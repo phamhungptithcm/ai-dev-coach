@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Dev Coach",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Coach developers to use AI with better reasoning, prompting, and coding habits.",
   "permissions": [
     "storage",
