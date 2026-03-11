@@ -1,0 +1,108 @@
+:root {
+  --bg: #f3f5f8;
+  --card: #ffffff;
+  --text: #17212b;
+  --muted: #546376;
+  --border: #d8e0e8;
+  --accent: #0a6c74;
+  --accent-strong: #07525a;
+  --danger: #b42318;
+  --success: #067647;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.settings {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 32px;
+  display: grid;
+  gap: 14px;
+}
+
+header h1 {
+  margin: 0;
+}
+
+header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+input[type="number"] {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+}
+
+.checkbox {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.button {
+  width: fit-content;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.button--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.button--primary:hover {
+  background: var(--accent-strong);
+}
+
+.status {
+  min-height: 18px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.status--ok {
+  color: var(--success);
+}
+
+.status--error {
+  color: var(--danger);
+}

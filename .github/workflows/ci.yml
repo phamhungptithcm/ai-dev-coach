@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - staging
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate extension JavaScript syntax
+        run: |
+          set -euo pipefail
+          for f in $(find extension -type f -name '*.js' | sort); do
+            node --check "$f"
+          done
+
+      - name: Validate extension manifest JSON
+        run: python -m json.tool extension/manifest.json >/dev/null
+
+      - name: Validate docs builder script
+        run: python -m py_compile .github/scripts/build_markdown_site.py
+
+      - name: Build docs from markdown
+        run: python .github/scripts/build_markdown_site.py --source docs --output public

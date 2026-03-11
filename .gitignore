@@ -1,0 +1,8 @@
+# Build artifacts
+site/
+public/
+.venv/
+__pycache__/
+
+# macOS
+.DS_Store

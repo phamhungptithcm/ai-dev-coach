@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Dev Coach</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <main class="popup">
+    <header class="popup__header">
+      <h1>AI Dev Coach</h1>
+      <p>Build better AI habits: think first, ask better, ship safer.</p>
+    </header>
+
+    <section class="card">
+      <h2>Developer Profile</h2>
+      <label for="roleInput">Job / Role</label>
+      <input id="roleInput" type="text" placeholder="Frontend Developer" />
+
+      <label for="skillInput">Skill Level</label>
+      <input id="skillInput" type="text" placeholder="Junior, Mid, Senior" />
+
+      <label for="habitInput">Habit Goal</label>
+      <textarea id="habitInput" rows="2" placeholder="Debug for 15 minutes before asking AI"></textarea>
+
+      <button id="saveProfileBtn" class="button button--primary">Save Profile</button>
+      <p id="profileStatus" class="status"></p>
+    </section>
+
+    <section class="card">
+      <h2>Prompt Builder</h2>
+      <label for="templateSelect">Template</label>
+      <select id="templateSelect"></select>
+      <p id="templateHint" class="muted"></p>
+
+      <label for="taskInput">Task (Required)</label>
+      <textarea id="taskInput" rows="2" placeholder="What do you need from AI?"></textarea>
+
+      <label for="contextInput">Context (Required)</label>
+      <textarea id="contextInput" rows="3" placeholder="Include stack trace, file path, expected vs actual behavior"></textarea>
+
+      <label for="attemptInput">What You Tried (Required)</label>
+      <textarea id="attemptInput" rows="3" placeholder="List attempts, hypotheses, and blocker"></textarea>
+
+      <label for="constraintsInput">Constraints (Optional)</label>
+      <textarea id="constraintsInput" rows="2" placeholder="Tech stack, style guide, performance limits, timeline"></textarea>
+
+      <label for="acceptanceInput">Acceptance Criteria (Optional)</label>
+      <textarea id="acceptanceInput" rows="2" placeholder="How should we know the solution is complete and correct?"></textarea>
+
+      <p id="requiredChecklist" class="required-checklist"></p>
+
+      <button id="generatePromptBtn" class="button button--primary">Generate Prompt</button>
+      <button id="copyPromptBtn" class="button">Copy Prompt</button>
+
+      <label for="generatedPrompt">Generated Prompt</label>
+      <textarea id="generatedPrompt" rows="11" readonly placeholder="Your coaching prompt will appear here"></textarea>
+
+      <section class="score-card" aria-label="Prompt score breakdown">
+        <div class="score-card__header">
+          <span>Prompt Score</span>
+          <strong id="promptScoreValue">--/100</strong>
+          <span id="promptGrade" class="grade grade--na">N/A</span>
+        </div>
+        <p id="promptScoreSummary" class="muted"></p>
+        <ul id="scoreBreakdown" class="score-list"></ul>
+        <ul id="scoreTips" class="score-list score-list--tips"></ul>
+      </section>
+
+      <p id="promptStatus" class="status"></p>
+    </section>
+
+    <section class="card">
+      <h2>Habit Snapshot</h2>
+      <p id="habitStats" class="stats"></p>
+      <button id="manualAttemptBtn" class="button">Log Manual Attempt</button>
+      <button id="openOptionsBtn" class="button">Open Settings</button>
+    </section>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>

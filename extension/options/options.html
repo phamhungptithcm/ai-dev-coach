@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Dev Coach Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <main class="settings">
+    <header>
+      <h1>AI Dev Coach Settings</h1>
+      <p>Configure how strict the coach should be and how warnings are triggered.</p>
+    </header>
+
+    <section class="card">
+      <h2>Coaching Controls</h2>
+      <label class="checkbox">
+        <input type="checkbox" id="enableCoach" />
+        Enable coaching overlays on AI chat platforms
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" id="strictMode" />
+        Strict mode (strong warning when prompt asks for shortcuts)
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Warning Thresholds</h2>
+
+      <label for="dependencyThreshold">AI dependency warning threshold (%)</label>
+      <input id="dependencyThreshold" type="number" min="40" max="95" />
+
+      <label for="pasteThreshold">Large paste threshold (characters)</label>
+      <input id="pasteThreshold" type="number" min="120" max="2000" />
+
+      <label for="overlayDuration">Overlay duration (milliseconds)</label>
+      <input id="overlayDuration" type="number" min="2500" max="15000" />
+    </section>
+
+    <section class="card">
+      <h2>Data Controls</h2>
+      <button id="saveBtn" class="button button--primary">Save Settings</button>
+      <button id="resetStatsBtn" class="button">Reset Habit Stats</button>
+      <p id="status" class="status"></p>
+    </section>
+  </main>
+
+  <script src="options.js"></script>
+</body>
+</html>

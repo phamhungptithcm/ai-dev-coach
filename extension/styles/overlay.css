@@ -1,0 +1,56 @@
+.ai-coach-toast-container {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(380px, calc(100vw - 32px));
+  z-index: 2147483000;
+  pointer-events: none;
+}
+
+.ai-coach-toast {
+  pointer-events: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  color: #162029;
+  box-shadow: 0 12px 28px rgba(9, 30, 66, 0.22);
+  padding: 12px 14px;
+  opacity: 0.96;
+  transform: translateY(0);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.ai-coach-toast--warning {
+  border-left: 5px solid #c1121f;
+}
+
+.ai-coach-toast--success {
+  border-left: 5px solid #2a9d8f;
+}
+
+.ai-coach-toast--info {
+  border-left: 5px solid #264653;
+}
+
+.ai-coach-toast--exit {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.ai-coach-toast__title {
+  margin: 0 0 4px;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.ai-coach-toast__message {
+  margin: 0;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.35;
+}

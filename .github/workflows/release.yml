@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve version from manifest
+        id: version
+        run: |
+          VERSION=$(node -p "require('./extension/manifest.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag matches extension version
+        run: |
+          EXPECTED_TAG="v${{ steps.version.outputs.version }}"
+          if [ "${GITHUB_REF_NAME}" != "$EXPECTED_TAG" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match manifest version ${EXPECTED_TAG}"
+            exit 1
+          fi
+
+      - name: Package extension
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cd extension
+          zip -r "../ai-dev-coach-${VERSION}.zip" .
+
+      - name: Create GitHub release with notes
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: AI Dev Coach ${{ github.ref_name }}
+          generate_release_notes: true
+          files: ai-dev-coach-${{ steps.version.outputs.version }}.zip
