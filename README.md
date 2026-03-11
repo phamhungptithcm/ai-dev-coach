@@ -62,7 +62,8 @@ On push to `main`, the workflow:
 ### One-Time GitHub Setup
 
 1. Open repository **Settings** > **Pages**.
-2. Set **Source** to **GitHub Actions**.
+2. Set **Source** to **Deploy from branch**.
+3. Select branch **`gh-pages`** and folder **`/ (root)`**.
 3. Push to `main` or run the workflow manually.
 
 ## Release Process
