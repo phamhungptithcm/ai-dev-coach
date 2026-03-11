@@ -47,7 +47,7 @@ AI Dev Coach is designed to protect the learning loop:
 ### 2. Documentation Format
 
 - All documentation is Markdown under `docs/`.
-- No MkDocs or custom docs UI framework is used.
+- Docs site is built with MkDocs Material using `mkdocs.yml`.
 
 ## CI/CD: Deploy Docs to GitHub Pages
 
@@ -55,15 +55,14 @@ This repository includes [`.github/workflows/deploy-docs.yml`](.github/workflows
 
 On push to `main`, the workflow:
 
-1. Reads Markdown from `docs/`
-2. Builds plain static HTML
+1. Installs `mkdocs-material`
+2. Builds docs with `mkdocs build --strict`
 3. Deploys automatically to GitHub Pages
 
 ### One-Time GitHub Setup
 
 1. Open repository **Settings** > **Pages**.
-2. Set **Source** to **Deploy from branch**.
-3. Select branch **`gh-pages`** and folder **`/ (root)`**.
+2. Set **Source** to **GitHub Actions**.
 3. Push to `main` or run the workflow manually.
 
 ## Release Process
@@ -80,8 +79,10 @@ On push to `main`, the workflow:
 ```text
 extension/
 docs/
-.github/scripts/build_markdown_site.py
+.github/workflows/ci.yml
 .github/workflows/deploy-docs.yml
+.github/workflows/release.yml
+mkdocs.yml
 ```
 
 ## Product Roadmap

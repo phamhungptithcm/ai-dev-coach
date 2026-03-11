@@ -1,6 +1,5 @@
 # Build artifacts
 site/
-public/
 .venv/
 __pycache__/
 
