@@ -163,10 +163,9 @@
   }
 
   function shouldShowBubble() {
-    return (
-      !!state.settings.enableCoach &&
-      (!!state.settings.promptListenerEnabled || !!state.settings.behaviorMonitorEnabled)
-    );
+    // Live bubble is a monitoring HUD. Keep it visible when monitoring is on,
+    // even if toast-style coaching overlays are disabled in settings.
+    return !!state.settings.promptListenerEnabled || !!state.settings.behaviorMonitorEnabled;
   }
 
   function formatEventTime(timestamp) {

@@ -616,10 +616,18 @@ async function saveProfile() {
 
 async function saveMonitoring() {
   const data = await storageGet(["settings"]);
+  const monitoring = readMonitoringForm();
+  const hasMonitoringEnabled = monitoring.promptListenerEnabled || monitoring.behaviorMonitorEnabled;
+  const previousSettings = data.settings || {};
+  const previousEnableCoach =
+    typeof previousSettings.enableCoach === "boolean"
+      ? previousSettings.enableCoach
+      : DEFAULT_SETTINGS.enableCoach;
   const nextSettings = {
     ...DEFAULT_SETTINGS,
-    ...(data.settings || {}),
-    ...readMonitoringForm()
+    ...previousSettings,
+    ...monitoring,
+    enableCoach: hasMonitoringEnabled ? true : previousEnableCoach
   };
   await storageSet({ settings: nextSettings });
   setStatus(monitorStatus, "Monitoring settings saved.", true);
