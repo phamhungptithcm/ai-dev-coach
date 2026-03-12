@@ -1,32 +1,39 @@
 (() => {
   const COACH_OWNED_SELECTOR = '[data-ai-coach-owned="true"]';
   const PROMPT_ANALYZED_EVENT = "ai-dev-coach:prompt-analyzed";
+  const PLATFORM_INPUT_SELECTORS = [
+    "textarea",
+    '[contenteditable="true"]',
+    '[contenteditable="plaintext-only"]',
+    '[contenteditable=""]',
+    '[contenteditable]:not([contenteditable="false"])'
+  ];
 
   const PLATFORM_CONFIG = [
     {
       name: "ChatGPT",
       matches: [/chatgpt\.com/i, /chat\.openai\.com/i],
-      inputSelectors: ["textarea", '[contenteditable="true"]']
+      inputSelectors: PLATFORM_INPUT_SELECTORS
     },
     {
       name: "Claude",
       matches: [/claude\.ai/i],
-      inputSelectors: ["textarea", '[contenteditable="true"]']
+      inputSelectors: PLATFORM_INPUT_SELECTORS
     },
     {
       name: "Gemini",
       matches: [/gemini\.google\.com/i],
-      inputSelectors: ["textarea", '[contenteditable="true"]']
+      inputSelectors: PLATFORM_INPUT_SELECTORS
     },
     {
       name: "Grok",
       matches: [/grok\.com/i],
-      inputSelectors: ["textarea", '[contenteditable="true"]']
+      inputSelectors: PLATFORM_INPUT_SELECTORS
     },
     {
       name: "DeepSeek",
       matches: [/chat\.deepseek\.com/i, /deepseek\.com/i],
-      inputSelectors: ["textarea", '[contenteditable="true"]']
+      inputSelectors: PLATFORM_INPUT_SELECTORS
     }
   ];
 
@@ -113,12 +120,15 @@
     /\bcopy\b/i,
     /\bshare\b/i
   ];
+  const DRAFT_PROMPT_TTL_MS = 15000;
 
   const attachedInputs = new WeakSet();
   const attachedForms = new WeakSet();
   let lastPromptSignature = "";
   let lastPromptAt = 0;
   let lastSendPulseAt = 0;
+  let lastDraftPrompt = "";
+  let lastDraftPromptAt = 0;
   let scanQueued = false;
 
   function storageGet(keys) {
@@ -131,6 +141,28 @@
 
   function clean(value) {
     return (value || "").trim();
+  }
+
+  function rememberDraftPrompt(prompt) {
+    const normalized = clean(prompt);
+    if (!normalized) {
+      return;
+    }
+
+    lastDraftPrompt = normalized;
+    lastDraftPromptAt = Date.now();
+  }
+
+  function getRecentDraftPrompt() {
+    if (!lastDraftPrompt) {
+      return "";
+    }
+
+    if (Date.now() - lastDraftPromptAt > DRAFT_PROMPT_TTL_MS) {
+      return "";
+    }
+
+    return lastDraftPrompt;
   }
 
   function buildPromptPreview(prompt) {
@@ -719,7 +751,13 @@
     return false;
   }
 
-  async function submitPromptFromInput(input) {
+  async function submitPromptFromInput(input, promptSnapshot = "") {
+    const initialPrompt = clean(promptSnapshot || readPrompt(input));
+    if (initialPrompt) {
+      rememberDraftPrompt(initialPrompt);
+    }
+    const prompt = initialPrompt || getRecentDraftPrompt();
+
     const settings = await getCurrentSettings();
     if (!settings.promptListenerEnabled) {
       return;
@@ -730,11 +768,6 @@
       return;
     }
 
-    if (!input) {
-      return;
-    }
-
-    const prompt = readPrompt(input).trim();
     if (!prompt) {
       await handleSendOnly();
       return;
@@ -772,13 +805,21 @@
     }
 
     input.addEventListener(
+      "input",
+      () => {
+        rememberDraftPrompt(readPrompt(input));
+      },
+      true
+    );
+
+    input.addEventListener(
       "keydown",
       (event) => {
         if (!shouldTrackEnter(event)) {
           return;
         }
 
-        submitPromptFromInput(input).catch((error) => {
+        submitPromptFromInput(input, readPrompt(input)).catch((error) => {
           console.error("AI Dev Coach prompt submission error", error);
         });
       },
@@ -838,7 +879,7 @@
         return;
       }
 
-      submitPromptFromInput(input).catch((error) => {
+      submitPromptFromInput(input, readPrompt(input)).catch((error) => {
         console.error("AI Dev Coach global keydown submission error", error);
       });
     },
@@ -860,7 +901,7 @@
       const scopedInput = formTarget ? findVisibleInputInScope(formTarget, platform) : null;
       const input = scopedInput || resolveActivePromptInput(platform);
 
-      submitPromptFromInput(input).catch((error) => {
+      submitPromptFromInput(input, readPrompt(input)).catch((error) => {
         console.error("AI Dev Coach global form submission error", error);
       });
     },
@@ -893,7 +934,7 @@
         return;
       }
 
-      submitPromptFromInput(input).catch((error) => {
+      submitPromptFromInput(input, readPrompt(input)).catch((error) => {
         console.error("AI Dev Coach send-button submission error", error);
       });
     },

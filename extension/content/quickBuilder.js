@@ -2,32 +2,39 @@
   const PANEL_ID = "ai-dev-coach-builder-panel";
   const BUTTON_ID = "ai-dev-coach-builder-launcher";
   const COACH_OWNED_SELECTOR = '[data-ai-coach-owned="true"]';
+  const PLATFORM_INPUT_SELECTORS = [
+    "textarea",
+    '[contenteditable="true"]',
+    '[contenteditable="plaintext-only"]',
+    '[contenteditable=""]',
+    '[contenteditable]:not([contenteditable="false"])'
+  ];
 
   const PLATFORM_CONFIG = [
     {
       name: "ChatGPT",
       matches: [/chatgpt\.com/i, /chat\.openai\.com/i],
-      inputSelectors: ["textarea", '[contenteditable="true"]']
+      inputSelectors: PLATFORM_INPUT_SELECTORS
     },
     {
       name: "Claude",
       matches: [/claude\.ai/i],
-      inputSelectors: ["textarea", '[contenteditable="true"]']
+      inputSelectors: PLATFORM_INPUT_SELECTORS
     },
     {
       name: "Gemini",
       matches: [/gemini\.google\.com/i],
-      inputSelectors: ["textarea", '[contenteditable="true"]']
+      inputSelectors: PLATFORM_INPUT_SELECTORS
     },
     {
       name: "Grok",
       matches: [/grok\.com/i],
-      inputSelectors: ["textarea", '[contenteditable="true"]']
+      inputSelectors: PLATFORM_INPUT_SELECTORS
     },
     {
       name: "DeepSeek",
       matches: [/chat\.deepseek\.com/i, /deepseek\.com/i],
-      inputSelectors: ["textarea", '[contenteditable="true"]']
+      inputSelectors: PLATFORM_INPUT_SELECTORS
     }
   ];
 
