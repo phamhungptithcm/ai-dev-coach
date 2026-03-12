@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- split CI/CD so docs deploy and extension release run independently
+- constrained docs deployment trigger to docs-related changes only
+- rebuilt extension release pipeline to bump manifest version only
+- added automatic friendly release-note generator for non-technical audiences
 - redesigned release workflow to auto-bump semantic version on `main` and auto-create release commit/tag/notes
 - enforced release-only version policy by adding `staging-version-guard.yml` for PRs into `staging`
 - added weekly `staging` to `main` sync automation workflow with auto-merge request and admin fallback

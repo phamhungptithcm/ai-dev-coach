@@ -67,11 +67,13 @@ python3 -m mkdocs build --strict
 
 This repository includes [`.github/workflows/deploy-docs.yml`](.github/workflows/deploy-docs.yml).
 
-On push to `staging`, the workflow:
+On push to `staging` with docs-related file changes, the workflow:
 
 1. Installs `mkdocs-material`
 2. Builds docs with `mkdocs build --strict`
 3. Deploys automatically to GitHub Pages
+
+This docs pipeline does not change extension version, tags, or releases.
 
 ### One-Time GitHub Setup
 
@@ -81,13 +83,16 @@ On push to `staging`, the workflow:
 
 ## Release Process
 
-- Pushing to `main` triggers `.github/workflows/release.yml` to:
+- Extension release automation lives in `.github/workflows/release.yml`.
+- It triggers on `main` only for extension changes (not docs-only changes) or manual dispatch.
+- On release, the workflow:
   - compute next semantic version automatically (default patch bump)
-  - update `extension/manifest.json` and docs version line automatically
+  - update only `extension/manifest.json`
   - commit `chore(release): cut vX.Y.Z` to `main`
   - create and push release tag `vX.Y.Z`
+  - generate friendly, plain-language release notes automatically
   - package the extension zip
-  - publish a GitHub Release with auto-generated release notes
+  - publish a GitHub Release with friendly notes
   - upload and publish the package to Chrome Web Store
 - Version bump is release-only on `main`. PRs into `staging` are guarded from release-version edits.
 
