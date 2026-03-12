@@ -81,7 +81,25 @@ Live bubble behavior:
 - bubble stays visible on supported AI pages and auto-remounts if site UI rerenders
 - bubble updates from both draft typing analysis and send-time analysis
 
-## 5. Copy-Paste Risk Alerts
+## 5. Sensitive Data Guardrail
+
+Before a prompt is sent, the extension can scan for likely secrets such as:
+
+- AWS access keys
+- JWT tokens
+- private keys
+- database URLs
+- API keys
+
+If sensitive content is detected:
+
+- the user gets a top-right warning before send
+- the prompt can be redacted locally in the chat input
+- the user is asked to review the prompt before sending again
+
+All secret scanning and redaction runs locally in the browser extension.
+
+## 6. Copy-Paste Risk Alerts
 
 When large multi-line code pastes are detected, the user gets coaching prompts to review and test before using pasted code.
 
@@ -89,7 +107,7 @@ If a user copies long AI-generated output and pastes it back into a prompt compo
 
 The extension also tracks AI output timestamp and copy timestamp. If copy happens faster than configured minimum read time, it triggers a \"read first\" warning.
 
-## 6. Settings and Controls
+## 7. Settings and Controls
 
 User can configure:
 

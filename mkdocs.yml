@@ -67,6 +67,7 @@ nav:
   - Project:
       - Branching Strategy: 07-project/branching-strategy.md
       - Roadmap: 07-project/roadmap.md
+      - Sprint Plan: 07-project/sprint-plan.md
       - Changelog: 07-project/changelog.md
   - References:
       - Research: 06-references/research.md

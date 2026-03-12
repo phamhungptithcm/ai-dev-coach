@@ -8,6 +8,13 @@
 - large paste warning system
 - local dependency tracking
 
+## V1.1: Extension Quality and Security
+
+- sensitive data detection before prompt send
+- prompt quality engine v2
+- prompt linter for AI prompts
+- discoverability and SEO-focused documentation improvements
+
 ## V2: Learning Analytics and Better Guidance
 
 - session summaries and progress trends
