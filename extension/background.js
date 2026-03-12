@@ -11,11 +11,12 @@ const DEFAULT_SETTINGS = {
   pasteThreshold: 320,
   longCopyThreshold: 360,
   minReadBeforeCopySeconds: 20,
-  overlayDurationMs: 6500
+  overlayDurationMs: 9000
 };
 
 const DEFAULT_PROFILE = {
   role: "",
+  roleKey: "",
   skill: "",
   habitGoals: ""
 };

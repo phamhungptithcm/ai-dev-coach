@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.14
+
+- added role-aware Prompt Builder options by job (Student, Teacher, Software Engineer, Solution Architecture, Doctor, Other)
+- added role selector and role-specific prompt guidance in popup and in-page builder
+- changed in-page Prompt Builder shortcut from `F1` to `Ctrl + O` when composer is focused
+- made `AI Dev Coach Live` bubble always visible on supported AI pages
+- fixed toast placement consistency to stay top-right on mobile breakpoints
+- aligned default overlay duration initialization to 9000ms in background defaults
+
 ## v1.2.13
 
 - added `F1` shortcut to open in-page Prompt Builder when AI composer is focused

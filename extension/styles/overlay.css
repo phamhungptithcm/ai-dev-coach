@@ -435,7 +435,7 @@
 
   .ai-coach-toast-container {
     right: 8px;
-    bottom: 8px;
+    top: 8px;
     width: min(360px, calc(100vw - 16px));
   }
 }

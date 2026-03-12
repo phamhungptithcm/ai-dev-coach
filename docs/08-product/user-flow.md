@@ -9,7 +9,7 @@
 ## Prompt Preparation
 
 1. User selects a default template.
-2. User can open in-page Prompt Builder from launcher or by pressing `F1` while focused in chat composer.
+2. User can open in-page Prompt Builder from launcher or by pressing `Ctrl + O` while focused in chat composer.
 3. User fills required fields (task, context, attempt).
 4. User generates structured prompt.
 5. User copies prompt into AI chat.

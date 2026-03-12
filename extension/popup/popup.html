@@ -51,8 +51,16 @@
       <p id="profileSummary" class="muted hidden"></p>
 
       <div id="profileForm">
-        <label for="roleInput">Job / Role</label>
-        <input id="roleInput" type="text" placeholder="Frontend Developer" />
+        <label for="roleSelect">Job / Role</label>
+        <select id="roleSelect">
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
+          <option value="software_engineer" selected>Software Engineer</option>
+          <option value="solution_architecture">Solution Architecture</option>
+          <option value="doctor">Doctor</option>
+          <option value="other">Other</option>
+        </select>
+        <input id="customRoleInput" class="hidden" type="text" placeholder="Enter your custom role" />
 
         <label for="skillInput">Skill Level</label>
         <input id="skillInput" type="text" placeholder="Junior, Mid, Senior" />
@@ -68,6 +76,7 @@
 
     <section class="card">
       <h2>Prompt Builder</h2>
+      <p id="rolePromptHint" class="muted"></p>
       <label for="templateSelect">Template</label>
       <select id="templateSelect"></select>
       <p id="templateHint" class="muted"></p>

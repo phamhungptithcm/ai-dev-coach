@@ -60,8 +60,49 @@
 
   const DEFAULT_PROFILE = {
     role: "",
+    roleKey: "",
     skill: "",
     habitGoals: ""
+  };
+
+  const JOB_ROLE_OPTIONS = {
+    student: {
+      label: "Student",
+      builderHint: "Prioritize understanding and learning outcomes.",
+      contextHint: "Course/topic, level, assignment constraints",
+      attemptHint: "What you understood and where you got stuck"
+    },
+    teacher: {
+      label: "Teacher",
+      builderHint: "Prioritize pedagogy, learner outcomes, and assessment clarity.",
+      contextHint: "Learner level, objective, class constraints",
+      attemptHint: "Teaching approach tried and observed result"
+    },
+    software_engineer: {
+      label: "Software Engineer",
+      builderHint: "Prioritize reproducible technical details and verification.",
+      contextHint: "Error, stack trace, file path, expected vs actual",
+      attemptHint: "Debug steps, hypotheses, and blocker"
+    },
+    solution_architecture: {
+      label: "Solution Architecture",
+      builderHint: "Prioritize constraints, tradeoffs, scale, and risk.",
+      contextHint: "NFRs, integration points, compliance and cost constraints",
+      attemptHint: "Option explored, tradeoffs considered, uncertainty"
+    },
+    doctor: {
+      label: "Doctor",
+      builderHint: "Use AI for educational reasoning support only.",
+      contextHint: "Symptoms timeline, relevant history, red flags",
+      attemptHint: "Differential considered and current uncertainty",
+      safetyGuardrail: "Educational support only. Do not request direct diagnosis, treatment, or dosage."
+    },
+    other: {
+      label: "Other",
+      builderHint: "Clarify domain constraints and request reasoning-first guidance.",
+      contextHint: "Domain context, constraints, available evidence",
+      attemptHint: "What you tried and where you are blocked"
+    }
   };
 
   const DEFAULT_TEMPLATE = "debugging";
@@ -169,6 +210,7 @@
   const state = {
     panelOpen: false,
     selectedTemplate: DEFAULT_TEMPLATE,
+    selectedRoleKey: "software_engineer",
     profile: { ...DEFAULT_PROFILE },
     refs: null,
     layoutTicking: false
@@ -184,6 +226,61 @@
 
   function clean(value) {
     return (value || "").trim();
+  }
+
+  function normalizeRoleKey(value) {
+    return clean(value).toLowerCase().replace(/\s+/g, "_");
+  }
+
+  function resolveRoleKey(rawProfile = {}) {
+    const fromKey = normalizeRoleKey(rawProfile.roleKey);
+    if (JOB_ROLE_OPTIONS[fromKey]) {
+      return fromKey;
+    }
+
+    const roleText = clean(rawProfile.role).toLowerCase();
+    if (!roleText) {
+      return "software_engineer";
+    }
+
+    if (/student|sinh vien|hoc sinh/.test(roleText)) {
+      return "student";
+    }
+    if (/teacher|giang vien|giao vien/.test(roleText)) {
+      return "teacher";
+    }
+    if (/software|engineer|developer|frontend|backend|fullstack|devops/.test(roleText)) {
+      return "software_engineer";
+    }
+    if (/solution architect|architecture|kien truc/.test(roleText)) {
+      return "solution_architecture";
+    }
+    if (/doctor|bac si|physician|medical/.test(roleText)) {
+      return "doctor";
+    }
+
+    return "other";
+  }
+
+  function getRoleProfile(rawProfile = {}) {
+    const key = resolveRoleKey(rawProfile);
+    const base = JOB_ROLE_OPTIONS[key] || JOB_ROLE_OPTIONS.other;
+    const customRole = clean(rawProfile.role);
+    const label = key === "other" ? customRole || base.label : base.label;
+    return { key, label, ...base };
+  }
+
+  function buildRoleHeaderLines(roleProfile) {
+    const lines = [
+      `Primary job role: ${roleProfile.label}`,
+      `Role guidance: ${roleProfile.builderHint}`
+    ];
+
+    if (roleProfile.safetyGuardrail) {
+      lines.push(`Safety guardrail: ${roleProfile.safetyGuardrail}`);
+    }
+
+    return lines;
   }
 
   function isCoachOwnedElement(element) {
@@ -432,10 +529,9 @@
     );
   }
 
-  function buildPrompt(templateKey, profile, fields) {
+  function buildPrompt(templateKey, profile, fields, roleProfile) {
     const template = TEMPLATES[templateKey] || TEMPLATES[DEFAULT_TEMPLATE];
-
-    return [
+    const basePrompt = [
       template.intro,
       `Role: ${profile.role || "Not provided"}`,
       `Skill level: ${profile.skill || "Not provided"}`,
@@ -450,6 +546,8 @@
       "Response rules:",
       ...template.responseRules
     ].join("\n");
+
+    return [...buildRoleHeaderLines(roleProfile), "", basePrompt].join("\n");
   }
 
   function setStatus(message, ok) {
@@ -491,9 +589,12 @@
     }
 
     const template = TEMPLATES[templateKey] || TEMPLATES[DEFAULT_TEMPLATE];
+    const roleOption = JOB_ROLE_OPTIONS[state.selectedRoleKey] || JOB_ROLE_OPTIONS.software_engineer;
+    const roleLabel = roleOption.label;
     state.refs.templateHint.textContent = template.hint;
-    state.refs.contextInput.placeholder = template.contextPlaceholder;
-    state.refs.attemptInput.placeholder = template.attemptPlaceholder;
+    state.refs.roleHint.textContent = `Role mode: ${roleLabel}. ${roleOption.builderHint}`;
+    state.refs.contextInput.placeholder = `${template.contextPlaceholder}. ${roleOption.contextHint}.`;
+    state.refs.attemptInput.placeholder = `${template.attemptPlaceholder}. ${roleOption.attemptHint}.`;
   }
 
   function readFields() {
@@ -511,12 +612,21 @@
   }
 
   async function loadProfileAndTemplate() {
-    const data = await storageGet(["profile", "selectedTemplate"]);
+    const data = await storageGet(["profile", "selectedTemplate", "quickBuilderRoleKey"]);
     state.profile = { ...DEFAULT_PROFILE, ...(data.profile || {}) };
     state.selectedTemplate = TEMPLATES[data.selectedTemplate] ? data.selectedTemplate : DEFAULT_TEMPLATE;
+    state.selectedRoleKey =
+      JOB_ROLE_OPTIONS[data.quickBuilderRoleKey] ? data.quickBuilderRoleKey : resolveRoleKey(state.profile);
+    const roleProfile = getRoleProfile({
+      ...state.profile,
+      roleKey: state.selectedRoleKey
+    });
+    state.profile.roleKey = state.selectedRoleKey;
+    state.profile.role = roleProfile.label;
 
     if (state.refs) {
       state.refs.templateSelect.value = state.selectedTemplate;
+      state.refs.roleSelect.value = state.selectedRoleKey;
       applyTemplateUI(state.selectedTemplate);
     }
   }
@@ -537,7 +647,14 @@
       return;
     }
 
-    const prompt = buildPrompt(state.selectedTemplate, state.profile, fields);
+    const roleOption = JOB_ROLE_OPTIONS[state.selectedRoleKey] || JOB_ROLE_OPTIONS.software_engineer;
+    const profile = {
+      ...state.profile,
+      roleKey: state.selectedRoleKey,
+      role: roleOption.label
+    };
+    const roleProfile = getRoleProfile(profile);
+    const prompt = buildPrompt(state.selectedTemplate, profile, fields, roleProfile);
     const inserted = setPromptInputValue(promptInput, prompt);
     if (!inserted) {
       setStatus("Failed to write prompt into AI input.", false);
@@ -634,6 +751,17 @@
       <select id="aiCoachTemplateSelect" class="ai-coach-builder__input"></select>
       <p id="aiCoachTemplateHint" class="ai-coach-builder__hint"></p>
 
+      <label class="ai-coach-builder__label" for="aiCoachRoleSelect">Role</label>
+      <select id="aiCoachRoleSelect" class="ai-coach-builder__input">
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+        <option value="software_engineer" selected>Software Engineer</option>
+        <option value="solution_architecture">Solution Architecture</option>
+        <option value="doctor">Doctor</option>
+        <option value="other">Other</option>
+      </select>
+      <p id="aiCoachRoleHint" class="ai-coach-builder__hint"></p>
+
       <label class="ai-coach-builder__label" for="aiCoachTask">Task (Required)</label>
       <textarea id="aiCoachTask" class="ai-coach-builder__input" rows="2" placeholder="What do you need from AI?"></textarea>
 
@@ -665,6 +793,8 @@
       closeBtn: panel.querySelector(".ai-coach-builder__close"),
       templateSelect: panel.querySelector("#aiCoachTemplateSelect"),
       templateHint: panel.querySelector("#aiCoachTemplateHint"),
+      roleSelect: panel.querySelector("#aiCoachRoleSelect"),
+      roleHint: panel.querySelector("#aiCoachRoleHint"),
       taskInput: panel.querySelector("#aiCoachTask"),
       contextInput: panel.querySelector("#aiCoachContext"),
       attemptInput: panel.querySelector("#aiCoachAttempt"),
@@ -687,6 +817,12 @@
       state.selectedTemplate = state.refs.templateSelect.value;
       applyTemplateUI(state.selectedTemplate);
       await storageSet({ selectedTemplate: state.selectedTemplate });
+    });
+
+    state.refs.roleSelect.addEventListener("change", async () => {
+      state.selectedRoleKey = state.refs.roleSelect.value;
+      applyTemplateUI(state.selectedTemplate);
+      await storageSet({ quickBuilderRoleKey: state.selectedRoleKey });
     });
 
     state.refs.insertBtn.addEventListener("click", () => {
@@ -728,10 +864,10 @@
   function isShortcutToggleEvent(event) {
     return (
       event.key &&
-      event.key.toLowerCase() === "f1" &&
+      event.key.toLowerCase() === "o" &&
       !event.shiftKey &&
       !event.altKey &&
-      !event.ctrlKey &&
+      event.ctrlKey &&
       !event.metaKey &&
       !event.isComposing &&
       !event.repeat

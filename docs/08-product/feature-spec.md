@@ -8,6 +8,15 @@ Users can store:
 - skill level
 - habit goal
 
+Job role options:
+
+- Student
+- Teacher
+- Software Engineer
+- Solution Architecture
+- Doctor
+- Other
+
 This profile personalizes coaching tips.
 
 ## 2. Prompt Builder
@@ -32,7 +41,7 @@ The extension generates a structured prompt and provides copy-to-clipboard.
 In-page access:
 
 - floating launcher beside composer on supported AI pages
-- keyboard shortcut `F1` to open Prompt Builder when chat input is focused
+- keyboard shortcut `Ctrl + O` to open Prompt Builder when chat input is focused
 
 See also: [Prompt Builder System](prompt-builder-system.md)
 

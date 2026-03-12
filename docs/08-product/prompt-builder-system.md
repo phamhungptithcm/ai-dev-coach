@@ -20,6 +20,15 @@ Optional fields:
 - constraints
 - acceptance criteria
 
+Role modes available in Prompt Builder:
+
+- Student
+- Teacher
+- Software Engineer
+- Solution Architecture
+- Doctor
+- Other
+
 ## Prompt Scoring Algorithm
 
 The extension computes a score from 0 to 100 with these weighted dimensions:
@@ -114,8 +123,9 @@ Grade mapping:
 ## In-Page Quick Builder (Chat Window)
 
 - The extension injects a floating `Prompt Builder` button beside the active AI chat composer.
-- Press `F1` while focused in the chat composer to open the Prompt Builder instantly.
+- Press `Ctrl + O` while focused in the chat composer to open the Prompt Builder instantly.
 - Clicking the button opens a compact form with the same template + required fields as popup builder.
+- Role selector in the in-page builder adjusts guidance and prompt framing per job role.
 - `Build + Insert` writes the generated prompt into the chat input.
 - `Build + Send` writes the prompt and triggers send automatically.
 - Works on ChatGPT, Claude, Gemini, Grok, and DeepSeek pages.

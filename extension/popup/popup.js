@@ -193,8 +193,55 @@ const TEMPLATES = {
   }
 };
 
+const JOB_ROLE_OPTIONS = {
+  student: {
+    label: "Student",
+    builderHint: "Focus on learning outcomes and understanding before final answers.",
+    contextHint: "Course/topic, current level, assignment constraints",
+    attemptHint: "Your current understanding, what confused you, and one attempt",
+    roleSignals: [/assignment/i, /rubric/i, /course/i, /lesson/i, /understand/i, /practice/i]
+  },
+  teacher: {
+    label: "Teacher",
+    builderHint: "Focus on pedagogy, learner outcomes, and assessment quality.",
+    contextHint: "Learner level, lesson objective, class constraints",
+    attemptHint: "What teaching approach you tried and observed outcome",
+    roleSignals: [/learning objective/i, /lesson plan/i, /assessment/i, /classroom/i, /pedagogy/i]
+  },
+  software_engineer: {
+    label: "Software Engineer",
+    builderHint: "Focus on reproducible technical context and verification.",
+    contextHint: "Error, stack trace, file path, expected vs actual",
+    attemptHint: "Debug steps, hypotheses, and blocker",
+    roleSignals: [/stack/i, /trace/i, /api/i, /repo/i, /commit/i, /test/i, /bug/i]
+  },
+  solution_architecture: {
+    label: "Solution Architecture",
+    builderHint: "Focus on constraints, tradeoffs, scalability, and risk.",
+    contextHint: "NFRs, integration points, compliance, cost and latency constraints",
+    attemptHint: "Architecture option explored and tradeoff concerns",
+    roleSignals: [/nfr/i, /latency/i, /throughput/i, /sla/i, /integration/i, /trade-?off/i]
+  },
+  doctor: {
+    label: "Doctor",
+    builderHint: "Use AI as an educational support tool, not a diagnostic authority.",
+    contextHint: "Symptoms timeline, relevant history, red flags, tests already available",
+    attemptHint: "Clinical reasoning done, differential considered, current uncertainty",
+    safetyGuardrail: "For educational support only. Do not request final diagnosis, treatment, or dosage instructions.",
+    roleSignals: [/symptom/i, /history/i, /differential/i, /red flag/i, /clinical/i, /exam/i]
+  },
+  other: {
+    label: "Other",
+    builderHint: "Define your domain context clearly and ask for reasoning-first guidance.",
+    contextHint: "Domain constraints, available evidence, expected outcome",
+    attemptHint: "What you already tried and where you are blocked",
+    roleSignals: [/constraint/i, /evidence/i, /outcome/i, /risk/i]
+  }
+};
+
 const DEFAULT_PROFILE = {
   role: "",
+  roleKey: "",
   skill: "",
   habitGoals: ""
 };
@@ -220,11 +267,13 @@ const REASONING_HINTS = [/tried/i, /attempt/i, /hypothesis/i, /debug/i, /test/i,
 const CONTEXT_HINTS = [/error/i, /stack/i, /file/i, /endpoint/i, /metric/i, /latency/i, /throughput/i, /trace/i];
 const SHORTCUT_PATTERNS = [/give me full code/i, /do it for me/i, /just answer/i, /no explanation/i, /copy paste/i];
 
-const roleInput = document.getElementById("roleInput");
+const roleSelect = document.getElementById("roleSelect");
+const customRoleInput = document.getElementById("customRoleInput");
 const skillInput = document.getElementById("skillInput");
 const habitInput = document.getElementById("habitInput");
 const templateSelect = document.getElementById("templateSelect");
 const templateHint = document.getElementById("templateHint");
+const rolePromptHint = document.getElementById("rolePromptHint");
 const taskInput = document.getElementById("taskInput");
 const contextInput = document.getElementById("contextInput");
 const attemptInput = document.getElementById("attemptInput");
@@ -260,6 +309,65 @@ function clean(value) {
   return (value || "").trim();
 }
 
+function normalizeRoleKey(value) {
+  return clean(value).toLowerCase().replace(/\s+/g, "_");
+}
+
+function resolveRoleKey(rawProfile = {}) {
+  const fromKey = normalizeRoleKey(rawProfile.roleKey);
+  if (JOB_ROLE_OPTIONS[fromKey]) {
+    return fromKey;
+  }
+
+  const roleText = clean(rawProfile.role).toLowerCase();
+  if (!roleText) {
+    return "software_engineer";
+  }
+
+  if (/student|sinh vien|hoc sinh/.test(roleText)) {
+    return "student";
+  }
+  if (/teacher|giang vien|giao vien/.test(roleText)) {
+    return "teacher";
+  }
+  if (/software|engineer|developer|frontend|backend|fullstack|devops/.test(roleText)) {
+    return "software_engineer";
+  }
+  if (/solution architect|architecture|kien truc/.test(roleText)) {
+    return "solution_architecture";
+  }
+  if (/doctor|bac si|physician|medical/.test(roleText)) {
+    return "doctor";
+  }
+
+  return "other";
+}
+
+function getRoleProfile(rawProfile = {}) {
+  const key = resolveRoleKey(rawProfile);
+  const base = JOB_ROLE_OPTIONS[key] || JOB_ROLE_OPTIONS.other;
+  const customRole = clean(rawProfile.role);
+  const label = key === "other" ? customRole || base.label : base.label;
+  return { key, label, ...base };
+}
+
+function setCustomRoleVisibility(roleKey) {
+  customRoleInput.classList.toggle("hidden", roleKey !== "other");
+}
+
+function buildRoleHeaderLines(roleProfile) {
+  const lines = [
+    `Primary job role: ${roleProfile.label}`,
+    `Role guidance: ${roleProfile.builderHint}`
+  ];
+
+  if (roleProfile.safetyGuardrail) {
+    lines.push(`Safety guardrail: ${roleProfile.safetyGuardrail}`);
+  }
+
+  return lines;
+}
+
 function setStatus(target, message, ok) {
   target.textContent = message || "";
   target.classList.remove("status--ok", "status--error");
@@ -284,9 +392,11 @@ function applyTemplateUI(template) {
     return;
   }
 
+  const roleProfile = getRoleProfile(readProfileForm());
   templateHint.textContent = template.hint;
-  contextInput.placeholder = template.contextPlaceholder;
-  attemptInput.placeholder = template.attemptPlaceholder;
+  rolePromptHint.textContent = `Role mode: ${roleProfile.label}. ${roleProfile.builderHint}`;
+  contextInput.placeholder = `${template.contextPlaceholder}. ${roleProfile.contextHint}.`;
+  attemptInput.placeholder = `${template.attemptPlaceholder}. ${roleProfile.attemptHint}.`;
 }
 
 function renderTemplates(selectedTemplate) {
@@ -304,8 +414,14 @@ function renderTemplates(selectedTemplate) {
 }
 
 function readProfileForm() {
+  const selectedRoleKey = roleSelect.value || "software_engineer";
+  const selectedRoleProfile = JOB_ROLE_OPTIONS[selectedRoleKey] || JOB_ROLE_OPTIONS.software_engineer;
+  const customRole = clean(customRoleInput.value);
+  const resolvedRoleLabel = selectedRoleKey === "other" ? customRole || "Other" : selectedRoleProfile.label;
+
   return {
-    role: clean(roleInput.value),
+    roleKey: selectedRoleKey,
+    role: resolvedRoleLabel,
     skill: clean(skillInput.value),
     habitGoals: clean(habitInput.value)
   };
@@ -333,7 +449,11 @@ function validatePromptFields(fields) {
 }
 
 function fillProfile(profile) {
-  roleInput.value = profile.role || "";
+  const roleKey = resolveRoleKey(profile);
+  roleSelect.value = roleKey;
+  setCustomRoleVisibility(roleKey);
+  customRoleInput.value =
+    roleKey === "other" && clean(profile.role).toLowerCase() !== "other" ? clean(profile.role) : "";
   skillInput.value = profile.skill || "";
   habitInput.value = profile.habitGoals || "";
 }
@@ -424,7 +544,8 @@ function countKeywordMatches(text, patterns) {
   return patterns.filter((pattern) => pattern.test(text)).length;
 }
 
-function scorePrompt({ templateKey, profile, fields, prompt }) {
+function scorePrompt({ templateKey, profile, fields, prompt, roleProfile }) {
+  const resolvedRoleProfile = roleProfile || getRoleProfile(profile);
   const joined = `${fields.task}\n${fields.context}\n${fields.attempt}\n${fields.constraints}\n${fields.acceptance}`;
 
   const breakdown = [];
@@ -472,6 +593,8 @@ function scorePrompt({ templateKey, profile, fields, prompt }) {
   let specificity = 0;
   const contextSignalCount = countKeywordMatches(joined, CONTEXT_HINTS);
   specificity += Math.min(10, contextSignalCount * 2);
+  const roleSignalCount = countKeywordMatches(joined, resolvedRoleProfile.roleSignals || []);
+  specificity += Math.min(4, roleSignalCount);
 
   if (fields.constraints.length >= 16) {
     specificity += 6;
@@ -488,6 +611,9 @@ function scorePrompt({ templateKey, profile, fields, prompt }) {
   specificity = Math.min(25, specificity);
   if (specificity < 12) {
     tips.push("Add concrete technical context (metrics, paths, traces, API details).");
+  }
+  if (roleSignalCount === 0) {
+    tips.push(`Add role-specific context for ${resolvedRoleProfile.label.toLowerCase()} scenarios.`);
   }
   breakdown.push({ label: "Specificity", score: specificity, max: 25 });
 
@@ -522,6 +648,16 @@ function scorePrompt({ templateKey, profile, fields, prompt }) {
 
   if (/just.*answer|only.*code/i.test(joined)) {
     safety -= 4;
+  }
+
+  if (
+    resolvedRoleProfile.key === "doctor" &&
+    /\bdiagnos(e|is)|prescrib|dosage|treatment plan|medical advice\b/i.test(joined)
+  ) {
+    safety -= 4;
+    warnings.push(
+      "Doctor mode safety: ask for educational reasoning and differential guidance, not direct diagnosis or prescriptions."
+    );
   }
 
   safety = Math.max(0, Math.min(15, safety));
@@ -646,6 +782,7 @@ async function logManualAttempt() {
 
 async function generatePrompt() {
   const profile = readProfileForm();
+  const roleProfile = getRoleProfile(profile);
   const fields = readPromptForm();
   const missing = validatePromptFields(fields);
 
@@ -668,12 +805,13 @@ async function generatePrompt() {
     return;
   }
 
-  const prompt = template.build({
+  const basePrompt = template.build({
     profile,
     ...fields
   });
+  const prompt = [...buildRoleHeaderLines(roleProfile), "", basePrompt].join("\n");
 
-  const analysis = scorePrompt({ templateKey, profile, fields, prompt });
+  const analysis = scorePrompt({ templateKey, profile, fields, prompt, roleProfile });
 
   generatedPrompt.value = prompt;
   renderScore(analysis);
@@ -765,7 +903,7 @@ function wireEvents() {
     const profile = readProfileForm();
     renderProfileView(profile, true);
     setStatus(profileStatus, "", true);
-    roleInput.focus();
+    roleSelect.focus();
   });
 
   document.getElementById("manualAttemptBtn").addEventListener("click", () => {
@@ -788,6 +926,15 @@ function wireEvents() {
     const template = TEMPLATES[templateSelect.value];
     applyTemplateUI(template);
     await storageSet({ selectedTemplate: templateSelect.value });
+  });
+
+  roleSelect.addEventListener("change", () => {
+    setCustomRoleVisibility(roleSelect.value);
+    applyTemplateUI(TEMPLATES[templateSelect.value]);
+  });
+
+  customRoleInput.addEventListener("input", () => {
+    applyTemplateUI(TEMPLATES[templateSelect.value]);
   });
 
   [taskInput, contextInput, attemptInput].forEach((input) => {

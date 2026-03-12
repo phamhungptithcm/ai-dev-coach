@@ -163,9 +163,9 @@
   }
 
   function shouldShowBubble() {
-    // Live bubble is a monitoring HUD. Keep it visible when monitoring is on,
-    // even if toast-style coaching overlays are disabled in settings.
-    return !!state.settings.promptListenerEnabled || !!state.settings.behaviorMonitorEnabled;
+    // Keep the live bubble always visible on supported AI pages.
+    // Users can still collapse the body via the header toggle.
+    return true;
   }
 
   function formatEventTime(timestamp) {
