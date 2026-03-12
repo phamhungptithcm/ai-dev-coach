@@ -11,6 +11,7 @@
     <header class="popup__header">
       <h1>AI Dev Coach</h1>
       <p>Build better AI habits: think first, ask better, ship safer.</p>
+      <p id="profileBadge" class="profile-badge profile-badge--empty">Profile: Not set</p>
     </header>
 
     <section class="card">
@@ -28,17 +29,25 @@
     </section>
 
     <section class="card">
-      <h2>Developer Profile</h2>
-      <label for="roleInput">Job / Role</label>
-      <input id="roleInput" type="text" placeholder="Frontend Developer" />
+      <div class="profile-card__head">
+        <h2>Developer Profile</h2>
+        <button id="editProfileBtn" class="button button--small hidden" type="button">Edit</button>
+      </div>
+      <p id="profileSummary" class="muted hidden"></p>
 
-      <label for="skillInput">Skill Level</label>
-      <input id="skillInput" type="text" placeholder="Junior, Mid, Senior" />
+      <div id="profileForm">
+        <label for="roleInput">Job / Role</label>
+        <input id="roleInput" type="text" placeholder="Frontend Developer" />
 
-      <label for="habitInput">Habit Goal</label>
-      <textarea id="habitInput" rows="2" placeholder="Debug for 15 minutes before asking AI"></textarea>
+        <label for="skillInput">Skill Level</label>
+        <input id="skillInput" type="text" placeholder="Junior, Mid, Senior" />
 
-      <button id="saveProfileBtn" class="button button--primary">Save Profile</button>
+        <label for="habitInput">Habit Goal</label>
+        <textarea id="habitInput" rows="2" placeholder="Debug for 15 minutes before asking AI"></textarea>
+
+        <button id="saveProfileBtn" class="button button--primary">Save Profile</button>
+      </div>
+
       <p id="profileStatus" class="status"></p>
     </section>
 
