@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.9
+
+- redesigned popup Live Monitoring into compact switch toggles with immediate auto-save
+- improved monitoring section labels for clearer hierarchy and faster scanning
+- updated docs home to show latest release tag and author profile summary
+
 ## v1.2.8
 
 - refreshed popup, settings, and in-page coaching UI with pastel design system

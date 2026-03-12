@@ -17,15 +17,29 @@
     <section class="card">
       <h2>Live Monitoring</h2>
       <p class="muted card-hint">Turn on real-time coaching while you work in AI chat.</p>
-      <label class="checkbox-row">
-        <input id="promptListenerToggle" type="checkbox" />
-        Enable prompt listener on send
-      </label>
-      <label class="checkbox-row">
-        <input id="behaviorMonitorToggle" type="checkbox" />
-        Enable behavior monitor (copy/paste alerts)
-      </label>
-      <button id="saveMonitoringBtn" class="button button--primary">Save Monitoring</button>
+      <div class="monitor-grid">
+        <label class="monitor-toggle">
+          <span class="monitor-toggle__meta">
+            <span class="monitor-toggle__title">Prompt Listener</span>
+            <span class="monitor-toggle__desc">Analyze prompt content on send</span>
+          </span>
+          <span class="monitor-switch">
+            <input id="promptListenerToggle" type="checkbox" />
+            <span class="monitor-switch__track"></span>
+          </span>
+        </label>
+
+        <label class="monitor-toggle">
+          <span class="monitor-toggle__meta">
+            <span class="monitor-toggle__title">Behavior Monitor</span>
+            <span class="monitor-toggle__desc">Track copy and paste risk signals</span>
+          </span>
+          <span class="monitor-switch">
+            <input id="behaviorMonitorToggle" type="checkbox" />
+            <span class="monitor-switch__track"></span>
+          </span>
+        </label>
+      </div>
       <p id="monitorStatus" class="status"></p>
     </section>
 

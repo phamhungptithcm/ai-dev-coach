@@ -2,6 +2,12 @@
 
 AI Dev Coach helps developers use AI as a learning accelerator, not a shortcut dependency.
 
+**Latest release tag:** `v1.2.4`  
+**Current development version:** `v1.2.9`
+
+**Author:** Hung Pham  
+Senior Fullstack Developer in the USA with over 8 years of experience.
+
 ## What This Documentation Covers
 
 - product direction and core coaching philosophy
