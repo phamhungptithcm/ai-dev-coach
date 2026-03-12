@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.2.4
+
+- added immediate prompt analysis on send-button click across supported AI chat UIs
+- improved send-time responsiveness by decoupling coach feedback from stats write latency
+- added long AI-output copy tracking and warning when pasted back into composer
+
+## v1.2.3
+
+- added production validator script for extension package integrity
+- hardened prompt monitoring and paste detection for better real-world behavior
+- improved release packaging and Chrome publish workflow reliability
+- expanded Chrome Web Store deployment guide with listing/privacy/assets checklist
+
 ## v1.2.2
 
 - switched docs to MkDocs Material workflow

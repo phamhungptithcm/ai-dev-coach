@@ -67,8 +67,27 @@
     /copy and paste/i,
     /urgent.*fix/i
   ];
+  const SEND_BUTTON_HINTS = [
+    /\bsend\b/i,
+    /\bsubmit\b/i,
+    /\bask\b/i,
+    /send message/i,
+    /submit prompt/i,
+    /arrow up/i
+  ];
+  const NON_SEND_BUTTON_HINTS = [
+    /\bstop\b/i,
+    /\bregenerate\b/i,
+    /\bretry\b/i,
+    /\bnew chat\b/i,
+    /\battach\b/i,
+    /\bupload\b/i,
+    /\bcopy\b/i,
+    /\bshare\b/i
+  ];
 
   const attachedInputs = new WeakSet();
+  const attachedForms = new WeakSet();
   let lastPromptSignature = "";
   let lastPromptAt = 0;
   let scanQueued = false;
@@ -131,10 +150,52 @@
     return rect.width > 0 && rect.height > 0;
   }
 
-  function findPromptInput(platform) {
+  function isPlatformInput(platform, element) {
+    return platform.inputSelectors.some((selector) => element.matches(selector));
+  }
+
+  function findPromptInputs(platform) {
+    const matches = [];
+    const seen = new Set();
+
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLElement &&
+      isPlatformInput(platform, activeElement) &&
+      isVisibleInput(activeElement)
+    ) {
+      matches.push(activeElement);
+      seen.add(activeElement);
+    }
+
     for (const selector of platform.inputSelectors) {
       const candidates = Array.from(document.querySelectorAll(selector));
-      const visible = candidates.find(isVisibleInput);
+      for (const candidate of candidates) {
+        if (!(candidate instanceof HTMLElement)) {
+          continue;
+        }
+        if (seen.has(candidate) || !isVisibleInput(candidate)) {
+          continue;
+        }
+        matches.push(candidate);
+        seen.add(candidate);
+        if (matches.length >= 8) {
+          return matches;
+        }
+      }
+    }
+
+    return matches;
+  }
+
+  function findVisibleInputInScope(scope, platform) {
+    if (!scope || !(scope instanceof Element)) {
+      return null;
+    }
+
+    for (const selector of platform.inputSelectors) {
+      const candidates = Array.from(scope.querySelectorAll(selector));
+      const visible = candidates.find((candidate) => candidate instanceof HTMLElement && isVisibleInput(candidate));
       if (visible) {
         return visible;
       }
@@ -345,9 +406,10 @@
 
     const { settings, profile } = await getState();
     const analysis = analyzePrompt(prompt, settings.strictMode);
-    const { dependency } = await updatePromptStats(prompt);
+    const statsPromise = updatePromptStats(prompt);
 
     if (!settings.enableCoach) {
+      await statsPromise;
       return;
     }
 
@@ -366,21 +428,133 @@
       text: `Prompt quality score: ${analysis.score}/100 (Grade ${analysis.grade})`
     });
 
-    if (dependency >= settings.dependencyWarningThreshold) {
-      messages.push({
-        type: "warning",
-        text: `AI dependency is ${dependency}%. Try one manual debugging pass first.`
-      });
-    }
-
     const habitTip = buildHabitTip(profile, analysis);
     messages.push({ type: "info", text: habitTip });
 
     queueMessages(messages, settings);
+
+    const { dependency } = await statsPromise;
+    if (dependency >= settings.dependencyWarningThreshold) {
+      showCoachMessage(
+        `AI dependency is ${dependency}%. Try one manual debugging pass first.`,
+        "warning",
+        settings
+      );
+    }
   }
 
   function shouldTrackEnter(event) {
     return event.key === "Enter" && !event.shiftKey && !event.isComposing;
+  }
+
+  function isLikelySendButton(element) {
+    if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (element.matches("button[type='submit'],input[type='submit']")) {
+      return true;
+    }
+
+    const attributes = [
+      element.getAttribute("aria-label"),
+      element.getAttribute("title"),
+      element.getAttribute("data-testid"),
+      element.getAttribute("name"),
+      element.id,
+      element.textContent
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    if (!attributes) {
+      return false;
+    }
+
+    if (NON_SEND_BUTTON_HINTS.some((pattern) => pattern.test(attributes))) {
+      return false;
+    }
+
+    return SEND_BUTTON_HINTS.some((pattern) => pattern.test(attributes));
+  }
+
+  function resolvePromptInputFromTrigger(trigger, platform) {
+    if (!(trigger instanceof HTMLElement)) {
+      return null;
+    }
+
+    const form = trigger.closest("form");
+    if (form) {
+      const formInput = findVisibleInputInScope(form, platform);
+      if (formInput) {
+        return formInput;
+      }
+    }
+
+    const composer = trigger.closest("[data-testid*='composer'],[class*='composer'],[class*='prompt']");
+    if (composer) {
+      const composerInput = findVisibleInputInScope(composer, platform);
+      if (composerInput) {
+        return composerInput;
+      }
+    }
+
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLElement &&
+      isPlatformInput(platform, activeElement) &&
+      isVisibleInput(activeElement)
+    ) {
+      return activeElement;
+    }
+
+    const inputs = findPromptInputs(platform);
+    return inputs[0] || null;
+  }
+
+  function buildPromptSignature(prompt) {
+    return `${prompt.length}:${prompt.slice(0, 160)}:${prompt.slice(-80)}`;
+  }
+
+  function shouldSkipPrompt(prompt) {
+    const signature = buildPromptSignature(prompt);
+    const now = Date.now();
+
+    if (signature === lastPromptSignature && now - lastPromptAt < 1200) {
+      return true;
+    }
+
+    lastPromptSignature = signature;
+    lastPromptAt = now;
+    return false;
+  }
+
+  function submitPromptFromInput(input) {
+    const prompt = readPrompt(input).trim();
+    if (!prompt || shouldSkipPrompt(prompt)) {
+      return;
+    }
+
+    handlePrompt(prompt).catch((error) => {
+      console.error("AI Dev Coach prompt handling error", error);
+    });
+  }
+
+  function attachFormListener(input) {
+    const form = input.closest("form");
+    if (!form || attachedForms.has(form)) {
+      return;
+    }
+
+    form.addEventListener(
+      "submit",
+      () => {
+        submitPromptFromInput(input);
+      },
+      true
+    );
+
+    attachedForms.add(form);
   }
 
   function attachInputListener(input) {
@@ -395,29 +569,13 @@
           return;
         }
 
-        const prompt = readPrompt(input).trim();
-        if (!prompt) {
-          return;
-        }
-
-        const signature = `${prompt.length}:${prompt.slice(0, 140)}`;
-        const now = Date.now();
-
-        if (signature === lastPromptSignature && now - lastPromptAt < 1200) {
-          return;
-        }
-
-        lastPromptSignature = signature;
-        lastPromptAt = now;
-
-        handlePrompt(prompt).catch((error) => {
-          console.error("AI Dev Coach prompt handling error", error);
-        });
+        submitPromptFromInput(input);
       },
       true
     );
 
     attachedInputs.add(input);
+    attachFormListener(input);
   }
 
   function scanAndAttach() {
@@ -426,12 +584,8 @@
       return;
     }
 
-    const input = findPromptInput(platform);
-    if (!input) {
-      return;
-    }
-
-    attachInputListener(input);
+    const inputs = findPromptInputs(platform);
+    inputs.forEach((input) => attachInputListener(input));
   }
 
   function scheduleScan() {
@@ -455,6 +609,41 @@
     childList: true,
     subtree: true
   });
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      const button = event.target.closest("button,[role='button'],input[type='submit'],input[type='button']");
+      if (!(button instanceof HTMLElement) || !isLikelySendButton(button)) {
+        return;
+      }
+
+      const platform = detectPlatform();
+      if (!platform) {
+        return;
+      }
+
+      const input = resolvePromptInputFromTrigger(button, platform);
+      if (!input) {
+        return;
+      }
+
+      submitPromptFromInput(input);
+    },
+    true
+  );
+
+  document.addEventListener(
+    "focusin",
+    () => {
+      scheduleScan();
+    },
+    true
+  );
 
   scanAndAttach();
 })();

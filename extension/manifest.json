@@ -1,11 +1,18 @@
 {
   "manifest_version": 3,
   "name": "AI Dev Coach",
-  "version": "1.2.2",
+  "version": "1.2.4",
   "description": "Coach developers to use AI with better reasoning, prompting, and coding habits.",
+  "minimum_chrome_version": "114",
+  "homepage_url": "https://github.com/phamhungptithcm/ai-dev-coach",
+  "icons": {
+    "16": "assets/icon-16.png",
+    "32": "assets/icon-32.png",
+    "48": "assets/icon-48.png",
+    "128": "assets/icon-128.png"
+  },
   "permissions": [
-    "storage",
-    "activeTab"
+    "storage"
   ],
   "host_permissions": [
     "https://chat.openai.com/*",
@@ -19,7 +26,11 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup/popup.html"
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "assets/icon-16.png",
+      "32": "assets/icon-32.png"
+    }
   },
   "options_page": "options/options.html",
   "content_scripts": [

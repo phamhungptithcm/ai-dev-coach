@@ -23,11 +23,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-docs.txt
 
       - name: Install docs dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install mkdocs-material
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements-docs.txt
+
+      - name: Validate extension package structure
+        run: node scripts/validate-extension.mjs
 
       - name: Validate extension JavaScript syntax
         run: |
@@ -37,7 +42,16 @@ jobs:
           done
 
       - name: Validate extension manifest JSON
-        run: python -m json.tool extension/manifest.json >/dev/null
+        run: python3 -m json.tool extension/manifest.json >/dev/null
+
+      - name: Fail on junk files
+        run: |
+          set -euo pipefail
+          if find . -type f -name '.DS_Store' | grep -q .; then
+            echo "::error::Found .DS_Store files in repository:"
+            find . -type f -name '.DS_Store'
+            exit 1
+          fi
 
       - name: Build MkDocs site (strict)
-        run: mkdocs build --strict
+        run: python3 -m mkdocs build --strict

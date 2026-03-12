@@ -44,7 +44,15 @@ AI Dev Coach is designed to protect the learning loop:
 4. Click **Load unpacked**.
 5. Select the `extension/` directory.
 
-### 2. Documentation Format
+### 2. Run Production Validation Locally
+
+```bash
+node scripts/validate-extension.mjs
+find extension -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+python3 -m mkdocs build --strict
+```
+
+### 3. Documentation Format
 
 - All documentation is Markdown under `docs/`.
 - Docs site is built with MkDocs Material using `mkdocs.yml`.
@@ -83,6 +91,10 @@ Configure these repository secrets before a `main` release run:
 - `CWS_REFRESH_TOKEN`
 - `CWS_PUBLISHER_ID`
 - `CWS_EXTENSION_ID`
+
+Optional:
+
+- `CWS_PUBLISH_TARGET` (`default` or `trustedTesters`)
 
 The release workflow exchanges the refresh token for an access token using OAuth, then calls the Chrome Web Store API upload and publish endpoints.
 
