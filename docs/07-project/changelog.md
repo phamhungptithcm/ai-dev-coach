@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.2.10
+
+- added drag-to-reposition behavior for the in-page Live Coach bubble
+- persisted bubble position in local storage and restored placement after reload
+- clamped drag position to viewport to keep bubble visible on resize
+
+## v1.2.9
+
+- redesigned popup Live Monitoring into compact switch toggles with immediate auto-save
+- improved monitoring section labels for clearer hierarchy and faster scanning
+- updated docs home to show latest release tag and author profile summary
+
+## v1.2.8
+
+- refreshed popup, settings, and in-page coaching UI with pastel design system
+- introduced unified primary/secondary palette (`#9DCAEB`, `#C3EEFA`) across all extension surfaces
+- improved flow with cleaner button grouping, section hints, and elevated visual hierarchy
+- added smooth motion for entry/hover states with reduced-motion accessibility fallback
+
+## v1.2.7
+
+- added in-page Live Coach bubble with realtime prompt score and habit snapshot on AI chat sites
+- added prompt-analyzed runtime event bridge so UI updates immediately when user sends a prompt
+- persisted last runtime prompt evaluation in storage for stable state after page refresh
+- improved send-only tracking path to update live habit stats even when prompt-content reading is disabled
+
+## v1.2.6
+
+- added in-page Quick Prompt Builder launcher beside AI chat input on supported sites
+- added Build + Insert and Build + Send actions to auto-write prompt into chat composer
+- hardened auto-send behavior with retry logic and fallback Enter dispatch
+- isolated extension-owned UI from prompt/copy/paste monitors to prevent false tracking
+- connected quick-builder submit events to prompt analysis pipeline for reliable scoring/stats
+
 ## v1.2.5
 
 - added toggle controls for prompt listener and behavior monitor in popup and settings

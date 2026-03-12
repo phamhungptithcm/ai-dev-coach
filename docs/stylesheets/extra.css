@@ -1,3 +1,19 @@
 :root {
   --md-primary-fg-color: #0b3a53;
 }
+
+.latest-release-link {
+  display: inline-block;
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid #9dcaeb;
+  background: #c3eefa;
+  color: #0b3a53;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.latest-release-link:hover {
+  border-color: #7db7e3;
+  background: #b6e8f8;
+}

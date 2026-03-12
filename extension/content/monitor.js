@@ -1,4 +1,7 @@
 (() => {
+  const COACH_OWNED_SELECTOR = '[data-ai-coach-owned="true"]';
+  const PROMPT_ANALYZED_EVENT = "ai-dev-coach:prompt-analyzed";
+
   const PLATFORM_CONFIG = [
     {
       name: "ChatGPT",
@@ -59,6 +62,17 @@
     shortcutPrompts: 0
   };
 
+  const DEFAULT_RUNTIME_EVALUATION = {
+    score: null,
+    grade: "N/A",
+    warnings: [],
+    suggestions: [],
+    hasShortcutIntent: false,
+    hasIndependentAttempt: false,
+    promptPreview: "",
+    at: 0
+  };
+
   const ATTEMPT_HINTS = [
     /i tried/i,
     /i attempted/i,
@@ -115,6 +129,14 @@
     return new Promise((resolve) => chrome.storage.local.set(payload, resolve));
   }
 
+  function clean(value) {
+    return (value || "").trim();
+  }
+
+  function buildPromptPreview(prompt) {
+    return clean(prompt).replace(/\s+/g, " ").slice(0, 220);
+  }
+
   function mergeSettings(rawSettings) {
     return { ...DEFAULT_SETTINGS, ...(rawSettings || {}) };
   }
@@ -151,8 +173,19 @@
     );
   }
 
+  function isCoachOwnedElement(element) {
+    if (!(element instanceof Element)) {
+      return false;
+    }
+    return !!element.closest(COACH_OWNED_SELECTOR);
+  }
+
   function isVisibleInput(element) {
     if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (isCoachOwnedElement(element)) {
       return false;
     }
 
@@ -233,6 +266,10 @@
 
   function resolvePromptInputFromEventTarget(target, platform) {
     if (!(target instanceof Element)) {
+      return null;
+    }
+
+    if (isCoachOwnedElement(target)) {
       return null;
     }
 
@@ -322,6 +359,43 @@
     return "D";
   }
 
+  function computeDependency(stats) {
+    const total = stats.aiRequests + stats.manualAttempts;
+    if (total === 0) {
+      return 0;
+    }
+    return Math.round((stats.aiRequests / total) * 100);
+  }
+
+  function emitPromptAnalyzed(payload) {
+    document.dispatchEvent(
+      new CustomEvent(PROMPT_ANALYZED_EVENT, {
+        detail: payload
+      })
+    );
+  }
+
+  function buildRuntimeEvaluation(prompt, analysis) {
+    if (!analysis) {
+      return {
+        ...DEFAULT_RUNTIME_EVALUATION,
+        promptPreview: buildPromptPreview(prompt),
+        at: Date.now()
+      };
+    }
+
+    return {
+      score: analysis.score,
+      grade: analysis.grade,
+      warnings: analysis.warnings.slice(0, 4),
+      suggestions: analysis.suggestions.slice(0, 4),
+      hasShortcutIntent: analysis.hasShortcutIntent,
+      hasIndependentAttempt: analysis.hasIndependentAttempt,
+      promptPreview: buildPromptPreview(prompt),
+      at: Date.now()
+    };
+  }
+
   function analyzePrompt(prompt, strictMode) {
     let score = 0;
     const warnings = [];
@@ -397,10 +471,7 @@
 
     await storageSet({ stats });
 
-    const total = stats.aiRequests + stats.manualAttempts;
-    const dependency = total > 0 ? Math.round((stats.aiRequests / total) * 100) : 0;
-
-    return { stats, dependency };
+    return { stats, dependency: computeDependency(stats) };
   }
 
   async function updateSendOnlyStats() {
@@ -408,7 +479,25 @@
     const stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
     stats.aiRequests += 1;
     await storageSet({ stats });
-    return stats;
+    return { stats, dependency: computeDependency(stats) };
+  }
+
+  async function persistRuntimeEvaluation(runtimeEvaluation) {
+    await storageSet({ lastRuntimePromptEvaluation: runtimeEvaluation });
+  }
+
+  async function handleSendOnly() {
+    if (shouldSkipSendPulse()) {
+      return;
+    }
+
+    const { stats, dependency } = await updateSendOnlyStats();
+    emitPromptAnalyzed({
+      at: Date.now(),
+      sendOnly: true,
+      stats,
+      dependency
+    });
   }
 
   function buildHabitTip(profile, analysis) {
@@ -475,10 +564,20 @@
 
     const { settings, profile } = await getState();
     const analysis = analyzePrompt(prompt, settings.strictMode);
+    const runtimeEvaluation = buildRuntimeEvaluation(prompt, analysis);
     const statsPromise = updatePromptStats(prompt, analysis);
+    const runtimePromise = persistRuntimeEvaluation(runtimeEvaluation);
 
     if (!settings.enableCoach || !settings.promptListenerEnabled || !settings.readPromptContentEnabled) {
-      await statsPromise;
+      const { stats, dependency } = await statsPromise;
+      await runtimePromise;
+      emitPromptAnalyzed({
+        at: runtimeEvaluation.at,
+        promptPreview: runtimeEvaluation.promptPreview,
+        analysis: runtimeEvaluation,
+        stats,
+        dependency
+      });
       return;
     }
 
@@ -500,7 +599,17 @@
     messages.push({ type: "info", text: buildHabitTip(profile, analysis) });
     queueMessages(messages, settings);
 
-    const { dependency } = await statsPromise;
+    const { stats, dependency } = await statsPromise;
+    await runtimePromise;
+
+    emitPromptAnalyzed({
+      at: runtimeEvaluation.at,
+      promptPreview: runtimeEvaluation.promptPreview,
+      analysis: runtimeEvaluation,
+      stats,
+      dependency
+    });
+
     if (dependency >= settings.dependencyWarningThreshold) {
       showCoachMessage(
         `AI dependency is ${dependency}%. Try one manual debugging pass first.`,
@@ -547,6 +656,10 @@
 
   function resolvePromptInputFromTrigger(trigger, platform) {
     if (!(trigger instanceof HTMLElement)) {
+      return null;
+    }
+
+    if (isCoachOwnedElement(trigger)) {
       return null;
     }
 
@@ -613,10 +726,7 @@
     }
 
     if (!settings.readPromptContentEnabled) {
-      if (shouldSkipSendPulse()) {
-        return;
-      }
-      await updateSendOnlyStats();
+      await handleSendOnly();
       return;
     }
 
@@ -626,10 +736,7 @@
 
     const prompt = readPrompt(input).trim();
     if (!prompt) {
-      if (shouldSkipSendPulse()) {
-        return;
-      }
-      await updateSendOnlyStats();
+      await handleSendOnly();
       return;
     }
 
@@ -747,6 +854,9 @@
       }
 
       const formTarget = event.target instanceof Element ? event.target : null;
+      if (formTarget && isCoachOwnedElement(formTarget)) {
+        return;
+      }
       const scopedInput = formTarget ? findVisibleInputInScope(formTarget, platform) : null;
       const input = scopedInput || resolveActivePromptInput(platform);
 
@@ -761,6 +871,10 @@
     "click",
     (event) => {
       if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      if (isCoachOwnedElement(event.target)) {
         return;
       }
 
@@ -781,6 +895,39 @@
 
       submitPromptFromInput(input).catch((error) => {
         console.error("AI Dev Coach send-button submission error", error);
+      });
+    },
+    true
+  );
+
+  document.addEventListener(
+    "ai-dev-coach:quick-builder-submit",
+    (event) => {
+      const prompt = clean(event?.detail?.prompt || "");
+      if (!prompt) {
+        return;
+      }
+
+      const analyzeFromBuilder = async () => {
+        const settings = await getCurrentSettings();
+        if (!settings.promptListenerEnabled) {
+          return;
+        }
+
+        if (!settings.readPromptContentEnabled) {
+          await handleSendOnly();
+          return;
+        }
+
+        if (shouldSkipPrompt(prompt)) {
+          return;
+        }
+
+        await handlePrompt(prompt);
+      };
+
+      analyzeFromBuilder().catch((error) => {
+        console.error("AI Dev Coach quick-builder submission error", error);
       });
     },
     true

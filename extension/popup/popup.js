@@ -741,8 +741,12 @@ async function loadState() {
 }
 
 function wireEvents() {
-  document.getElementById("saveMonitoringBtn").addEventListener("click", () => {
-    saveMonitoring().catch(() => setStatus(monitorStatus, "Unable to save monitoring settings.", false));
+  [promptListenerToggle, behaviorMonitorToggle].forEach((toggle) => {
+    toggle.addEventListener("change", () => {
+      saveMonitoring().catch(() => {
+        setStatus(monitorStatus, "Unable to save monitoring settings.", false);
+      });
+    });
   });
 
   document.getElementById("saveProfileBtn").addEventListener("click", () => {

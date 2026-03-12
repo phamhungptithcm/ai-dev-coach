@@ -15,6 +15,7 @@
 
     <section class="card">
       <h2>Coaching Controls</h2>
+      <p class="hint">Choose exactly what the extension monitors and coaches in AI chat windows.</p>
       <label class="checkbox">
         <input type="checkbox" id="enableCoach" />
         Enable coaching overlays on AI chat platforms
@@ -58,6 +59,7 @@
 
     <section class="card">
       <h2>Warning Thresholds</h2>
+      <p class="hint">Tune sensitivity based on your team workflow and training goals.</p>
 
       <label for="dependencyThreshold">AI dependency warning threshold (%)</label>
       <input id="dependencyThreshold" type="number" min="40" max="95" />
@@ -77,8 +79,10 @@
 
     <section class="card">
       <h2>Data Controls</h2>
-      <button id="saveBtn" class="button button--primary">Save Settings</button>
-      <button id="resetStatsBtn" class="button">Reset Habit Stats</button>
+      <div class="button-row">
+        <button id="saveBtn" class="button button--primary">Save Settings</button>
+        <button id="resetStatsBtn" class="button">Reset Habit Stats</button>
+      </div>
       <p id="status" class="status"></p>
     </section>
   </main>

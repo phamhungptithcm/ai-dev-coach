@@ -1,4 +1,6 @@
 (() => {
+  const COACH_OWNED_SELECTOR = '[data-ai-coach-owned="true"]';
+
   const DEFAULT_SETTINGS = {
     enableCoach: true,
     promptListenerEnabled: true,
@@ -94,8 +96,19 @@
     logger("AI Dev Coach:", message);
   }
 
+  function isCoachOwnedElement(element) {
+    if (!(element instanceof Element)) {
+      return false;
+    }
+    return !!element.closest(COACH_OWNED_SELECTOR);
+  }
+
   function isEditableTarget(target) {
     if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (isCoachOwnedElement(target)) {
       return false;
     }
 
@@ -135,6 +148,10 @@
 
   function isLikelyAssistantOutputSelection(target) {
     if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (isCoachOwnedElement(target)) {
       return false;
     }
 
@@ -213,6 +230,10 @@
 
   function pickLongestAssistantText(node) {
     if (!(node instanceof HTMLElement)) {
+      return "";
+    }
+
+    if (isCoachOwnedElement(node)) {
       return "";
     }
 
@@ -403,6 +424,10 @@
           return;
         }
 
+        if (isCoachOwnedElement(sourceElement)) {
+          return;
+        }
+
         if (!isLikelyAssistantOutputSelection(sourceElement)) {
           return;
         }
@@ -427,6 +452,10 @@
         }
 
         if (!(event.target instanceof Element)) {
+          return;
+        }
+
+        if (isCoachOwnedElement(event.target)) {
           return;
         }
 
@@ -463,6 +492,10 @@
         return;
       }
 
+      if (event.target instanceof HTMLElement && isCoachOwnedElement(event.target)) {
+        return;
+      }
+
       const clipboard = event.clipboardData;
       if (!clipboard) {
         return;
@@ -489,6 +522,10 @@
           }
 
           if (!(node instanceof HTMLElement)) {
+            continue;
+          }
+
+          if (isCoachOwnedElement(node)) {
             continue;
           }
 
