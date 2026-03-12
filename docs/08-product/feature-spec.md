@@ -41,6 +41,11 @@ Analyzes each submitted prompt for:
 
 Outputs a quality score and targeted feedback.
 
+Trigger behavior:
+
+- run immediately when user presses `Enter`
+- run immediately when user clicks AI platform send/submit button
+
 ## 4. Habit and Dependency Coaching
 
 Tracks local counters:
@@ -54,6 +59,8 @@ Displays warning when dependency exceeds configured threshold.
 ## 5. Copy-Paste Risk Alerts
 
 When large multi-line code pastes are detected, the user gets coaching prompts to review and test before using pasted code.
+
+If a user copies long AI-generated output and pastes it back into a prompt composer, the extension warns them to rewrite with their own reasoning before sending.
 
 ## 6. Settings and Controls
 
