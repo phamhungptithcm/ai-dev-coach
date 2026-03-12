@@ -1,4 +1,6 @@
 (() => {
+  const COACH_OWNED_SELECTOR = '[data-ai-coach-owned="true"]';
+
   const PLATFORM_CONFIG = [
     {
       name: "ChatGPT",
@@ -115,6 +117,10 @@
     return new Promise((resolve) => chrome.storage.local.set(payload, resolve));
   }
 
+  function clean(value) {
+    return (value || "").trim();
+  }
+
   function mergeSettings(rawSettings) {
     return { ...DEFAULT_SETTINGS, ...(rawSettings || {}) };
   }
@@ -151,8 +157,19 @@
     );
   }
 
+  function isCoachOwnedElement(element) {
+    if (!(element instanceof Element)) {
+      return false;
+    }
+    return !!element.closest(COACH_OWNED_SELECTOR);
+  }
+
   function isVisibleInput(element) {
     if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (isCoachOwnedElement(element)) {
       return false;
     }
 
@@ -233,6 +250,10 @@
 
   function resolvePromptInputFromEventTarget(target, platform) {
     if (!(target instanceof Element)) {
+      return null;
+    }
+
+    if (isCoachOwnedElement(target)) {
       return null;
     }
 
@@ -550,6 +571,10 @@
       return null;
     }
 
+    if (isCoachOwnedElement(trigger)) {
+      return null;
+    }
+
     const form = trigger.closest("form");
     if (form) {
       const formInput = findVisibleInputInScope(form, platform);
@@ -747,6 +772,9 @@
       }
 
       const formTarget = event.target instanceof Element ? event.target : null;
+      if (formTarget && isCoachOwnedElement(formTarget)) {
+        return;
+      }
       const scopedInput = formTarget ? findVisibleInputInScope(formTarget, platform) : null;
       const input = scopedInput || resolveActivePromptInput(platform);
 
@@ -761,6 +789,10 @@
     "click",
     (event) => {
       if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      if (isCoachOwnedElement(event.target)) {
         return;
       }
 
@@ -781,6 +813,42 @@
 
       submitPromptFromInput(input).catch((error) => {
         console.error("AI Dev Coach send-button submission error", error);
+      });
+    },
+    true
+  );
+
+  document.addEventListener(
+    "ai-dev-coach:quick-builder-submit",
+    (event) => {
+      const prompt = clean(event?.detail?.prompt || "");
+      if (!prompt) {
+        return;
+      }
+
+      const analyzeFromBuilder = async () => {
+        const settings = await getCurrentSettings();
+        if (!settings.promptListenerEnabled) {
+          return;
+        }
+
+        if (!settings.readPromptContentEnabled) {
+          if (shouldSkipSendPulse()) {
+            return;
+          }
+          await updateSendOnlyStats();
+          return;
+        }
+
+        if (shouldSkipPrompt(prompt)) {
+          return;
+        }
+
+        await handlePrompt(prompt);
+      };
+
+      analyzeFromBuilder().catch((error) => {
+        console.error("AI Dev Coach quick-builder submission error", error);
       });
     },
     true

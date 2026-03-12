@@ -111,9 +111,18 @@ Grade mapping:
 - `profile`
 - `stats`
 
+## In-Page Quick Builder (Chat Window)
+
+- The extension injects a floating `Prompt Builder` button beside the active AI chat composer.
+- Clicking the button opens a compact form with the same template + required fields as popup builder.
+- `Build + Insert` writes the generated prompt into the chat input.
+- `Build + Send` writes the prompt and triggers send automatically.
+- Works on ChatGPT, Claude, Gemini, Grok, and DeepSeek pages.
+
 ## Current Implementation Files
 
 - `extension/popup/popup.html`
 - `extension/popup/popup.css`
 - `extension/popup/popup.js`
+- `extension/content/quickBuilder.js`
 - `extension/content/monitor.js`

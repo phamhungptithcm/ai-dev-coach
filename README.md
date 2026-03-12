@@ -19,6 +19,7 @@ AI Dev Coach is designed to protect the learning loop:
 
 - Profile onboarding in popup (`job`, `skill`, `habit goal`)
 - Prompt Builder with required fields (`task`, `context`, `what you tried`)
+- In-page Quick Prompt Builder button beside AI chat composer (`Build + Insert`, `Build + Send`)
 - 6 prompt templates: debugging, code review, system design, refactoring, performance optimization, learning
 - Prompt scoring algorithm with grade + breakdown (`completeness`, `specificity`, `reasoning`, `learning safety`, `template fit`)
 - Real-time prompt quality scoring on AI chat websites

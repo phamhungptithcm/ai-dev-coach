@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.2.6
+
+- added in-page Quick Prompt Builder launcher beside AI chat input on supported sites
+- added Build + Insert and Build + Send actions to auto-write prompt into chat composer
+- hardened auto-send behavior with retry logic and fallback Enter dispatch
+- isolated extension-owned UI from prompt/copy/paste monitors to prevent false tracking
+- connected quick-builder submit events to prompt analysis pipeline for reliable scoring/stats
+
 ## v1.2.5
 
 - added toggle controls for prompt listener and behavior monitor in popup and settings
