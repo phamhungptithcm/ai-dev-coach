@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.2.12
+
+- fixed prompt capture reliability on ChatGPT by snapshotting composer content before send clears input
+- expanded composer selectors for modern editable chat inputs across supported AI platforms
+- fixed Live Coach bubble visibility so monitoring HUD remains visible when monitoring toggles are enabled
+- improved popup monitoring save flow to auto-enable coach overlays when monitoring is turned on
+
 ## v1.2.11
 
 - improved in-page Prompt Builder launcher visibility with fallback fixed position when chat input is not detected
