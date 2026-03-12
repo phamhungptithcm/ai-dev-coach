@@ -12,6 +12,8 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    env:
+      REPO_ADMIN_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,15 +66,15 @@ jobs:
             echo "::warning::Could not enable auto-merge with default token."
 
       - name: Admin merge fallback (optional)
-        if: steps.diff.outputs.ahead != '0' && secrets.REPO_ADMIN_TOKEN != ''
+        if: steps.diff.outputs.ahead != '0' && env.REPO_ADMIN_TOKEN != ''
         env:
-          GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
+          GH_TOKEN: ${{ env.REPO_ADMIN_TOKEN }}
         run: |
           set -euo pipefail
           gh pr merge "${{ steps.pr.outputs.number }}" --merge --admin || \
             echo "::warning::Admin merge fallback did not run (checks/restrictions may still block)."
 
       - name: Report missing admin token
-        if: steps.diff.outputs.ahead != '0' && secrets.REPO_ADMIN_TOKEN == ''
+        if: steps.diff.outputs.ahead != '0' && env.REPO_ADMIN_TOKEN == ''
         run: |
           echo "::warning::REPO_ADMIN_TOKEN is not set. Weekly sync PR was created/reused and auto-merge was requested, but admin fallback merge is disabled."
