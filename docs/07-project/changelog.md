@@ -6,6 +6,8 @@
 - added privacy controls for prompt-content and copied-content reading
 - added read-before-copy timing monitor with countdown reminders and fast-copy alerts
 - added stats for AI copy events and fast copy behavior
+- added bad-prompt and shortcut-prompt counters in habit snapshot
+- improved send detection with global Enter/submit fallback listeners
 
 ## v1.2.4
 

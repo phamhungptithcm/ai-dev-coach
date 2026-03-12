@@ -54,7 +54,9 @@
     manualAttempts: 0,
     largePastes: 0,
     aiCopies: 0,
-    fastAiCopies: 0
+    fastAiCopies: 0,
+    badPrompts: 0,
+    shortcutPrompts: 0
   };
 
   const ATTEMPT_HINTS = [
@@ -102,6 +104,7 @@
   const attachedForms = new WeakSet();
   let lastPromptSignature = "";
   let lastPromptAt = 0;
+  let lastSendPulseAt = 0;
   let scanQueued = false;
 
   function storageGet(keys) {
@@ -228,6 +231,35 @@
     return null;
   }
 
+  function resolvePromptInputFromEventTarget(target, platform) {
+    if (!(target instanceof Element)) {
+      return null;
+    }
+
+    for (const selector of platform.inputSelectors) {
+      const candidate = target.closest(selector);
+      if (candidate instanceof HTMLElement && isVisibleInput(candidate)) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  function resolveActivePromptInput(platform) {
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLElement &&
+      isPlatformInput(platform, activeElement) &&
+      isVisibleInput(activeElement)
+    ) {
+      return activeElement;
+    }
+
+    const inputs = findPromptInputs(platform);
+    return inputs[0] || null;
+  }
+
   function readPrompt(input) {
     if (!input) {
       return "";
@@ -348,13 +380,19 @@
     };
   }
 
-  async function updatePromptStats(prompt) {
+  async function updatePromptStats(prompt, analysis) {
     const data = await storageGet(["stats"]);
     const stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
 
     stats.aiRequests += 1;
     if (hasIndependentAttempt(prompt)) {
       stats.manualAttempts += 1;
+    }
+    if (analysis && analysis.score < 60) {
+      stats.badPrompts += 1;
+    }
+    if (analysis && analysis.hasShortcutIntent) {
+      stats.shortcutPrompts += 1;
     }
 
     await storageSet({ stats });
@@ -363,6 +401,14 @@
     const dependency = total > 0 ? Math.round((stats.aiRequests / total) * 100) : 0;
 
     return { stats, dependency };
+  }
+
+  async function updateSendOnlyStats() {
+    const data = await storageGet(["stats"]);
+    const stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
+    stats.aiRequests += 1;
+    await storageSet({ stats });
+    return stats;
   }
 
   function buildHabitTip(profile, analysis) {
@@ -429,7 +475,7 @@
 
     const { settings, profile } = await getState();
     const analysis = analyzePrompt(prompt, settings.strictMode);
-    const statsPromise = updatePromptStats(prompt);
+    const statsPromise = updatePromptStats(prompt, analysis);
 
     if (!settings.enableCoach || !settings.promptListenerEnabled || !settings.readPromptContentEnabled) {
       await statsPromise;
@@ -550,14 +596,44 @@
     return false;
   }
 
+  function shouldSkipSendPulse() {
+    const now = Date.now();
+    if (now - lastSendPulseAt < 900) {
+      return true;
+    }
+
+    lastSendPulseAt = now;
+    return false;
+  }
+
   async function submitPromptFromInput(input) {
     const settings = await getCurrentSettings();
-    if (!settings.enableCoach || !settings.promptListenerEnabled || !settings.readPromptContentEnabled) {
+    if (!settings.promptListenerEnabled) {
+      return;
+    }
+
+    if (!settings.readPromptContentEnabled) {
+      if (shouldSkipSendPulse()) {
+        return;
+      }
+      await updateSendOnlyStats();
+      return;
+    }
+
+    if (!input) {
       return;
     }
 
     const prompt = readPrompt(input).trim();
-    if (!prompt || shouldSkipPrompt(prompt)) {
+    if (!prompt) {
+      if (shouldSkipSendPulse()) {
+        return;
+      }
+      await updateSendOnlyStats();
+      return;
+    }
+
+    if (shouldSkipPrompt(prompt)) {
       return;
     }
 
@@ -638,6 +714,50 @@
   });
 
   document.addEventListener(
+    "keydown",
+    (event) => {
+      if (!shouldTrackEnter(event)) {
+        return;
+      }
+
+      const platform = detectPlatform();
+      if (!platform) {
+        return;
+      }
+
+      const inputFromTarget = resolvePromptInputFromEventTarget(event.target, platform);
+      const input = inputFromTarget || resolveActivePromptInput(platform);
+      if (!input) {
+        return;
+      }
+
+      submitPromptFromInput(input).catch((error) => {
+        console.error("AI Dev Coach global keydown submission error", error);
+      });
+    },
+    true
+  );
+
+  document.addEventListener(
+    "submit",
+    (event) => {
+      const platform = detectPlatform();
+      if (!platform) {
+        return;
+      }
+
+      const formTarget = event.target instanceof Element ? event.target : null;
+      const scopedInput = formTarget ? findVisibleInputInScope(formTarget, platform) : null;
+      const input = scopedInput || resolveActivePromptInput(platform);
+
+      submitPromptFromInput(input).catch((error) => {
+        console.error("AI Dev Coach global form submission error", error);
+      });
+    },
+    true
+  );
+
+  document.addEventListener(
     "click",
     (event) => {
       if (!(event.target instanceof Element)) {
@@ -654,7 +774,7 @@
         return;
       }
 
-      const input = resolvePromptInputFromTrigger(button, platform);
+      const input = resolvePromptInputFromTrigger(button, platform) || resolveActivePromptInput(platform);
       if (!input) {
         return;
       }

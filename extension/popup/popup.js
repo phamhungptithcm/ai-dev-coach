@@ -209,7 +209,9 @@ const DEFAULT_STATS = {
   manualAttempts: 0,
   largePastes: 0,
   aiCopies: 0,
-  fastAiCopies: 0
+  fastAiCopies: 0,
+  badPrompts: 0,
+  shortcutPrompts: 0
 };
 
 const DEFAULT_TEMPLATE_KEY = "debugging";
@@ -386,7 +388,7 @@ function fillMonitoring(settings) {
 
 function renderStats(stats) {
   const dependency = computeDependency(stats);
-  habitStats.textContent = `AI requests: ${stats.aiRequests} | Manual attempts: ${stats.manualAttempts} | Dependency: ${dependency}% | Large pastes: ${stats.largePastes} | AI copies: ${stats.aiCopies} | Fast copies: ${stats.fastAiCopies}`;
+  habitStats.textContent = `AI requests: ${stats.aiRequests} | Manual attempts: ${stats.manualAttempts} | Dependency: ${dependency}% | Bad prompts: ${stats.badPrompts} | Shortcut prompts: ${stats.shortcutPrompts} | Large pastes: ${stats.largePastes} | AI copies: ${stats.aiCopies} | Fast copies: ${stats.fastAiCopies}`;
 }
 
 function gradeFromScore(score) {

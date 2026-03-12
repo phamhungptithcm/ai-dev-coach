@@ -25,7 +25,9 @@ const DEFAULT_STATS = {
   manualAttempts: 0,
   largePastes: 0,
   aiCopies: 0,
-  fastAiCopies: 0
+  fastAiCopies: 0,
+  badPrompts: 0,
+  shortcutPrompts: 0
 };
 
 const DEFAULT_TEMPLATE = "debugging";
