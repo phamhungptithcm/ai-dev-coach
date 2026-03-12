@@ -14,6 +14,20 @@
     </header>
 
     <section class="card">
+      <h2>Live Monitoring</h2>
+      <label class="checkbox-row">
+        <input id="promptListenerToggle" type="checkbox" />
+        Enable prompt listener on send
+      </label>
+      <label class="checkbox-row">
+        <input id="behaviorMonitorToggle" type="checkbox" />
+        Enable behavior monitor (copy/paste alerts)
+      </label>
+      <button id="saveMonitoringBtn" class="button">Save Monitoring</button>
+      <p id="monitorStatus" class="status"></p>
+    </section>
+
+    <section class="card">
       <h2>Developer Profile</h2>
       <label for="roleInput">Job / Role</label>
       <input id="roleInput" type="text" placeholder="Frontend Developer" />

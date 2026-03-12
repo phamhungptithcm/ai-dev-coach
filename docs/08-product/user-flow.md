@@ -37,3 +37,9 @@ Submission signals:
 1. User copies a long assistant response.
 2. User pastes that content into a prompt composer.
 3. Extension warns user to rewrite with personal reasoning and verification steps before sending.
+
+## Risk Event: Fast Copy After AI Output
+
+1. AI produces a long response.
+2. Extension starts a read-time countdown reminder.
+3. If user copies too quickly (Ctrl+C or copy button), extension shows immediate warning with remaining read time.

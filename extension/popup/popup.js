@@ -199,10 +199,17 @@ const DEFAULT_PROFILE = {
   habitGoals: ""
 };
 
+const DEFAULT_SETTINGS = {
+  promptListenerEnabled: true,
+  behaviorMonitorEnabled: true
+};
+
 const DEFAULT_STATS = {
   aiRequests: 0,
   manualAttempts: 0,
-  largePastes: 0
+  largePastes: 0,
+  aiCopies: 0,
+  fastAiCopies: 0
 };
 
 const DEFAULT_TEMPLATE_KEY = "debugging";
@@ -225,7 +232,10 @@ const requiredChecklist = document.getElementById("requiredChecklist");
 const generatedPrompt = document.getElementById("generatedPrompt");
 const profileStatus = document.getElementById("profileStatus");
 const promptStatus = document.getElementById("promptStatus");
+const monitorStatus = document.getElementById("monitorStatus");
 const habitStats = document.getElementById("habitStats");
+const promptListenerToggle = document.getElementById("promptListenerToggle");
+const behaviorMonitorToggle = document.getElementById("behaviorMonitorToggle");
 const promptScoreValue = document.getElementById("promptScoreValue");
 const promptScoreGrade = document.getElementById("promptGrade");
 const promptScoreSummary = document.getElementById("promptScoreSummary");
@@ -295,6 +305,13 @@ function readProfileForm() {
   };
 }
 
+function readMonitoringForm() {
+  return {
+    promptListenerEnabled: !!promptListenerToggle.checked,
+    behaviorMonitorEnabled: !!behaviorMonitorToggle.checked
+  };
+}
+
 function readPromptForm() {
   return {
     task: clean(taskInput.value),
@@ -315,9 +332,14 @@ function fillProfile(profile) {
   habitInput.value = profile.habitGoals || "";
 }
 
+function fillMonitoring(settings) {
+  promptListenerToggle.checked = !!settings.promptListenerEnabled;
+  behaviorMonitorToggle.checked = !!settings.behaviorMonitorEnabled;
+}
+
 function renderStats(stats) {
   const dependency = computeDependency(stats);
-  habitStats.textContent = `AI requests: ${stats.aiRequests} | Manual attempts: ${stats.manualAttempts} | Dependency: ${dependency}% | Large pastes: ${stats.largePastes}`;
+  habitStats.textContent = `AI requests: ${stats.aiRequests} | Manual attempts: ${stats.manualAttempts} | Dependency: ${dependency}% | Large pastes: ${stats.largePastes} | AI copies: ${stats.aiCopies} | Fast copies: ${stats.fastAiCopies}`;
 }
 
 function gradeFromScore(score) {
@@ -542,6 +564,17 @@ async function saveProfile() {
   setStatus(profileStatus, "Profile saved.", true);
 }
 
+async function saveMonitoring() {
+  const data = await storageGet(["settings"]);
+  const nextSettings = {
+    ...DEFAULT_SETTINGS,
+    ...(data.settings || {}),
+    ...readMonitoringForm()
+  };
+  await storageSet({ settings: nextSettings });
+  setStatus(monitorStatus, "Monitoring settings saved.", true);
+}
+
 async function logManualAttempt() {
   const data = await storageGet(["stats"]);
   const stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
@@ -624,6 +657,7 @@ function resetScoreCard() {
 
 async function loadState() {
   const data = await storageGet([
+    "settings",
     "profile",
     "stats",
     "selectedTemplate",
@@ -631,12 +665,14 @@ async function loadState() {
     "lastPromptAnalysis"
   ]);
 
+  const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
   const profile = { ...DEFAULT_PROFILE, ...(data.profile || {}) };
   const stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
   const selectedTemplate = TEMPLATES[data.selectedTemplate]
     ? data.selectedTemplate
     : DEFAULT_TEMPLATE_KEY;
 
+  fillMonitoring(settings);
   fillProfile(profile);
   renderTemplates(selectedTemplate);
   renderStats(stats);
@@ -654,6 +690,10 @@ async function loadState() {
 }
 
 function wireEvents() {
+  document.getElementById("saveMonitoringBtn").addEventListener("click", () => {
+    saveMonitoring().catch(() => setStatus(monitorStatus, "Unable to save monitoring settings.", false));
+  });
+
   document.getElementById("saveProfileBtn").addEventListener("click", () => {
     saveProfile().catch(() => setStatus(profileStatus, "Unable to save profile.", false));
   });

@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.2.5
+
+- added toggle controls for prompt listener and behavior monitor in popup and settings
+- added privacy controls for prompt-content and copied-content reading
+- added read-before-copy timing monitor with countdown reminders and fast-copy alerts
+- added stats for AI copy events and fast copy behavior
+
 ## v1.2.4
 
 - added immediate prompt analysis on send-button click across supported AI chat UIs

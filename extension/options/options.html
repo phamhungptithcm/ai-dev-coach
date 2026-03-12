@@ -21,6 +21,36 @@
       </label>
 
       <label class="checkbox">
+        <input type="checkbox" id="promptListenerEnabled" />
+        Enable prompt listener (analyze content when user sends to AI)
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" id="behaviorMonitorEnabled" />
+        Enable behavior monitor (copy/paste and risky habit detection)
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" id="readPromptContentEnabled" />
+        Allow reading prompt content for scoring and coaching
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" id="readCopiedContentEnabled" />
+        Allow reading copied AI output for copy-risk detection
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" id="readBeforeCopyEnabled" />
+        Warn when user copies AI output too quickly
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" id="showOutputCountdown" />
+        Show countdown reminder after AI outputs response
+      </label>
+
+      <label class="checkbox">
         <input type="checkbox" id="strictMode" />
         Strict mode (strong warning when prompt asks for shortcuts)
       </label>
@@ -34,6 +64,12 @@
 
       <label for="pasteThreshold">Large paste threshold (characters)</label>
       <input id="pasteThreshold" type="number" min="120" max="2000" />
+
+      <label for="longCopyThreshold">Long AI copy threshold (characters)</label>
+      <input id="longCopyThreshold" type="number" min="180" max="4000" />
+
+      <label for="minReadBeforeCopySeconds">Minimum read time before copy (seconds)</label>
+      <input id="minReadBeforeCopySeconds" type="number" min="5" max="180" />
 
       <label for="overlayDuration">Overlay duration (milliseconds)</label>
       <input id="overlayDuration" type="number" min="2500" max="15000" />
