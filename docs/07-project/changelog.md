@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.10
+
+- added drag-to-reposition behavior for the in-page Live Coach bubble
+- persisted bubble position in local storage and restored placement after reload
+- clamped drag position to viewport to keep bubble visible on resize
+
 ## v1.2.9
 
 - redesigned popup Live Monitoring into compact switch toggles with immediate auto-save
