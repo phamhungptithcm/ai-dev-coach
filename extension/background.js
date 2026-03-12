@@ -28,6 +28,20 @@ const VALID_TEMPLATES = new Set([
   "learning"
 ]);
 
+function mergeDefaults(defaults, current) {
+  if (!current || typeof current !== "object" || Array.isArray(current)) {
+    return { ...defaults };
+  }
+  return { ...defaults, ...current };
+}
+
+function hasChanged(merged, current) {
+  if (!current || typeof current !== "object" || Array.isArray(current)) {
+    return true;
+  }
+  return Object.keys(merged).some((key) => merged[key] !== current[key]);
+}
+
 async function ensureDefaults() {
   const data = await chrome.storage.local.get([
     "settings",
@@ -36,13 +50,23 @@ async function ensureDefaults() {
     "selectedTemplate"
   ]);
 
-  const mergedSettings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
-  const mergedProfile = { ...DEFAULT_PROFILE, ...(data.profile || {}) };
-  const mergedStats = { ...DEFAULT_STATS, ...(data.stats || {}) };
+  const mergedSettings = mergeDefaults(DEFAULT_SETTINGS, data.settings);
+  const mergedProfile = mergeDefaults(DEFAULT_PROFILE, data.profile);
+  const mergedStats = mergeDefaults(DEFAULT_STATS, data.stats);
 
   const selectedTemplate = VALID_TEMPLATES.has(data.selectedTemplate)
     ? data.selectedTemplate
     : DEFAULT_TEMPLATE;
+
+  const shouldUpdate =
+    hasChanged(mergedSettings, data.settings) ||
+    hasChanged(mergedProfile, data.profile) ||
+    hasChanged(mergedStats, data.stats) ||
+    selectedTemplate !== data.selectedTemplate;
+
+  if (!shouldUpdate) {
+    return;
+  }
 
   const nextState = {
     settings: mergedSettings,

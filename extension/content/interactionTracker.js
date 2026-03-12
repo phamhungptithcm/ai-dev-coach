@@ -11,6 +11,9 @@
     largePastes: 0
   };
 
+  const WARNING_COOLDOWN_MS = 3000;
+  let lastWarningAt = 0;
+
   function storageGet(keys) {
     return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
   }
@@ -31,13 +34,55 @@
     return hasMultiLine && codeSignals.some((pattern) => pattern.test(text));
   }
 
-  function showWarning(message, settings) {
+  function showWarning(message, settings, options = {}) {
+    const force = !!options.force;
+    const now = Date.now();
+    if (!force && now - lastWarningAt < WARNING_COOLDOWN_MS) {
+      return;
+    }
+    lastWarningAt = now;
+
     if (window.AIDevCoachOverlay && typeof window.AIDevCoachOverlay.show === "function") {
       window.AIDevCoachOverlay.show(message, "warning", settings.overlayDurationMs || 6500);
       return;
     }
 
-    alert(message);
+    console.warn("AI Dev Coach warning:", message);
+  }
+
+  function isEditableTarget(target) {
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (target.isContentEditable) {
+      return true;
+    }
+
+    if (target.tagName === "TEXTAREA") {
+      return !target.hasAttribute("disabled") && !target.hasAttribute("readonly");
+    }
+
+    if (target.tagName !== "INPUT") {
+      return false;
+    }
+
+    const inputType = (target.getAttribute("type") || "text").toLowerCase();
+    const allowedTypes = new Set([
+      "text",
+      "search",
+      "email",
+      "url",
+      "tel",
+      "number",
+      "password"
+    ]);
+
+    return (
+      allowedTypes.has(inputType) &&
+      !target.hasAttribute("disabled") &&
+      !target.hasAttribute("readonly")
+    );
   }
 
   async function incrementLargePasteCount() {
@@ -50,6 +95,10 @@
   }
 
   document.addEventListener("paste", async (event) => {
+    if (!isEditableTarget(event.target)) {
+      return;
+    }
+
     const clipboard = event.clipboardData;
     if (!clipboard) {
       return;
@@ -78,7 +127,8 @@
     if (largePasteCount >= 3) {
       showWarning(
         "Pattern alert: multiple large pastes detected. Switch to guided hints instead of copy-paste answers.",
-        settings
+        settings,
+        { force: true }
       );
     }
   });
