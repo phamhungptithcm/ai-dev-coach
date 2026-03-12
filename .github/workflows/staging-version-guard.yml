@@ -1,0 +1,42 @@
+name: Staging Version Guard
+
+on:
+  pull_request:
+    branches:
+      - staging
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Block release version bumps on staging PRs
+        run: |
+          set -euo pipefail
+          BASE_REF="${{ github.base_ref }}"
+          git fetch origin "${BASE_REF}" --depth=1
+
+          base_manifest_version=$(git show "origin/${BASE_REF}:extension/manifest.json" | node -e "const fs=require('fs'); const d=JSON.parse(fs.readFileSync(0,'utf8')); process.stdout.write(d.version);")
+          head_manifest_version=$(node -p "require('./extension/manifest.json').version")
+
+          base_docs_version=$(git show "origin/${BASE_REF}:docs/index.md" | sed -nE 's/.*Current development version:\s*`(v[0-9]+\.[0-9]+\.[0-9]+)`.*/\1/p' | head -n1)
+          head_docs_version=$(sed -nE 's/.*Current development version:\s*`(v[0-9]+\.[0-9]+\.[0-9]+)`.*/\1/p' docs/index.md | head -n1)
+
+          if [ "${base_manifest_version}" != "${head_manifest_version}" ]; then
+            echo "::error::Manifest version changed in a PR to staging (${base_manifest_version} -> ${head_manifest_version}). Version bumps are release-only on main."
+            exit 1
+          fi
+
+          if [ -n "${base_docs_version}" ] && [ -n "${head_docs_version}" ] && [ "${base_docs_version}" != "${head_docs_version}" ]; then
+            echo "::error::docs/index.md current development version changed in a PR to staging (${base_docs_version} -> ${head_docs_version}). Version bumps are release-only on main."
+            exit 1
+          fi
+
+          echo "Staging version guard passed."

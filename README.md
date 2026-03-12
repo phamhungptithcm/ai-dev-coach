@@ -81,12 +81,15 @@ On push to `staging`, the workflow:
 
 ## Release Process
 
-- Version is defined in `extension/manifest.json`.
 - Pushing to `main` triggers `.github/workflows/release.yml` to:
-  - auto-create tag `v<manifest-version>` if it does not exist
+  - compute next semantic version automatically (default patch bump)
+  - update `extension/manifest.json` and docs version line automatically
+  - commit `chore(release): cut vX.Y.Z` to `main`
+  - create and push release tag `vX.Y.Z`
   - package the extension zip
   - publish a GitHub Release with auto-generated release notes
   - upload and publish the package to Chrome Web Store
+- Version bump is release-only on `main`. PRs into `staging` are guarded from release-version edits.
 
 ### Chrome Web Store Secrets
 
@@ -101,14 +104,15 @@ Configure these repository secrets before a `main` release run:
 Optional:
 
 - `CWS_PUBLISH_TARGET` (`default` or `trustedTesters`)
+- `REPO_ADMIN_TOKEN` (admin token for branch-protection automation and weekly sync admin merge fallback)
 
 The release workflow exchanges the refresh token for an access token using OAuth, then calls the Chrome Web Store API upload and publish endpoints.
 
 ## Branching Strategy
 
 - `staging` is the integration branch for pull requests.
-- `main` is the stable core branch.
-- Every 2 weeks, merge `staging` into `main`.
+- `main` is the stable release branch.
+- Weekly automation syncs `staging` into `main` when updates exist.
 - Branch protections enforce PR flow with 1 approval (admins can bypass for emergencies).
 
 See [docs/07-project/branching-strategy.md](docs/07-project/branching-strategy.md).
@@ -121,6 +125,9 @@ docs/
 .github/workflows/ci.yml
 .github/workflows/deploy-docs.yml
 .github/workflows/release.yml
+.github/workflows/staging-version-guard.yml
+.github/workflows/weekly-staging-to-main.yml
+.github/workflows/apply-branch-protection.yml
 mkdocs.yml
 ```
 

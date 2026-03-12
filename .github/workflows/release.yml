@@ -4,17 +4,36 @@ on:
   push:
     branches: ["main"]
   workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver bump type"
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      publish_to_cws:
+        description: "Publish release to Chrome Web Store"
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: write
 
 concurrency:
   group: release-main
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   release:
+    if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
+    env:
+      BUMP_TYPE: ${{ github.event_name == 'workflow_dispatch' && inputs.bump || 'patch' }}
+      PUBLISH_TO_CWS: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to_cws || 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,58 +45,52 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Resolve version from manifest
-        id: version
-        run: |
-          VERSION=$(node -p "require('./extension/manifest.json').version")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
-
       - name: Validate extension package structure
         run: node scripts/validate-extension.mjs
 
-      - name: Check if release tag already exists
-        id: tag_check
-        run: |
-          TAG="${{ steps.version.outputs.tag }}"
-          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Create and push release tag
-        if: steps.tag_check.outputs.exists == 'false'
-        run: |
-          TAG="${{ steps.version.outputs.tag }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin "$TAG"
-
-      - name: Package extension
-        if: steps.tag_check.outputs.exists == 'false'
+      - name: Resolve next release version
+        id: version
         run: |
           set -euo pipefail
-          VERSION="${{ steps.version.outputs.version }}"
-          mkdir -p dist
-          cd extension
-          zip -r "../dist/ai-dev-coach-${VERSION}.zip" . -x "*.DS_Store" -x "__MACOSX/*"
-          cd ..
-          unzip -l "dist/ai-dev-coach-${VERSION}.zip" | grep -q "manifest.json"
+          git fetch --tags --force
 
-      - name: Create GitHub release with notes
-        if: steps.tag_check.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: AI Dev Coach ${{ steps.version.outputs.tag }}
-          generate_release_notes: true
-          files: dist/ai-dev-coach-${{ steps.version.outputs.version }}.zip
+          latest_tag=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+          if [ -z "${latest_tag}" ]; then
+            major=1
+            minor=2
+            patch=0
+          else
+            version="${latest_tag#v}"
+            IFS='.' read -r major minor patch <<<"${version}"
+          fi
 
-      - name: Evaluate Chrome Web Store secret readiness
-        if: steps.tag_check.outputs.exists == 'false'
-        id: cws_ready
+          case "${BUMP_TYPE}" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch|*)
+              patch=$((patch + 1))
+              ;;
+          esac
+
+          NEXT_VERSION="${major}.${minor}.${patch}"
+          VERSION=$(node -p "require('./extension/manifest.json').version")
+          if [ "$VERSION" != "$NEXT_VERSION" ]; then
+            echo "Current manifest version: ${VERSION}"
+            echo "Next release version: ${NEXT_VERSION}"
+          fi
+
+          echo "version=${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Chrome Web Store secrets
+        if: env.PUBLISH_TO_CWS == 'true'
         env:
           CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
@@ -94,14 +107,85 @@ jobs:
           [ -z "${CWS_PUBLISHER_ID:-}" ] && missing+=("CWS_PUBLISHER_ID")
 
           if [ "${#missing[@]}" -gt 0 ]; then
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Skipping Chrome Web Store publish. Missing secrets: ${missing[*]}"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "::error::Chrome Web Store publish is required but missing secrets: ${missing[*]}"
+            exit 1
           fi
 
+      - name: Bump version files
+        run: |
+          set -euo pipefail
+          NEXT_VERSION="${{ steps.version.outputs.version }}"
+          node -e "
+            const fs = require('fs');
+            const manifestPath = 'extension/manifest.json';
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            manifest.version = process.argv[1];
+            fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+          " "${NEXT_VERSION}"
+
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          path = Path("docs/index.md")
+          text = path.read_text(encoding="utf-8")
+          version = "${{ steps.version.outputs.tag }}"
+          updated = re.sub(
+              r"(\*\*Current development version:\*\*\s*`)(v\d+\.\d+\.\d+)(`)",
+              lambda m: f"{m.group(1)}{version}{m.group(3)}",
+              text,
+              count=1,
+          )
+          if updated != text:
+              path.write_text(updated, encoding="utf-8")
+          PY
+
+      - name: Commit and push release bump
+        id: release_commit
+        run: |
+          set -euo pipefail
+          NEXT_VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add extension/manifest.json docs/index.md
+          if git diff --cached --quiet; then
+            echo "No version changes detected; skipping release."
+            echo "skip_release=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "chore(release): cut v${NEXT_VERSION}"
+          git push origin HEAD:main
+          echo "skip_release=false" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push release tag
+        if: steps.release_commit.outputs.skip_release == 'false'
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Package extension
+        if: steps.release_commit.outputs.skip_release == 'false'
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p dist
+          cd extension
+          zip -r "../dist/ai-dev-coach-${VERSION}.zip" . -x "*.DS_Store" -x "__MACOSX/*"
+          cd ..
+          unzip -l "dist/ai-dev-coach-${VERSION}.zip" | grep -q "manifest.json"
+
+      - name: Create GitHub release with notes
+        if: steps.release_commit.outputs.skip_release == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: AI Dev Coach ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: dist/ai-dev-coach-${{ steps.version.outputs.version }}.zip
+
       - name: Upload and publish to Chrome Web Store
-        if: steps.tag_check.outputs.exists == 'false' && steps.cws_ready.outputs.ready == 'true'
+        if: steps.release_commit.outputs.skip_release == 'false' && env.PUBLISH_TO_CWS == 'true'
         env:
           CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}

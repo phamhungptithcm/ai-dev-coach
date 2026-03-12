@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- redesigned release workflow to auto-bump semantic version on `main` and auto-create release commit/tag/notes
+- enforced release-only version policy by adding `staging-version-guard.yml` for PRs into `staging`
+- added weekly `staging` to `main` sync automation workflow with auto-merge request and admin fallback
+- added `apply-branch-protection.yml` to manage branch protection policy as code
+
 ## v1.2.15
 
 - expanded role-aware Prompt Builder coverage with new roles: Manager and Director
