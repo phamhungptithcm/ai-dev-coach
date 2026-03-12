@@ -199,10 +199,17 @@ const DEFAULT_PROFILE = {
   habitGoals: ""
 };
 
+const DEFAULT_SETTINGS = {
+  promptListenerEnabled: true,
+  behaviorMonitorEnabled: true
+};
+
 const DEFAULT_STATS = {
   aiRequests: 0,
   manualAttempts: 0,
-  largePastes: 0
+  largePastes: 0,
+  aiCopies: 0,
+  fastAiCopies: 0
 };
 
 const DEFAULT_TEMPLATE_KEY = "debugging";
@@ -225,7 +232,14 @@ const requiredChecklist = document.getElementById("requiredChecklist");
 const generatedPrompt = document.getElementById("generatedPrompt");
 const profileStatus = document.getElementById("profileStatus");
 const promptStatus = document.getElementById("promptStatus");
+const monitorStatus = document.getElementById("monitorStatus");
 const habitStats = document.getElementById("habitStats");
+const profileBadge = document.getElementById("profileBadge");
+const profileForm = document.getElementById("profileForm");
+const profileSummary = document.getElementById("profileSummary");
+const editProfileBtn = document.getElementById("editProfileBtn");
+const promptListenerToggle = document.getElementById("promptListenerToggle");
+const behaviorMonitorToggle = document.getElementById("behaviorMonitorToggle");
 const promptScoreValue = document.getElementById("promptScoreValue");
 const promptScoreGrade = document.getElementById("promptGrade");
 const promptScoreSummary = document.getElementById("promptScoreSummary");
@@ -295,6 +309,13 @@ function readProfileForm() {
   };
 }
 
+function readMonitoringForm() {
+  return {
+    promptListenerEnabled: !!promptListenerToggle.checked,
+    behaviorMonitorEnabled: !!behaviorMonitorToggle.checked
+  };
+}
+
 function readPromptForm() {
   return {
     task: clean(taskInput.value),
@@ -315,9 +336,57 @@ function fillProfile(profile) {
   habitInput.value = profile.habitGoals || "";
 }
 
+function hasProfileData(profile) {
+  return !!(clean(profile.role) || clean(profile.skill) || clean(profile.habitGoals));
+}
+
+function renderProfileBadge(profile) {
+  if (!hasProfileData(profile)) {
+    profileBadge.textContent = "Profile: Not set";
+    profileBadge.classList.add("profile-badge--empty");
+    return;
+  }
+
+  const role = clean(profile.role) || "Developer";
+  const skill = clean(profile.skill);
+  const badgeParts = [role];
+  if (skill) {
+    badgeParts.push(skill);
+  }
+
+  profileBadge.textContent = badgeParts.join(" • ");
+  profileBadge.classList.remove("profile-badge--empty");
+}
+
+function renderProfileView(profile, forceEditMode = false) {
+  const hasData = hasProfileData(profile);
+  const showForm = forceEditMode || !hasData;
+
+  profileForm.classList.toggle("hidden", !showForm);
+  editProfileBtn.classList.toggle("hidden", showForm || !hasData);
+
+  if (!showForm && hasData) {
+    const role = clean(profile.role) || "Not set";
+    const skill = clean(profile.skill) || "Not set";
+    const goal = clean(profile.habitGoals) || "Not set";
+    profileSummary.textContent = `Role: ${role} | Skill: ${skill} | Goal: ${goal}`;
+    profileSummary.classList.remove("hidden");
+  } else {
+    profileSummary.textContent = "";
+    profileSummary.classList.add("hidden");
+  }
+
+  renderProfileBadge(profile);
+}
+
+function fillMonitoring(settings) {
+  promptListenerToggle.checked = !!settings.promptListenerEnabled;
+  behaviorMonitorToggle.checked = !!settings.behaviorMonitorEnabled;
+}
+
 function renderStats(stats) {
   const dependency = computeDependency(stats);
-  habitStats.textContent = `AI requests: ${stats.aiRequests} | Manual attempts: ${stats.manualAttempts} | Dependency: ${dependency}% | Large pastes: ${stats.largePastes}`;
+  habitStats.textContent = `AI requests: ${stats.aiRequests} | Manual attempts: ${stats.manualAttempts} | Dependency: ${dependency}% | Large pastes: ${stats.largePastes} | AI copies: ${stats.aiCopies} | Fast copies: ${stats.fastAiCopies}`;
 }
 
 function gradeFromScore(score) {
@@ -539,7 +608,19 @@ function renderChecklist(fields) {
 async function saveProfile() {
   const profile = readProfileForm();
   await storageSet({ profile });
-  setStatus(profileStatus, "Profile saved.", true);
+  renderProfileView(profile, false);
+  setStatus(profileStatus, "", true);
+}
+
+async function saveMonitoring() {
+  const data = await storageGet(["settings"]);
+  const nextSettings = {
+    ...DEFAULT_SETTINGS,
+    ...(data.settings || {}),
+    ...readMonitoringForm()
+  };
+  await storageSet({ settings: nextSettings });
+  setStatus(monitorStatus, "Monitoring settings saved.", true);
 }
 
 async function logManualAttempt() {
@@ -624,6 +705,7 @@ function resetScoreCard() {
 
 async function loadState() {
   const data = await storageGet([
+    "settings",
     "profile",
     "stats",
     "selectedTemplate",
@@ -631,13 +713,16 @@ async function loadState() {
     "lastPromptAnalysis"
   ]);
 
+  const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
   const profile = { ...DEFAULT_PROFILE, ...(data.profile || {}) };
   const stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
   const selectedTemplate = TEMPLATES[data.selectedTemplate]
     ? data.selectedTemplate
     : DEFAULT_TEMPLATE_KEY;
 
+  fillMonitoring(settings);
   fillProfile(profile);
+  renderProfileView(profile, false);
   renderTemplates(selectedTemplate);
   renderStats(stats);
   renderChecklist(readPromptForm());
@@ -654,8 +739,19 @@ async function loadState() {
 }
 
 function wireEvents() {
+  document.getElementById("saveMonitoringBtn").addEventListener("click", () => {
+    saveMonitoring().catch(() => setStatus(monitorStatus, "Unable to save monitoring settings.", false));
+  });
+
   document.getElementById("saveProfileBtn").addEventListener("click", () => {
     saveProfile().catch(() => setStatus(profileStatus, "Unable to save profile.", false));
+  });
+
+  editProfileBtn.addEventListener("click", () => {
+    const profile = readProfileForm();
+    renderProfileView(profile, true);
+    setStatus(profileStatus, "", true);
+    roleInput.focus();
   });
 
   document.getElementById("manualAttemptBtn").addEventListener("click", () => {

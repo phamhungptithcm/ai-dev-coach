@@ -29,9 +29,17 @@
 
   const DEFAULT_SETTINGS = {
     enableCoach: true,
+    promptListenerEnabled: true,
+    behaviorMonitorEnabled: true,
+    readPromptContentEnabled: true,
+    readCopiedContentEnabled: true,
+    readBeforeCopyEnabled: true,
+    showOutputCountdown: true,
     strictMode: true,
     dependencyWarningThreshold: 70,
     pasteThreshold: 320,
+    longCopyThreshold: 360,
+    minReadBeforeCopySeconds: 20,
     overlayDurationMs: 6500
   };
 
@@ -44,7 +52,9 @@
   const DEFAULT_STATS = {
     aiRequests: 0,
     manualAttempts: 0,
-    largePastes: 0
+    largePastes: 0,
+    aiCopies: 0,
+    fastAiCopies: 0
   };
 
   const ATTEMPT_HINTS = [
@@ -67,6 +77,7 @@
     /copy and paste/i,
     /urgent.*fix/i
   ];
+
   const SEND_BUTTON_HINTS = [
     /\bsend\b/i,
     /\bsubmit\b/i,
@@ -75,6 +86,7 @@
     /submit prompt/i,
     /arrow up/i
   ];
+
   const NON_SEND_BUTTON_HINTS = [
     /\bstop\b/i,
     /\bregenerate\b/i,
@@ -100,6 +112,24 @@
     return new Promise((resolve) => chrome.storage.local.set(payload, resolve));
   }
 
+  function mergeSettings(rawSettings) {
+    return { ...DEFAULT_SETTINGS, ...(rawSettings || {}) };
+  }
+
+  async function getCurrentSettings() {
+    const data = await storageGet(["settings"]);
+    return mergeSettings(data.settings);
+  }
+
+  async function getState() {
+    const data = await storageGet(["settings", "profile", "stats"]);
+    return {
+      settings: mergeSettings(data.settings),
+      profile: { ...DEFAULT_PROFILE, ...(data.profile || {}) },
+      stats: { ...DEFAULT_STATS, ...(data.stats || {}) }
+    };
+  }
+
   function showCoachMessage(message, type, settings) {
     const duration = settings.overlayDurationMs || DEFAULT_SETTINGS.overlayDurationMs;
 
@@ -111,16 +141,6 @@
     console.log("AI Dev Coach:", message);
   }
 
-  async function getState() {
-    const data = await storageGet(["settings", "profile", "stats"]);
-
-    return {
-      settings: { ...DEFAULT_SETTINGS, ...(data.settings || {}) },
-      profile: { ...DEFAULT_PROFILE, ...(data.profile || {}) },
-      stats: { ...DEFAULT_STATS, ...(data.stats || {}) }
-    };
-  }
-
   function detectPlatform() {
     const locationValue = window.location.href;
     return PLATFORM_CONFIG.find((platform) =>
@@ -129,7 +149,7 @@
   }
 
   function isVisibleInput(element) {
-    if (!element) {
+    if (!(element instanceof HTMLElement)) {
       return false;
     }
 
@@ -177,8 +197,10 @@
         if (seen.has(candidate) || !isVisibleInput(candidate)) {
           continue;
         }
+
         matches.push(candidate);
         seen.add(candidate);
+
         if (matches.length >= 8) {
           return matches;
         }
@@ -189,13 +211,15 @@
   }
 
   function findVisibleInputInScope(scope, platform) {
-    if (!scope || !(scope instanceof Element)) {
+    if (!(scope instanceof Element)) {
       return null;
     }
 
     for (const selector of platform.inputSelectors) {
       const candidates = Array.from(scope.querySelectorAll(selector));
-      const visible = candidates.find((candidate) => candidate instanceof HTMLElement && isVisibleInput(candidate));
+      const visible = candidates.find(
+        (candidate) => candidate instanceof HTMLElement && isVisibleInput(candidate)
+      );
       if (visible) {
         return visible;
       }
@@ -329,7 +353,6 @@
     const stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
 
     stats.aiRequests += 1;
-
     if (hasIndependentAttempt(prompt)) {
       stats.manualAttempts += 1;
     }
@@ -408,7 +431,7 @@
     const analysis = analyzePrompt(prompt, settings.strictMode);
     const statsPromise = updatePromptStats(prompt);
 
-    if (!settings.enableCoach) {
+    if (!settings.enableCoach || !settings.promptListenerEnabled || !settings.readPromptContentEnabled) {
       await statsPromise;
       return;
     }
@@ -428,9 +451,7 @@
       text: `Prompt quality score: ${analysis.score}/100 (Grade ${analysis.grade})`
     });
 
-    const habitTip = buildHabitTip(profile, analysis);
-    messages.push({ type: "info", text: habitTip });
-
+    messages.push({ type: "info", text: buildHabitTip(profile, analysis) });
     queueMessages(messages, settings);
 
     const { dependency } = await statsPromise;
@@ -529,15 +550,18 @@
     return false;
   }
 
-  function submitPromptFromInput(input) {
+  async function submitPromptFromInput(input) {
+    const settings = await getCurrentSettings();
+    if (!settings.enableCoach || !settings.promptListenerEnabled || !settings.readPromptContentEnabled) {
+      return;
+    }
+
     const prompt = readPrompt(input).trim();
     if (!prompt || shouldSkipPrompt(prompt)) {
       return;
     }
 
-    handlePrompt(prompt).catch((error) => {
-      console.error("AI Dev Coach prompt handling error", error);
-    });
+    await handlePrompt(prompt);
   }
 
   function attachFormListener(input) {
@@ -549,7 +573,9 @@
     form.addEventListener(
       "submit",
       () => {
-        submitPromptFromInput(input);
+        submitPromptFromInput(input).catch((error) => {
+          console.error("AI Dev Coach form submission error", error);
+        });
       },
       true
     );
@@ -569,7 +595,9 @@
           return;
         }
 
-        submitPromptFromInput(input);
+        submitPromptFromInput(input).catch((error) => {
+          console.error("AI Dev Coach prompt submission error", error);
+        });
       },
       true
     );
@@ -594,7 +622,6 @@
     }
 
     scanQueued = true;
-
     window.setTimeout(() => {
       scanQueued = false;
       scanAndAttach();
@@ -632,7 +659,9 @@
         return;
       }
 
-      submitPromptFromInput(input);
+      submitPromptFromInput(input).catch((error) => {
+        console.error("AI Dev Coach send-button submission error", error);
+      });
     },
     true
   );
