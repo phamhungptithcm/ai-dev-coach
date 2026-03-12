@@ -16,6 +16,7 @@
 
     <section class="card">
       <h2>Live Monitoring</h2>
+      <p class="muted card-hint">Turn on real-time coaching while you work in AI chat.</p>
       <label class="checkbox-row">
         <input id="promptListenerToggle" type="checkbox" />
         Enable prompt listener on send
@@ -24,7 +25,7 @@
         <input id="behaviorMonitorToggle" type="checkbox" />
         Enable behavior monitor (copy/paste alerts)
       </label>
-      <button id="saveMonitoringBtn" class="button">Save Monitoring</button>
+      <button id="saveMonitoringBtn" class="button button--primary">Save Monitoring</button>
       <p id="monitorStatus" class="status"></p>
     </section>
 
@@ -74,8 +75,10 @@
 
       <p id="requiredChecklist" class="required-checklist"></p>
 
-      <button id="generatePromptBtn" class="button button--primary">Generate Prompt</button>
-      <button id="copyPromptBtn" class="button">Copy Prompt</button>
+      <div class="button-row">
+        <button id="generatePromptBtn" class="button button--primary">Generate Prompt</button>
+        <button id="copyPromptBtn" class="button">Copy Prompt</button>
+      </div>
 
       <label for="generatedPrompt">Generated Prompt</label>
       <textarea id="generatedPrompt" rows="11" readonly placeholder="Your coaching prompt will appear here"></textarea>
@@ -97,8 +100,10 @@
     <section class="card">
       <h2>Habit Snapshot</h2>
       <p id="habitStats" class="stats"></p>
-      <button id="manualAttemptBtn" class="button">Log Manual Attempt</button>
-      <button id="openOptionsBtn" class="button">Open Settings</button>
+      <div class="button-row">
+        <button id="manualAttemptBtn" class="button">Log Manual Attempt</button>
+        <button id="openOptionsBtn" class="button">Open Settings</button>
+      </div>
     </section>
   </main>
 

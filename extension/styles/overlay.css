@@ -1,3 +1,15 @@
+:root {
+  --ai-coach-primary: #9dcaeb;
+  --ai-coach-secondary: #c3eefa;
+  --ai-coach-primary-strong: #7fb5df;
+  --ai-coach-text: #173244;
+  --ai-coach-muted: #5d778a;
+  --ai-coach-border: #cde3f2;
+  --ai-coach-border-strong: #b8d8eb;
+  --ai-coach-shadow-soft: 0 10px 28px rgba(27, 76, 111, 0.17);
+  --ai-coach-shadow-lift: 0 14px 34px rgba(27, 76, 111, 0.24);
+}
+
 .ai-coach-toast-container {
   position: fixed;
   right: 18px;
@@ -5,68 +17,71 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: min(380px, calc(100vw - 32px));
+  width: min(384px, calc(100vw - 28px));
   z-index: 2147483000;
   pointer-events: none;
 }
 
 .ai-coach-toast {
   pointer-events: auto;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background: #ffffff;
-  color: #162029;
-  box-shadow: 0 12px 28px rgba(9, 30, 66, 0.22);
+  border-radius: 14px;
+  border: 1px solid var(--ai-coach-border);
+  border-left-width: 5px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 251, 255, 0.94));
+  color: var(--ai-coach-text);
+  box-shadow: var(--ai-coach-shadow-soft);
   padding: 12px 14px;
-  opacity: 0.96;
+  opacity: 0.97;
   transform: translateY(0);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  animation: ai-coach-fade-in 180ms ease both;
+  transition: opacity 200ms ease, transform 200ms ease;
 }
 
 .ai-coach-toast--warning {
-  border-left: 5px solid #c1121f;
+  border-left-color: #c1453e;
 }
 
 .ai-coach-toast--success {
-  border-left: 5px solid #2a9d8f;
+  border-left-color: #1d9a67;
 }
 
 .ai-coach-toast--info {
-  border-left: 5px solid #264653;
+  border-left-color: #3d7fb3;
 }
 
 .ai-coach-toast--exit {
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(8px);
 }
 
 .ai-coach-toast__title {
   margin: 0 0 4px;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.01em;
 }
 
 .ai-coach-toast__message {
   margin: 0;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   font-size: 13px;
-  line-height: 1.35;
+  line-height: 1.36;
 }
 
 .ai-coach-live-bubble {
   position: fixed;
-  top: 18px;
-  right: 18px;
-  width: min(360px, calc(100vw - 24px));
+  top: 16px;
+  right: 16px;
+  width: min(364px, calc(100vw - 22px));
   z-index: 2147482850;
-  border: 1px solid #d7dee5;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 14px 30px rgba(9, 30, 66, 0.2);
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  color: #162029;
+  border: 1px solid var(--ai-coach-border-strong);
+  border-radius: 14px;
+  background: linear-gradient(182deg, rgba(255, 255, 255, 0.97), rgba(243, 251, 255, 0.92));
+  box-shadow: var(--ai-coach-shadow-lift);
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
+  color: var(--ai-coach-text);
+  animation: ai-coach-slide-in 220ms ease both;
 }
 
 .ai-coach-live-bubble__hidden {
@@ -78,24 +93,33 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  border-bottom: 1px solid #e6ebf0;
+  border-bottom: 1px solid rgba(186, 218, 237, 0.82);
+  background: linear-gradient(120deg, rgba(195, 238, 250, 0.52), rgba(157, 202, 235, 0.44));
+  border-radius: 14px 14px 0 0;
 }
 
 .ai-coach-live-bubble__header strong {
   font-size: 13px;
+  font-weight: 800;
   letter-spacing: 0.01em;
 }
 
 .ai-coach-live-bubble__toggle {
-  border: 1px solid #d7dee5;
-  background: #f8fafc;
+  border: 1px solid rgba(128, 177, 210, 0.5);
+  background: rgba(255, 255, 255, 0.82);
   border-radius: 999px;
   width: 26px;
   height: 26px;
-  color: #3d4c5f;
+  color: #3e5d74;
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease;
+}
+
+.ai-coach-live-bubble__toggle:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
 }
 
 .ai-coach-live-bubble__body {
@@ -112,55 +136,55 @@
 
 .ai-coach-live-bubble__label {
   font-size: 12px;
-  font-weight: 700;
-  color: #3d4c5f;
+  font-weight: 800;
+  color: #355a74;
 }
 
 .ai-coach-live-bubble__score {
   margin-left: auto;
   font-size: 20px;
-  font-weight: 800;
-  color: #162029;
+  font-weight: 900;
+  color: var(--ai-coach-text);
 }
 
 .ai-coach-live-bubble__grade {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 900;
   border-radius: 999px;
   padding: 3px 8px;
-  border: 1px solid #d7dee5;
-  background: #f8fafc;
-  color: #3d4c5f;
+  border: 1px solid rgba(176, 214, 236, 0.9);
+  background: rgba(241, 250, 255, 0.95);
+  color: #4a687f;
 }
 
 .ai-coach-live-bubble__grade--a {
-  background: #ecfdf3;
-  border-color: #abefc6;
-  color: #067647;
+  background: #daf6e9;
+  border-color: #b0e7cf;
+  color: #0c7b52;
 }
 
 .ai-coach-live-bubble__grade--b {
-  background: #edf5ff;
-  border-color: #b2ddff;
-  color: #175cd3;
+  background: #e8f4fe;
+  border-color: #c5e1f7;
+  color: #225f8f;
 }
 
 .ai-coach-live-bubble__grade--c {
-  background: #fff6ed;
-  border-color: #ffd6ae;
-  color: #b54708;
+  background: #fff2df;
+  border-color: #f8d5a6;
+  color: #9d5603;
 }
 
 .ai-coach-live-bubble__grade--d {
-  background: #fef3f2;
-  border-color: #fecdca;
-  color: #b42318;
+  background: #fde9e8;
+  border-color: #f3c8c4;
+  color: #b1231a;
 }
 
 .ai-coach-live-bubble__grade--na {
-  background: #f8fafc;
-  border-color: #d7dee5;
-  color: #667085;
+  background: #eef7fd;
+  border-color: #d3e7f4;
+  color: #607b8f;
 }
 
 .ai-coach-live-bubble__summary,
@@ -174,20 +198,25 @@
 }
 
 .ai-coach-live-bubble__summary {
-  color: #344054;
-  font-weight: 600;
+  color: #34566f;
+  font-weight: 700;
+}
+
+.ai-coach-live-bubble__habit,
+.ai-coach-live-bubble__behavior {
+  color: #325772;
 }
 
 .ai-coach-live-bubble__preview {
-  color: #475467;
+  color: #446882;
 }
 
 .ai-coach-live-bubble__meta {
-  color: #667085;
+  color: #607b8f;
 }
 
 .ai-coach-live-bubble__muted {
-  color: #98a2b3;
+  color: #94acbd;
 }
 
 .ai-coach-live-bubble--minimized .ai-coach-live-bubble__body {
@@ -201,38 +230,45 @@
 .ai-coach-builder-launcher {
   position: fixed;
   z-index: 2147482800;
-  border: 1px solid #0a6c74;
-  background: #0a6c74;
-  color: #ffffff;
+  border: 1px solid #82b8dc;
+  background: linear-gradient(130deg, var(--ai-coach-secondary), var(--ai-coach-primary));
+  color: #17394f;
   border-radius: 999px;
   padding: 8px 12px;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(8, 77, 83, 0.25);
+  box-shadow: 0 8px 18px rgba(83, 132, 167, 0.26);
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.ai-coach-builder-launcher:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(83, 132, 167, 0.3);
 }
 
 .ai-coach-builder-launcher--active {
-  background: #084d53;
-  border-color: #084d53;
+  background: linear-gradient(130deg, #bfe8f8, #8cbfe4);
+  border-color: #72add8;
 }
 
 .ai-coach-builder-panel {
   position: fixed;
-  right: 18px;
-  bottom: 66px;
-  width: min(400px, calc(100vw - 24px));
+  right: 16px;
+  bottom: 62px;
+  width: min(412px, calc(100vw - 20px));
   max-height: min(84vh, 760px);
   overflow: auto;
   z-index: 2147482900;
-  border: 1px solid #d7dee5;
+  border: 1px solid var(--ai-coach-border-strong);
   border-radius: 14px;
-  background: #ffffff;
-  box-shadow: 0 20px 46px rgba(9, 30, 66, 0.28);
+  background: linear-gradient(184deg, rgba(255, 255, 255, 0.98), rgba(243, 251, 255, 0.94));
+  box-shadow: var(--ai-coach-shadow-lift);
   padding: 12px;
   display: grid;
   gap: 8px;
+  animation: ai-coach-slide-in 220ms ease both;
 }
 
 .ai-coach-builder__header {
@@ -244,53 +280,61 @@
 
 .ai-coach-builder__header h3 {
   margin: 0;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   font-size: 15px;
-  color: #162029;
+  color: var(--ai-coach-text);
+  letter-spacing: 0.01em;
 }
 
 .ai-coach-builder__close {
-  border: 1px solid #d7dee5;
-  background: #f8fafc;
-  color: #3d4c5f;
+  border: 1px solid rgba(128, 177, 210, 0.54);
+  background: rgba(255, 255, 255, 0.85);
+  color: #46657c;
   width: 28px;
   height: 28px;
   border-radius: 999px;
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
+  transition: transform 140ms ease, background 140ms ease;
+}
+
+.ai-coach-builder__close:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
 }
 
 .ai-coach-builder__label {
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   font-size: 12px;
-  font-weight: 700;
-  color: #162029;
+  font-weight: 800;
+  color: #264c64;
 }
 
 .ai-coach-builder__hint {
   margin: 0;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   font-size: 12px;
   line-height: 1.35;
-  color: #586776;
+  color: var(--ai-coach-muted);
 }
 
 .ai-coach-builder__input {
   width: 100%;
-  border: 1px solid #d7dee5;
-  border-radius: 8px;
+  border: 1px solid var(--ai-coach-border);
+  border-radius: 10px;
   padding: 9px;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   font-size: 13px;
-  color: #162029;
-  background: #ffffff;
+  color: var(--ai-coach-text);
+  background: rgba(255, 255, 255, 0.95);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .ai-coach-builder__input:focus {
   outline: none;
-  border-color: #0a6c74;
-  box-shadow: 0 0 0 2px rgba(10, 108, 116, 0.16);
+  border-color: #89bcdf;
+  box-shadow: 0 0 0 3px rgba(157, 202, 235, 0.28);
 }
 
 .ai-coach-builder__actions {
@@ -300,37 +344,95 @@
 }
 
 .ai-coach-builder__btn {
-  border: 1px solid #d7dee5;
-  border-radius: 8px;
+  border: 1px solid var(--ai-coach-border);
+  border-radius: 10px;
   padding: 9px;
   cursor: pointer;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 800;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.ai-coach-builder__btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(83, 132, 167, 0.2);
 }
 
 .ai-coach-builder__btn--secondary {
-  background: #f8fafc;
-  color: #162029;
+  background: linear-gradient(180deg, #ffffff, #f4fbff);
+  color: var(--ai-coach-text);
 }
 
 .ai-coach-builder__btn--primary {
-  background: #0a6c74;
-  border-color: #0a6c74;
-  color: #ffffff;
+  background: linear-gradient(130deg, var(--ai-coach-secondary), var(--ai-coach-primary));
+  border-color: #84b9db;
+  color: #173a51;
 }
 
 .ai-coach-builder__status {
   min-height: 16px;
   margin: 0;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   font-size: 12px;
+  font-weight: 700;
 }
 
 .ai-coach-builder__status--ok {
-  color: #067647;
+  color: #138a5b;
 }
 
 .ai-coach-builder__status--error {
-  color: #b42318;
+  color: #ba2f26;
+}
+
+@keyframes ai-coach-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 0.97;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ai-coach-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(9px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .ai-coach-live-bubble {
+    top: 8px;
+    right: 8px;
+    width: min(360px, calc(100vw - 16px));
+  }
+
+  .ai-coach-builder-panel {
+    right: 8px;
+    bottom: 54px;
+    width: min(396px, calc(100vw - 16px));
+  }
+
+  .ai-coach-toast-container {
+    right: 8px;
+    bottom: 8px;
+    width: min(360px, calc(100vw - 16px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

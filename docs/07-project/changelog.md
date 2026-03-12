@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.2.8
+
+- refreshed popup, settings, and in-page coaching UI with pastel design system
+- introduced unified primary/secondary palette (`#9DCAEB`, `#C3EEFA`) across all extension surfaces
+- improved flow with cleaner button grouping, section hints, and elevated visual hierarchy
+- added smooth motion for entry/hover states with reduced-motion accessibility fallback
+
 ## v1.2.7
 
 - added in-page Live Coach bubble with realtime prompt score and habit snapshot on AI chat sites
