@@ -20,9 +20,20 @@
 3. Overlay provides warnings or suggestions.
 4. Stats are updated in local storage.
 
+Submission signals:
+
+- Enter key in prompt composer
+- Send/Submit button click
+
 ## Risk Event: Large Paste
 
 1. User pastes large code block.
 2. Extension detects code-like paste content.
 3. Warning asks user to explain and test before usage.
 4. Repeated behavior triggers stronger pattern alert.
+
+## Risk Event: Copy AI Output then Reuse
+
+1. User copies a long assistant response.
+2. User pastes that content into a prompt composer.
+3. Extension warns user to rewrite with personal reasoning and verification steps before sending.

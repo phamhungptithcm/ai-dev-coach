@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.4
+
+- added immediate prompt analysis on send-button click across supported AI chat UIs
+- improved send-time responsiveness by decoupling coach feedback from stats write latency
+- added long AI-output copy tracking and warning when pasted back into composer
+
 ## v1.2.3
 
 - added production validator script for extension package integrity
