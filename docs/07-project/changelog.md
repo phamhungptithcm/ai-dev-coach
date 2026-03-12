@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.11
+
+- improved in-page Prompt Builder launcher visibility with fallback fixed position when chat input is not detected
+- launcher now remains available on supported AI pages without requiring extension toolbar click
+
 ## v1.2.10
 
 - added drag-to-reposition behavior for the in-page Live Coach bubble

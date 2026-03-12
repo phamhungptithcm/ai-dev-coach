@@ -538,14 +538,20 @@
     const platform = detectPlatform();
     const input = findPromptInput(platform);
 
-    if (!platform || !input) {
+    if (!platform) {
       state.refs.launcher.classList.add("ai-coach-builder__hidden");
       return;
     }
 
-    const rect = input.getBoundingClientRect();
-    const desiredLeft = rect.right + 8;
-    const desiredTop = rect.bottom - 34;
+    let desiredLeft = window.innerWidth - 156;
+    let desiredTop = window.innerHeight - 86;
+
+    if (input) {
+      const rect = input.getBoundingClientRect();
+      desiredLeft = rect.right + 8;
+      desiredTop = rect.bottom - 34;
+    }
+
     const maxLeft = window.innerWidth - 170;
     const maxTop = window.innerHeight - 42;
 
