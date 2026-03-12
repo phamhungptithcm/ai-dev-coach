@@ -10,7 +10,7 @@ The coaching engine combines prompt analysis, habit heuristics, and dependency s
 - negative attempt phrases (`I didn't try`, `chua thu`, `khong thu`)
 - shortcut intent patterns (for example, asking for full copy-paste code)
 - large code paste events
-- user profile (role, skill level, habit goals)
+- user profile (role, level, habit goals)
 - bilingual phrase detection (English + Vietnamese)
 
 ## Prompt Analysis Modes

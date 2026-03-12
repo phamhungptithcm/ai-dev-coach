@@ -5,15 +5,16 @@
 Users can store:
 
 - job role
-- skill level
+- level (`Student`, `Junior`, `Middle`, `Senior`)
 - habit goal
 
 Job role options:
 
-- Student
 - Teacher
 - Software Engineer
 - Solution Architecture
+- Manager
+- Director
 - Doctor
 - Other
 
@@ -41,7 +42,8 @@ The extension generates a structured prompt and provides copy-to-clipboard.
 In-page access:
 
 - floating launcher beside composer on supported AI pages
-- keyboard shortcut `Ctrl + O` to open Prompt Builder when chat input is focused
+- keyboard shortcut `Ctrl/Cmd + O` to open Prompt Builder when chat input is focused (browser-dependent)
+- command shortcut `Ctrl/Cmd + Shift + O` to open Prompt Builder reliably
 
 See also: [Prompt Builder System](prompt-builder-system.md)
 
@@ -76,7 +78,7 @@ Displays warning when dependency exceeds configured threshold.
 
 Live bubble behavior:
 
-- bubble stays visible when monitoring is enabled (`prompt listener` or `behavior monitor`)
+- bubble stays visible on supported AI pages and auto-remounts if site UI rerenders
 - bubble updates from both draft typing analysis and send-time analysis
 
 ## 5. Copy-Paste Risk Alerts

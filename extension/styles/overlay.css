@@ -74,7 +74,7 @@
   top: 16px;
   right: 16px;
   width: min(364px, calc(100vw - 22px));
-  z-index: 2147482850;
+  z-index: 2147483647;
   border: 1px solid var(--ai-coach-border-strong);
   border-radius: 14px;
   background: linear-gradient(182deg, rgba(255, 255, 255, 0.97), rgba(243, 251, 255, 0.92));
@@ -241,7 +241,7 @@
 
 .ai-coach-builder-launcher {
   position: fixed;
-  z-index: 2147482800;
+  z-index: 2147483645;
   border: 1px solid #82b8dc;
   background: linear-gradient(130deg, var(--ai-coach-secondary), var(--ai-coach-primary));
   color: #17394f;
@@ -272,7 +272,7 @@
   width: min(412px, calc(100vw - 20px));
   max-height: min(84vh, 760px);
   overflow: auto;
-  z-index: 2147482900;
+  z-index: 2147483646;
   border: 1px solid var(--ai-coach-border-strong);
   border-radius: 14px;
   background: linear-gradient(184deg, rgba(255, 255, 255, 0.98), rgba(243, 251, 255, 0.94));

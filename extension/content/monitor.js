@@ -2,6 +2,13 @@
   const COACH_OWNED_SELECTOR = '[data-ai-coach-owned="true"]';
   const PROMPT_ANALYZED_EVENT = "ai-dev-coach:prompt-analyzed";
   const PLATFORM_INPUT_SELECTORS = [
+    "#prompt-textarea",
+    "[data-testid='prompt-textarea']",
+    "[data-testid*='prompt-textarea']",
+    "[data-testid*='composer'] textarea",
+    "[data-testid*='composer'] [contenteditable='true']",
+    "[role='textbox'][contenteditable='true']",
+    "div.ProseMirror[contenteditable='true']",
     "textarea",
     '[contenteditable="true"]',
     '[contenteditable="plaintext-only"]',
@@ -258,6 +265,16 @@
   ];
   const DRAFT_PROMPT_TTL_MS = 15000;
   const LIVE_SCORE_DEBOUNCE_MS = 500;
+  const CONTEXT_EXCLUSION_HINTS = [
+    /\bsearch\b/i,
+    /\bfilter\b/i,
+    /\bfind\b/i,
+    /\bhistory\b/i,
+    /\brename\b/i,
+    /\btitle\b/i,
+    /\bsetting(s)?\b/i,
+    /\bmemory\b/i
+  ];
 
   const attachedInputs = new WeakSet();
   const attachedForms = new WeakSet();
@@ -378,6 +395,100 @@
     return rect.width > 0 && rect.height > 0;
   }
 
+  function contextHintText(element) {
+    if (!(element instanceof HTMLElement)) {
+      return "";
+    }
+
+    return [
+      element.id,
+      element.getAttribute("name"),
+      element.getAttribute("data-testid"),
+      element.getAttribute("aria-label"),
+      element.getAttribute("placeholder"),
+      element.className
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  function isExcludedContextInput(element) {
+    if (!(element instanceof HTMLElement)) {
+      return true;
+    }
+    const context = contextHintText(element);
+    return CONTEXT_EXCLUSION_HINTS.some((pattern) => pattern.test(context));
+  }
+
+  function findComposerScope(element) {
+    if (!(element instanceof HTMLElement)) {
+      return null;
+    }
+
+    return element.closest(
+      "form,[data-testid*='composer'],[data-testid*='prompt'],[class*='composer'],[class*='prompt'],[class*='chat-input']"
+    );
+  }
+
+  function hasNearbySendButton(element) {
+    const scope = findComposerScope(element);
+    if (!(scope instanceof Element)) {
+      return false;
+    }
+
+    const candidates = Array.from(
+      scope.querySelectorAll("button,[role='button'],input[type='submit'],input[type='button']")
+    ).slice(0, 80);
+    return candidates.some((candidate) => candidate instanceof HTMLElement && isLikelySendButton(candidate));
+  }
+
+  function scorePromptInputCandidate(element) {
+    if (!(element instanceof HTMLElement) || !isVisibleInput(element) || isExcludedContextInput(element)) {
+      return Number.NEGATIVE_INFINITY;
+    }
+
+    const context = contextHintText(element);
+    const rect = element.getBoundingClientRect();
+    let score = 0;
+
+    if (/#prompt-textarea|prompt-textarea|composer|chat-input/i.test(context)) {
+      score += 80;
+    }
+    if (findComposerScope(element)) {
+      score += 36;
+    }
+    if (hasNearbySendButton(element)) {
+      score += 30;
+    }
+    if (rect.bottom >= window.innerHeight * 0.45) {
+      score += 16;
+    }
+    if (rect.width >= 200) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  function pickBestPromptInput(candidates) {
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+      return null;
+    }
+
+    let best = null;
+    let bestScore = Number.NEGATIVE_INFINITY;
+
+    candidates.forEach((candidate) => {
+      const score = scorePromptInputCandidate(candidate);
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+      }
+    });
+
+    return bestScore === Number.NEGATIVE_INFINITY ? null : best;
+  }
+
   function isPlatformInput(platform, element) {
     return platform.inputSelectors.some((selector) => element.matches(selector));
   }
@@ -392,8 +503,11 @@
       isPlatformInput(platform, activeElement) &&
       isVisibleInput(activeElement)
     ) {
-      matches.push(activeElement);
-      seen.add(activeElement);
+      const activeScore = scorePromptInputCandidate(activeElement);
+      if (activeScore !== Number.NEGATIVE_INFINITY) {
+        matches.push(activeElement);
+        seen.add(activeElement);
+      }
     }
 
     for (const selector of platform.inputSelectors) {
@@ -403,6 +517,9 @@
           continue;
         }
         if (seen.has(candidate) || !isVisibleInput(candidate)) {
+          continue;
+        }
+        if (scorePromptInputCandidate(candidate) === Number.NEGATIVE_INFINITY) {
           continue;
         }
 
@@ -423,17 +540,16 @@
       return null;
     }
 
+    const candidates = [];
     for (const selector of platform.inputSelectors) {
-      const candidates = Array.from(scope.querySelectorAll(selector));
-      const visible = candidates.find(
-        (candidate) => candidate instanceof HTMLElement && isVisibleInput(candidate)
-      );
-      if (visible) {
-        return visible;
-      }
+      scope.querySelectorAll(selector).forEach((node) => {
+        if (node instanceof HTMLElement && isVisibleInput(node)) {
+          candidates.push(node);
+        }
+      });
     }
 
-    return null;
+    return pickBestPromptInput(candidates);
   }
 
   function resolvePromptInputFromEventTarget(target, platform) {
@@ -452,6 +568,14 @@
       }
     }
 
+    const scope = target.closest(
+      "form,[data-testid*='composer'],[data-testid*='prompt'],[class*='composer'],[class*='prompt'],[class*='chat-input']"
+    );
+    const scoped = findVisibleInputInScope(scope, platform);
+    if (scoped) {
+      return scoped;
+    }
+
     return null;
   }
 
@@ -462,11 +586,14 @@
       isPlatformInput(platform, activeElement) &&
       isVisibleInput(activeElement)
     ) {
-      return activeElement;
+      const activeScore = scorePromptInputCandidate(activeElement);
+      if (activeScore !== Number.NEGATIVE_INFINITY) {
+        return activeElement;
+      }
     }
 
     const inputs = findPromptInputs(platform);
-    return inputs[0] || null;
+    return pickBestPromptInput(inputs);
   }
 
   function readPrompt(input) {
@@ -475,10 +602,25 @@
     }
 
     if (input.tagName === "TEXTAREA") {
-      return input.value || "";
+      return (input.value || "").replace(/[\u200B-\u200D\uFEFF]/g, "");
     }
 
-    return input.innerText || "";
+    const placeholder = clean(
+      input.getAttribute("aria-placeholder") ||
+        input.getAttribute("data-placeholder") ||
+        input.getAttribute("placeholder")
+    ).toLowerCase();
+    const text = clean((input.innerText || input.textContent || "").replace(/[\u200B-\u200D\uFEFF]/g, ""));
+
+    if (!text) {
+      return "";
+    }
+
+    if (placeholder && text.toLowerCase() === placeholder) {
+      return "";
+    }
+
+    return text;
   }
 
   function hasAnyHint(prompt, patterns) {
@@ -756,6 +898,18 @@
       return "For backend work, ask AI for failure paths and data validation checks.";
     }
 
+    if (normalizedRole.includes("manager")) {
+      return "Manager mode: ask AI for options, risks, and a concrete decision recommendation.";
+    }
+
+    if (normalizedRole.includes("director")) {
+      return "Director mode: ask AI for strategic options with KPI impact and dependency risk.";
+    }
+
+    if (normalizedSkill.includes("student")) {
+      return "Student mode: ask AI for guided steps and one short exercise before final answers.";
+    }
+
     if (normalizedSkill.includes("junior") || normalizedSkill.includes("beginner")) {
       return "Learning mode: request a step-by-step explanation before any full solution.";
     }
@@ -920,7 +1074,7 @@
     }
 
     const inputs = findPromptInputs(platform);
-    return inputs[0] || null;
+    return pickBestPromptInput(inputs);
   }
 
   function buildPromptSignature(prompt) {

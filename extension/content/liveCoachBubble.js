@@ -28,6 +28,7 @@
     hasShortcutIntent: false,
     hasIndependentAttempt: false,
     promptPreview: "",
+    isDraft: false,
     at: 0
   };
 
@@ -141,6 +142,7 @@
     return {
       ...DEFAULT_RUNTIME,
       ...rawRuntime,
+      isDraft: !!rawRuntime.isDraft,
       warnings: Array.isArray(rawRuntime.warnings) ? rawRuntime.warnings : [],
       suggestions: Array.isArray(rawRuntime.suggestions) ? rawRuntime.suggestions : []
     };
@@ -162,18 +164,14 @@
     return "ai-coach-live-bubble__grade--d";
   }
 
-  function shouldShowBubble() {
-    // Keep the live bubble always visible on supported AI pages.
-    // Users can still collapse the body via the header toggle.
-    return true;
-  }
-
-  function formatEventTime(timestamp) {
+  function formatEventTime(runtime) {
+    const timestamp = runtime?.at;
     if (!timestamp || !Number.isFinite(timestamp)) {
       return "Waiting for first send event";
     }
 
-    return `Last update: ${new Date(timestamp).toLocaleTimeString()}`;
+    const label = runtime?.isDraft ? "Live typing update" : "Last send update";
+    return `${label}: ${new Date(timestamp).toLocaleTimeString()}`;
   }
 
   function formatScoreSummary(runtime) {
@@ -197,11 +195,8 @@
       return;
     }
 
-    const visible = shouldShowBubble();
-    state.refs.root.classList.toggle("ai-coach-live-bubble__hidden", !visible);
-    if (!visible) {
-      return;
-    }
+    state.refs.root.classList.remove("ai-coach-live-bubble__hidden");
+    state.refs.root.style.display = "block";
 
     const score = Number.isFinite(state.runtime.score) ? state.runtime.score : null;
     state.refs.scoreValue.textContent = score === null ? "--/100" : `${score}/100`;
@@ -221,7 +216,7 @@
     state.refs.preview.textContent = preview;
     state.refs.preview.classList.toggle("ai-coach-live-bubble__muted", !preview);
 
-    state.refs.meta.textContent = formatEventTime(state.runtime.at);
+    state.refs.meta.textContent = formatEventTime(state.runtime);
   }
 
   function toggleMinimize() {
@@ -390,6 +385,7 @@
 
     if (detail.analysis && typeof detail.analysis === "object") {
       state.runtime = mergeRuntime(detail.analysis);
+      state.runtime.isDraft = !!detail.draft;
       if (!state.runtime.at) {
         state.runtime.at = detail.at || Date.now();
       }
@@ -399,11 +395,26 @@
     } else if (detail.sendOnly) {
       state.runtime = {
         ...state.runtime,
+        isDraft: false,
         at: detail.at || Date.now()
       };
     }
 
     render();
+  }
+
+  function ensureBubbleMounted() {
+    if (!state.refs?.root) {
+      return;
+    }
+
+    if (document.body && !document.body.contains(state.refs.root)) {
+      document.body.appendChild(state.refs.root);
+      render();
+      if (state.bubblePosition) {
+        applyBubblePosition(state.bubblePosition);
+      }
+    }
   }
 
   async function hydrateFromStorage() {
@@ -473,6 +484,17 @@
     );
   }
 
+  function wireMountObserver() {
+    const observer = new MutationObserver(() => {
+      ensureBubbleMounted();
+    });
+
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+  }
+
   async function init() {
     createBubble();
     await hydrateFromStorage();
@@ -480,6 +502,7 @@
     wireStorageUpdates();
     wireDragBehavior();
     wireViewportResize();
+    wireMountObserver();
     render();
 
     if (state.bubblePosition) {
@@ -487,6 +510,10 @@
         applyBubblePosition(state.bubblePosition);
       });
     }
+
+    window.setInterval(() => {
+      ensureBubbleMounted();
+    }, 1500);
   }
 
   init().catch((error) => {

@@ -20,8 +20,10 @@ AI Dev Coach is designed to protect the learning loop:
 - Profile onboarding in popup (`job`, `skill`, `habit goal`)
 - Prompt Builder with required fields (`task`, `context`, `what you tried`)
 - In-page Quick Prompt Builder button beside AI chat composer (`Build + Insert`, `Build + Send`)
-- Keyboard shortcut `Ctrl + O` to open Prompt Builder while focused in AI chat composer
-- Role-aware Prompt Builder modes: Student, Teacher, Software Engineer, Solution Architecture, Doctor, Other
+- Keyboard shortcut `Ctrl/Cmd + O` while focused in AI chat composer (browser-dependent)
+- Background shortcut command `Ctrl/Cmd + Shift + O` to open Prompt Builder reliably
+- Role-aware Prompt Builder modes: Teacher, Software Engineer, Solution Architecture, Manager, Director, Doctor, Other
+- Profile level dropdown: Student, Junior, Middle, Senior
 - In-page Live Coach bubble with realtime prompt score and habit snapshot
 - 6 prompt templates: debugging, code review, system design, refactoring, performance optimization, learning
 - Prompt scoring algorithm with grade + breakdown (`completeness`, `specificity`, `reasoning`, `learning safety`, `template fit`)

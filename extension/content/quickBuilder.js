@@ -3,6 +3,13 @@
   const BUTTON_ID = "ai-dev-coach-builder-launcher";
   const COACH_OWNED_SELECTOR = '[data-ai-coach-owned="true"]';
   const PLATFORM_INPUT_SELECTORS = [
+    "#prompt-textarea",
+    "[data-testid='prompt-textarea']",
+    "[data-testid*='prompt-textarea']",
+    "[data-testid*='composer'] textarea",
+    "[data-testid*='composer'] [contenteditable='true']",
+    "[role='textbox'][contenteditable='true']",
+    "div.ProseMirror[contenteditable='true']",
     "textarea",
     '[contenteditable="true"]',
     '[contenteditable="plaintext-only"]',
@@ -65,13 +72,18 @@
     habitGoals: ""
   };
 
+  const CONTEXT_EXCLUSION_HINTS = [
+    /\bsearch\b/i,
+    /\bfilter\b/i,
+    /\bfind\b/i,
+    /\bhistory\b/i,
+    /\brename\b/i,
+    /\btitle\b/i,
+    /\bsetting(s)?\b/i,
+    /\bmemory\b/i
+  ];
+
   const JOB_ROLE_OPTIONS = {
-    student: {
-      label: "Student",
-      builderHint: "Prioritize understanding and learning outcomes.",
-      contextHint: "Course/topic, level, assignment constraints",
-      attemptHint: "What you understood and where you got stuck"
-    },
     teacher: {
       label: "Teacher",
       builderHint: "Prioritize pedagogy, learner outcomes, and assessment clarity.",
@@ -90,6 +102,18 @@
       contextHint: "NFRs, integration points, compliance and cost constraints",
       attemptHint: "Option explored, tradeoffs considered, uncertainty"
     },
+    manager: {
+      label: "Manager",
+      builderHint: "Prioritize delivery risk, scope decisions, and team unblock plans.",
+      contextHint: "Business impact, delivery timeline, capacity, and risks",
+      attemptHint: "Actions taken, current blockers, and decisions needed"
+    },
+    director: {
+      label: "Director",
+      builderHint: "Prioritize strategy, cross-team dependencies, and measurable outcomes.",
+      contextHint: "KPIs, org constraints, cross-functional dependencies, governance",
+      attemptHint: "Options considered, tradeoffs, and escalation points"
+    },
     doctor: {
       label: "Doctor",
       builderHint: "Use AI for educational reasoning support only.",
@@ -106,6 +130,15 @@
   };
 
   const DEFAULT_TEMPLATE = "debugging";
+  const ROLE_TEMPLATE_RECOMMENDATIONS = {
+    teacher: "learning",
+    software_engineer: "debugging",
+    solution_architecture: "system_design",
+    manager: "system_design",
+    director: "system_design",
+    doctor: "learning",
+    other: "debugging"
+  };
   const REQUIRED_FIELDS = ["task", "context", "attempt"];
 
   const TEMPLATES = {
@@ -228,6 +261,48 @@
     return (value || "").trim();
   }
 
+  function normalizeLevel(value) {
+    const raw = clean(value);
+    if (!raw) {
+      return "";
+    }
+
+    if (/^student$/i.test(raw)) {
+      return "Student";
+    }
+    if (/^junior$/i.test(raw)) {
+      return "Junior";
+    }
+    if (/^(middle|mid)$/i.test(raw)) {
+      return "Middle";
+    }
+    if (/^senior$/i.test(raw)) {
+      return "Senior";
+    }
+
+    return raw;
+  }
+
+  function isStudentLevel(value) {
+    return normalizeLevel(value) === "Student";
+  }
+
+  function hasLegacyStudentRole(profile = {}) {
+    const roleKey = normalizeRoleKey(profile.roleKey);
+    const roleText = clean(profile.role).toLowerCase();
+    return roleKey === "student" || /student|sinh vien|hoc sinh/.test(roleText);
+  }
+
+  function getRecommendedTemplateForProfile(profile, roleKey) {
+    if (isStudentLevel(profile?.skill)) {
+      return "learning";
+    }
+
+    const resolvedRoleKey = JOB_ROLE_OPTIONS[roleKey] ? roleKey : resolveRoleKey(profile || {});
+    const recommendedTemplate = ROLE_TEMPLATE_RECOMMENDATIONS[resolvedRoleKey] || DEFAULT_TEMPLATE;
+    return TEMPLATES[recommendedTemplate] ? recommendedTemplate : DEFAULT_TEMPLATE;
+  }
+
   function normalizeRoleKey(value) {
     return clean(value).toLowerCase().replace(/\s+/g, "_");
   }
@@ -243,9 +318,6 @@
       return "software_engineer";
     }
 
-    if (/student|sinh vien|hoc sinh/.test(roleText)) {
-      return "student";
-    }
     if (/teacher|giang vien|giao vien/.test(roleText)) {
       return "teacher";
     }
@@ -254,6 +326,12 @@
     }
     if (/solution architect|architecture|kien truc/.test(roleText)) {
       return "solution_architecture";
+    }
+    if (/manager|lead|quan ly/.test(roleText)) {
+      return "manager";
+    }
+    if (/director|giam doc/.test(roleText)) {
+      return "director";
     }
     if (/doctor|bac si|physician|medical/.test(roleText)) {
       return "doctor";
@@ -320,6 +398,101 @@
     return rect.width > 0 && rect.height > 0;
   }
 
+  function contextHintText(element) {
+    if (!(element instanceof HTMLElement)) {
+      return "";
+    }
+
+    return [
+      element.id,
+      element.getAttribute("name"),
+      element.getAttribute("data-testid"),
+      element.getAttribute("aria-label"),
+      element.getAttribute("placeholder"),
+      element.className
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  function isExcludedContextInput(element) {
+    if (!(element instanceof HTMLElement)) {
+      return true;
+    }
+
+    const context = contextHintText(element);
+    return CONTEXT_EXCLUSION_HINTS.some((pattern) => pattern.test(context));
+  }
+
+  function findComposerScope(element) {
+    if (!(element instanceof HTMLElement)) {
+      return null;
+    }
+
+    return element.closest(
+      "form,[data-testid*='composer'],[data-testid*='prompt'],[class*='composer'],[class*='prompt'],[class*='chat-input']"
+    );
+  }
+
+  function hasNearbySendButton(element) {
+    const scope = findComposerScope(element);
+    if (!(scope instanceof Element)) {
+      return false;
+    }
+
+    const candidates = Array.from(
+      scope.querySelectorAll("button,[role='button'],input[type='submit'],input[type='button']")
+    ).slice(0, 80);
+    return candidates.some((candidate) => candidate instanceof HTMLElement && isLikelySendButton(candidate));
+  }
+
+  function scorePromptInputCandidate(element) {
+    if (!(element instanceof HTMLElement) || !isVisibleInput(element) || isExcludedContextInput(element)) {
+      return Number.NEGATIVE_INFINITY;
+    }
+
+    const context = contextHintText(element);
+    const rect = element.getBoundingClientRect();
+    let score = 0;
+
+    if (/#prompt-textarea|prompt-textarea|composer|chat-input/i.test(context)) {
+      score += 80;
+    }
+    if (findComposerScope(element)) {
+      score += 36;
+    }
+    if (hasNearbySendButton(element)) {
+      score += 30;
+    }
+    if (rect.bottom >= window.innerHeight * 0.45) {
+      score += 16;
+    }
+    if (rect.width >= 200) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  function pickBestPromptInput(candidates) {
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+      return null;
+    }
+
+    let best = null;
+    let bestScore = Number.NEGATIVE_INFINITY;
+
+    candidates.forEach((candidate) => {
+      const score = scorePromptInputCandidate(candidate);
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+      }
+    });
+
+    return bestScore === Number.NEGATIVE_INFINITY ? null : best;
+  }
+
   function findPromptInput(platform) {
     if (!platform) {
       return null;
@@ -332,14 +505,34 @@
       platform.inputSelectors.some((selector) => activeElement.matches(selector)) &&
       isVisibleInput(activeElement)
     ) {
-      return activeElement;
+      const activeScore = scorePromptInputCandidate(activeElement);
+      if (activeScore !== Number.NEGATIVE_INFINITY) {
+        return activeElement;
+      }
     }
+
+    const matches = [];
+    const seen = new Set();
 
     for (const selector of platform.inputSelectors) {
       const candidates = Array.from(document.querySelectorAll(selector));
-      const visible = candidates.find((candidate) => isVisibleInput(candidate));
-      if (visible) {
-        return visible;
+      candidates.forEach((candidate) => {
+        if (!(candidate instanceof HTMLElement) || seen.has(candidate) || !isVisibleInput(candidate)) {
+          return;
+        }
+        seen.add(candidate);
+        matches.push(candidate);
+      });
+    }
+
+    const best = pickBestPromptInput(matches);
+    if (best) {
+      return best;
+    }
+
+    for (const candidate of matches) {
+      if (!isExcludedContextInput(candidate)) {
+        return candidate;
       }
     }
 
@@ -360,6 +553,19 @@
       if (candidate instanceof HTMLElement && isVisibleInput(candidate) && !isCoachOwnedElement(candidate)) {
         return candidate;
       }
+    }
+
+    const scoped = findComposerScope(element instanceof HTMLElement ? element : null);
+    if (scoped instanceof Element) {
+      const candidates = [];
+      for (const selector of platform.inputSelectors) {
+        scoped.querySelectorAll(selector).forEach((node) => {
+          if (node instanceof HTMLElement && isVisibleInput(node) && !isCoachOwnedElement(node)) {
+            candidates.push(node);
+          }
+        });
+      }
+      return pickBestPromptInput(candidates);
     }
 
     return null;
@@ -534,7 +740,7 @@
     const basePrompt = [
       template.intro,
       `Role: ${profile.role || "Not provided"}`,
-      `Skill level: ${profile.skill || "Not provided"}`,
+      `Level: ${profile.skill || "Not provided"}`,
       `Habit goal: ${profile.habitGoals || template.defaultGoal}`,
       "",
       `Task: ${fields.task}`,
@@ -573,11 +779,12 @@
 
     const select = state.refs.templateSelect;
     select.innerHTML = "";
+    const recommendedKey = getRecommendedTemplateForProfile(state.profile, state.selectedRoleKey);
 
     Object.entries(TEMPLATES).forEach(([key, template]) => {
       const option = document.createElement("option");
       option.value = key;
-      option.textContent = template.label;
+      option.textContent = key === recommendedKey ? `${template.label} (Recommended)` : template.label;
       option.selected = key === state.selectedTemplate;
       select.appendChild(option);
     });
@@ -591,8 +798,20 @@
     const template = TEMPLATES[templateKey] || TEMPLATES[DEFAULT_TEMPLATE];
     const roleOption = JOB_ROLE_OPTIONS[state.selectedRoleKey] || JOB_ROLE_OPTIONS.software_engineer;
     const roleLabel = roleOption.label;
+    const recommendedKey = getRecommendedTemplateForProfile(state.profile, state.selectedRoleKey);
+    const recommendedTemplate = TEMPLATES[recommendedKey];
     state.refs.templateHint.textContent = template.hint;
+    if (recommendedTemplate) {
+      const recommendationNote =
+        templateKey === recommendedKey
+          ? `Recommended template applied: ${recommendedTemplate.label}.`
+          : `Recommended template for this role: ${recommendedTemplate.label}.`;
+      state.refs.templateHint.textContent = `${template.hint} ${recommendationNote}`;
+    }
     state.refs.roleHint.textContent = `Role mode: ${roleLabel}. ${roleOption.builderHint}`;
+    if (isStudentLevel(state.profile.skill)) {
+      state.refs.roleHint.textContent += " Level mode: Student learning flow is active.";
+    }
     state.refs.contextInput.placeholder = `${template.contextPlaceholder}. ${roleOption.contextHint}.`;
     state.refs.attemptInput.placeholder = `${template.attemptPlaceholder}. ${roleOption.attemptHint}.`;
   }
@@ -614,9 +833,25 @@
   async function loadProfileAndTemplate() {
     const data = await storageGet(["profile", "selectedTemplate", "quickBuilderRoleKey"]);
     state.profile = { ...DEFAULT_PROFILE, ...(data.profile || {}) };
-    state.selectedTemplate = TEMPLATES[data.selectedTemplate] ? data.selectedTemplate : DEFAULT_TEMPLATE;
-    state.selectedRoleKey =
-      JOB_ROLE_OPTIONS[data.quickBuilderRoleKey] ? data.quickBuilderRoleKey : resolveRoleKey(state.profile);
+    state.profile.skill = normalizeLevel(state.profile.skill);
+    if (hasLegacyStudentRole(state.profile)) {
+      state.profile.roleKey = "other";
+      state.profile.role = "Other";
+      state.profile.skill = state.profile.skill || "Student";
+      storageSet({ profile: state.profile }).catch(() => {
+        console.warn("AI Dev Coach quick builder legacy profile migration skipped");
+      });
+    }
+    const profileHasExplicitRole = !!(clean(state.profile.role) || clean(state.profile.roleKey));
+    state.selectedRoleKey = profileHasExplicitRole
+      ? resolveRoleKey(state.profile)
+      : JOB_ROLE_OPTIONS[data.quickBuilderRoleKey]
+        ? data.quickBuilderRoleKey
+        : resolveRoleKey(state.profile);
+    const recommendedTemplate = getRecommendedTemplateForProfile(state.profile, state.selectedRoleKey);
+    state.selectedTemplate = TEMPLATES[data.selectedTemplate]
+      ? data.selectedTemplate
+      : recommendedTemplate;
     const roleProfile = getRoleProfile({
       ...state.profile,
       roleKey: state.selectedRoleKey
@@ -625,6 +860,7 @@
     state.profile.role = roleProfile.label;
 
     if (state.refs) {
+      renderTemplateOptions();
       state.refs.templateSelect.value = state.selectedTemplate;
       state.refs.roleSelect.value = state.selectedRoleKey;
       applyTemplateUI(state.selectedTemplate);
@@ -686,21 +922,45 @@
       return;
     }
 
-    let desiredLeft = window.innerWidth - 156;
-    let desiredTop = window.innerHeight - 86;
+    let desiredLeft = window.innerWidth - 160;
+    let desiredTop = 16;
 
     if (input) {
       const rect = input.getBoundingClientRect();
-      desiredLeft = rect.right + 8;
-      desiredTop = rect.bottom - 34;
+      desiredLeft = rect.right - 154;
+      desiredTop = rect.top - 44;
+      if (desiredTop < 8) {
+        desiredTop = rect.bottom + 8;
+      }
     }
 
     const maxLeft = window.innerWidth - 170;
-    const maxTop = window.innerHeight - 42;
+    const maxTop = window.innerHeight - 48;
 
     state.refs.launcher.style.left = `${Math.max(10, Math.min(maxLeft, desiredLeft))}px`;
     state.refs.launcher.style.top = `${Math.max(8, Math.min(maxTop, desiredTop))}px`;
     state.refs.launcher.classList.remove("ai-coach-builder__hidden");
+
+    if (state.panelOpen && state.refs.panel) {
+      const panelRect = state.refs.panel.getBoundingClientRect();
+      const panelWidth = panelRect.width || 412;
+      const panelHeight = panelRect.height || 620;
+      const launcherRect = state.refs.launcher.getBoundingClientRect();
+      let panelLeft = launcherRect.right - panelWidth;
+      let panelTop = launcherRect.bottom + 8;
+
+      if (panelTop + panelHeight > window.innerHeight - 8) {
+        panelTop = launcherRect.top - panelHeight - 8;
+      }
+
+      panelLeft = Math.max(8, Math.min(window.innerWidth - panelWidth - 8, panelLeft));
+      panelTop = Math.max(8, Math.min(window.innerHeight - panelHeight - 8, panelTop));
+
+      state.refs.panel.style.left = `${panelLeft}px`;
+      state.refs.panel.style.top = `${panelTop}px`;
+      state.refs.panel.style.right = "auto";
+      state.refs.panel.style.bottom = "auto";
+    }
   }
 
   function scheduleLayoutUpdate() {
@@ -753,10 +1013,11 @@
 
       <label class="ai-coach-builder__label" for="aiCoachRoleSelect">Role</label>
       <select id="aiCoachRoleSelect" class="ai-coach-builder__input">
-        <option value="student">Student</option>
         <option value="teacher">Teacher</option>
         <option value="software_engineer" selected>Software Engineer</option>
         <option value="solution_architecture">Solution Architecture</option>
+        <option value="manager">Manager</option>
+        <option value="director">Director</option>
         <option value="doctor">Doctor</option>
         <option value="other">Other</option>
       </select>
@@ -821,8 +1082,16 @@
 
     state.refs.roleSelect.addEventListener("change", async () => {
       state.selectedRoleKey = state.refs.roleSelect.value;
+      const recommendedTemplate = getRecommendedTemplateForProfile(state.profile, state.selectedRoleKey);
+      state.selectedTemplate = TEMPLATES[recommendedTemplate] ? recommendedTemplate : DEFAULT_TEMPLATE;
+      renderTemplateOptions();
+      state.refs.templateSelect.value = state.selectedTemplate;
       applyTemplateUI(state.selectedTemplate);
-      await storageSet({ quickBuilderRoleKey: state.selectedRoleKey });
+      await storageSet({
+        quickBuilderRoleKey: state.selectedRoleKey,
+        selectedTemplate: state.selectedTemplate
+      });
+      setStatus(`Role updated to ${JOB_ROLE_OPTIONS[state.selectedRoleKey]?.label || "Other"}.`, true);
     });
 
     state.refs.insertBtn.addEventListener("click", () => {
@@ -862,13 +1131,12 @@
   }
 
   function isShortcutToggleEvent(event) {
+    const hasPrimaryModifier = event.ctrlKey || event.metaKey;
     return (
       event.key &&
       event.key.toLowerCase() === "o" &&
-      !event.shiftKey &&
       !event.altKey &&
-      event.ctrlKey &&
-      !event.metaKey &&
+      hasPrimaryModifier &&
       !event.isComposing &&
       !event.repeat
     );
@@ -905,6 +1173,25 @@
     );
   }
 
+  function wireRuntimeMessages() {
+    chrome.runtime.onMessage.addListener((message) => {
+      if (!message || message.type !== "ai-dev-coach:open-quick-builder") {
+        return;
+      }
+
+      const platform = detectPlatform();
+      if (!platform) {
+        return;
+      }
+
+      togglePanel(true);
+      scheduleLayoutUpdate();
+      if (state.refs?.taskInput) {
+        state.refs.taskInput.focus();
+      }
+    });
+  }
+
   async function init() {
     createUI();
     renderTemplateOptions();
@@ -912,6 +1199,7 @@
     applyTemplateUI(state.selectedTemplate);
     startObservers();
     wireShortcut();
+    wireRuntimeMessages();
     scheduleLayoutUpdate();
   }
 

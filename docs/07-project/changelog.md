@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.2.15
+
+- expanded role-aware Prompt Builder coverage with new roles: Manager and Director
+- changed profile skill field to level dropdown (`Student`, `Junior`, `Middle`, `Senior`)
+- moved `Student` from role mode into level mode for clearer profile semantics
+- added role-to-template recommendation logic in popup and in-page Prompt Builder
+- improved composer detection reliability for ChatGPT/Claude/Grok/Gemini/DeepSeek monitoring and quick builder insertion
+- added command shortcut fallback (`Ctrl/Cmd + Shift + O`) for opening quick builder when browser blocks `Ctrl/Cmd + O`
+- improved live bubble resilience with auto-remount behavior on dynamic AI page rerenders
+
 ## v1.2.14
 
 - added role-aware Prompt Builder options by job (Student, Teacher, Software Engineer, Solution Architecture, Doctor, Other)

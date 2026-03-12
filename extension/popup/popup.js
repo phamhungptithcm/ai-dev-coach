@@ -14,7 +14,7 @@ const TEMPLATES = {
       return [
         "You are my debugging mentor.",
         `Role: ${profile.role || "Not provided"}`,
-        `Skill level: ${profile.skill || "Not provided"}`,
+        `Level: ${profile.skill || "Not provided"}`,
         `Habit goal: ${profile.habitGoals || "Debug independently before asking for final code"}`,
         "",
         `Debug task: ${task}`,
@@ -46,7 +46,7 @@ const TEMPLATES = {
       return [
         "Act as a pragmatic senior reviewer and coach.",
         `Role: ${profile.role || "Not provided"}`,
-        `Skill level: ${profile.skill || "Not provided"}`,
+        `Level: ${profile.skill || "Not provided"}`,
         `Habit goal: ${profile.habitGoals || "Improve code quality and review judgment"}`,
         "",
         `Review goal: ${task}`,
@@ -78,7 +78,7 @@ const TEMPLATES = {
       return [
         "Act as a staff engineer helping with system design.",
         `Role: ${profile.role || "Not provided"}`,
-        `Skill level: ${profile.skill || "Not provided"}`,
+        `Level: ${profile.skill || "Not provided"}`,
         `Habit goal: ${profile.habitGoals || "Reason with tradeoffs before implementation"}`,
         "",
         `Design problem: ${task}`,
@@ -110,7 +110,7 @@ const TEMPLATES = {
       return [
         "Act as a refactoring coach.",
         `Role: ${profile.role || "Not provided"}`,
-        `Skill level: ${profile.skill || "Not provided"}`,
+        `Level: ${profile.skill || "Not provided"}`,
         `Habit goal: ${profile.habitGoals || "Improve design while preserving behavior"}`,
         "",
         `Refactoring target: ${task}`,
@@ -142,7 +142,7 @@ const TEMPLATES = {
       return [
         "Act as a performance optimization mentor.",
         `Role: ${profile.role || "Not provided"}`,
-        `Skill level: ${profile.skill || "Not provided"}`,
+        `Level: ${profile.skill || "Not provided"}`,
         `Habit goal: ${profile.habitGoals || "Measure first, optimize second"}`,
         "",
         `Performance goal: ${task}`,
@@ -174,7 +174,7 @@ const TEMPLATES = {
       return [
         "Teach me like a technical mentor.",
         `Role: ${profile.role || "Not provided"}`,
-        `Skill level: ${profile.skill || "Not provided"}`,
+        `Level: ${profile.skill || "Not provided"}`,
         `Habit goal: ${profile.habitGoals || "Strengthen independent reasoning"}`,
         "",
         `Learning goal: ${task}`,
@@ -194,13 +194,6 @@ const TEMPLATES = {
 };
 
 const JOB_ROLE_OPTIONS = {
-  student: {
-    label: "Student",
-    builderHint: "Focus on learning outcomes and understanding before final answers.",
-    contextHint: "Course/topic, current level, assignment constraints",
-    attemptHint: "Your current understanding, what confused you, and one attempt",
-    roleSignals: [/assignment/i, /rubric/i, /course/i, /lesson/i, /understand/i, /practice/i]
-  },
   teacher: {
     label: "Teacher",
     builderHint: "Focus on pedagogy, learner outcomes, and assessment quality.",
@@ -221,6 +214,20 @@ const JOB_ROLE_OPTIONS = {
     contextHint: "NFRs, integration points, compliance, cost and latency constraints",
     attemptHint: "Architecture option explored and tradeoff concerns",
     roleSignals: [/nfr/i, /latency/i, /throughput/i, /sla/i, /integration/i, /trade-?off/i]
+  },
+  manager: {
+    label: "Manager",
+    builderHint: "Focus on delivery risk, prioritization, and team execution clarity.",
+    contextHint: "Business impact, timeline, team capacity, and blockers",
+    attemptHint: "What has been tried, what is blocked, and decision options",
+    roleSignals: [/timeline/i, /milestone/i, /risk/i, /scope/i, /priority/i, /resource/i, /stakeholder/i]
+  },
+  director: {
+    label: "Director",
+    builderHint: "Focus on strategy, cross-team alignment, and measurable outcomes.",
+    contextHint: "Org constraints, KPI targets, dependencies, and governance",
+    attemptHint: "Options explored, tradeoffs, and escalation points",
+    roleSignals: [/strategy/i, /kpi/i, /roadmap/i, /governance/i, /portfolio/i, /budget/i, /alignment/i]
   },
   doctor: {
     label: "Doctor",
@@ -262,6 +269,16 @@ const DEFAULT_STATS = {
 };
 
 const DEFAULT_TEMPLATE_KEY = "debugging";
+const ROLE_TEMPLATE_RECOMMENDATIONS = {
+  teacher: "learning",
+  software_engineer: "debugging",
+  solution_architecture: "system_design",
+  manager: "system_design",
+  director: "system_design",
+  doctor: "learning",
+  other: "debugging"
+};
+const LEVEL_OPTIONS = new Set(["Student", "Junior", "Middle", "Senior"]);
 const REQUIRED_KEYS = ["task", "context", "attempt"];
 const REASONING_HINTS = [/tried/i, /attempt/i, /hypothesis/i, /debug/i, /test/i, /measure/i, /analy/i];
 const CONTEXT_HINTS = [/error/i, /stack/i, /file/i, /endpoint/i, /metric/i, /latency/i, /throughput/i, /trace/i];
@@ -309,6 +326,58 @@ function clean(value) {
   return (value || "").trim();
 }
 
+function normalizeLevel(value) {
+  const raw = clean(value);
+  if (!raw) {
+    return "";
+  }
+
+  if (/^student$/i.test(raw)) {
+    return "Student";
+  }
+  if (/^junior$/i.test(raw)) {
+    return "Junior";
+  }
+  if (/^(middle|mid)$/i.test(raw)) {
+    return "Middle";
+  }
+  if (/^senior$/i.test(raw)) {
+    return "Senior";
+  }
+
+  return LEVEL_OPTIONS.has(raw) ? raw : "";
+}
+
+function isStudentLevel(value) {
+  return normalizeLevel(value) === "Student";
+}
+
+function migrateLegacyStudentProfile(rawProfile = {}) {
+  const roleKey = normalizeRoleKey(rawProfile.roleKey);
+  const roleText = clean(rawProfile.role).toLowerCase();
+  const isLegacyStudent = roleKey === "student" || /student|sinh vien|hoc sinh/.test(roleText);
+
+  if (!isLegacyStudent) {
+    return {
+      profile: {
+        ...rawProfile,
+        skill: normalizeLevel(rawProfile.skill)
+      },
+      migrated: false
+    };
+  }
+
+  return {
+    profile: {
+      ...rawProfile,
+      roleKey: "other",
+      role: "Other",
+      skill: normalizeLevel(rawProfile.skill) || "Student"
+    },
+    migrated: true
+  };
+}
+
 function normalizeRoleKey(value) {
   return clean(value).toLowerCase().replace(/\s+/g, "_");
 }
@@ -324,9 +393,6 @@ function resolveRoleKey(rawProfile = {}) {
     return "software_engineer";
   }
 
-  if (/student|sinh vien|hoc sinh/.test(roleText)) {
-    return "student";
-  }
   if (/teacher|giang vien|giao vien/.test(roleText)) {
     return "teacher";
   }
@@ -335,6 +401,12 @@ function resolveRoleKey(rawProfile = {}) {
   }
   if (/solution architect|architecture|kien truc/.test(roleText)) {
     return "solution_architecture";
+  }
+  if (/manager|lead|quan ly/.test(roleText)) {
+    return "manager";
+  }
+  if (/director|giam doc/.test(roleText)) {
+    return "director";
   }
   if (/doctor|bac si|physician|medical/.test(roleText)) {
     return "doctor";
@@ -392,9 +464,22 @@ function applyTemplateUI(template) {
     return;
   }
 
-  const roleProfile = getRoleProfile(readProfileForm());
+  const currentProfile = readProfileForm();
+  const roleProfile = getRoleProfile(currentProfile);
+  const recommendedTemplateKey = getRecommendedTemplateForProfile(currentProfile);
+  const recommendedTemplate = TEMPLATES[recommendedTemplateKey];
   templateHint.textContent = template.hint;
   rolePromptHint.textContent = `Role mode: ${roleProfile.label}. ${roleProfile.builderHint}`;
+  if (isStudentLevel(currentProfile.skill)) {
+    rolePromptHint.textContent += " Level mode: Student learning flow is active.";
+  }
+  if (recommendedTemplate) {
+    const recommendationNote =
+      templateSelect.value === recommendedTemplateKey
+        ? `Recommended template applied: ${recommendedTemplate.label}.`
+        : `Recommended template for this role: ${recommendedTemplate.label}.`;
+    templateHint.textContent = `${template.hint} ${recommendationNote}`;
+  }
   contextInput.placeholder = `${template.contextPlaceholder}. ${roleProfile.contextHint}.`;
   attemptInput.placeholder = `${template.attemptPlaceholder}. ${roleProfile.attemptHint}.`;
 }
@@ -422,7 +507,7 @@ function readProfileForm() {
   return {
     roleKey: selectedRoleKey,
     role: resolvedRoleLabel,
-    skill: clean(skillInput.value),
+    skill: normalizeLevel(skillInput.value),
     habitGoals: clean(habitInput.value)
   };
 }
@@ -454,8 +539,17 @@ function fillProfile(profile) {
   setCustomRoleVisibility(roleKey);
   customRoleInput.value =
     roleKey === "other" && clean(profile.role).toLowerCase() !== "other" ? clean(profile.role) : "";
-  skillInput.value = profile.skill || "";
+  skillInput.value = normalizeLevel(profile.skill);
   habitInput.value = profile.habitGoals || "";
+}
+
+function getRecommendedTemplateForProfile(profile) {
+  if (isStudentLevel(profile.skill)) {
+    return "learning";
+  }
+  const roleProfile = getRoleProfile(profile);
+  const templateKey = ROLE_TEMPLATE_RECOMMENDATIONS[roleProfile.key] || DEFAULT_TEMPLATE_KEY;
+  return TEMPLATES[templateKey] ? templateKey : DEFAULT_TEMPLATE_KEY;
 }
 
 function hasProfileData(profile) {
@@ -491,7 +585,7 @@ function renderProfileView(profile, forceEditMode = false) {
     const role = clean(profile.role) || "Not set";
     const skill = clean(profile.skill) || "Not set";
     const goal = clean(profile.habitGoals) || "Not set";
-    profileSummary.textContent = `Role: ${role} | Skill: ${skill} | Goal: ${goal}`;
+    profileSummary.textContent = `Role: ${role} | Level: ${skill} | Goal: ${goal}`;
     profileSummary.classList.remove("hidden");
   } else {
     profileSummary.textContent = "";
@@ -862,11 +956,18 @@ async function loadState() {
   ]);
 
   const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
-  const profile = { ...DEFAULT_PROFILE, ...(data.profile || {}) };
+  const { profile, migrated } = migrateLegacyStudentProfile({
+    ...DEFAULT_PROFILE,
+    ...(data.profile || {})
+  });
   const stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
   const selectedTemplate = TEMPLATES[data.selectedTemplate]
     ? data.selectedTemplate
-    : DEFAULT_TEMPLATE_KEY;
+    : getRecommendedTemplateForProfile(profile);
+
+  if (migrated) {
+    await storageSet({ profile });
+  }
 
   fillMonitoring(settings);
   fillProfile(profile);
@@ -930,7 +1031,21 @@ function wireEvents() {
 
   roleSelect.addEventListener("change", () => {
     setCustomRoleVisibility(roleSelect.value);
+    const recommendedTemplate = getRecommendedTemplateForProfile(readProfileForm());
+    templateSelect.value = recommendedTemplate;
     applyTemplateUI(TEMPLATES[templateSelect.value]);
+    storageSet({ selectedTemplate: recommendedTemplate }).catch(() => {
+      setStatus(promptStatus, "Unable to store template preference.", false);
+    });
+  });
+
+  skillInput.addEventListener("change", () => {
+    const recommendedTemplate = getRecommendedTemplateForProfile(readProfileForm());
+    templateSelect.value = recommendedTemplate;
+    applyTemplateUI(TEMPLATES[templateSelect.value]);
+    storageSet({ selectedTemplate: recommendedTemplate }).catch(() => {
+      setStatus(promptStatus, "Unable to store template preference.", false);
+    });
   });
 
   customRoleInput.addEventListener("input", () => {

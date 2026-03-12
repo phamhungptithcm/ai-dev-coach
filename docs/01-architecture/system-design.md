@@ -27,6 +27,6 @@ flowchart LR
 
 The extension stores only local state in `chrome.storage.local`:
 
-- `profile`: role, skill level, habit goal
+- `profile`: role, level, habit goal
 - `settings`: strict mode and warning thresholds
 - `stats`: AI requests, manual attempts, large paste count

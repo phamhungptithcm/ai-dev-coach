@@ -22,12 +22,20 @@ Optional fields:
 
 Role modes available in Prompt Builder:
 
-- Student
 - Teacher
 - Software Engineer
 - Solution Architecture
+- Manager
+- Director
 - Doctor
 - Other
+
+Level modes:
+
+- Student
+- Junior
+- Middle
+- Senior
 
 ## Prompt Scoring Algorithm
 
@@ -72,7 +80,7 @@ Grade mapping:
 +---------------------------------------------------+
 | Developer Profile                                 |
 | Role: [____________________________]              |
-| Skill: [___________________________]              |
+| Level: [ Student v ]                              |
 | Habit Goal: [_______________________]             |
 | [ Save Profile ]                                  |
 +---------------------------------------------------+
@@ -123,7 +131,8 @@ Grade mapping:
 ## In-Page Quick Builder (Chat Window)
 
 - The extension injects a floating `Prompt Builder` button beside the active AI chat composer.
-- Press `Ctrl + O` while focused in the chat composer to open the Prompt Builder instantly.
+- Press `Ctrl/Cmd + O` while focused in the chat composer to open the Prompt Builder instantly (browser-dependent).
+- Use command shortcut `Ctrl/Cmd + Shift + O` for consistent opening across browsers.
 - Clicking the button opens a compact form with the same template + required fields as popup builder.
 - Role selector in the in-page builder adjusts guidance and prompt framing per job role.
 - `Build + Insert` writes the generated prompt into the chat input.
@@ -134,6 +143,7 @@ Grade mapping:
 
 - A floating bubble shows realtime `Prompt Score`, grade, and send-time coaching summary.
 - While user types in composer, draft scoring updates bubble in near realtime (500ms debounce).
+- Bubble is kept mounted and auto-restored if the AI page rerenders or route changes.
 - Habit snapshot in bubble updates immediately with AI requests, manual attempts, dependency, bad prompts, shortcut prompts, and copy/paste behavior.
 - Bubble is driven by send-event listeners (`Enter`, submit, send-button click) and runtime analysis events.
 

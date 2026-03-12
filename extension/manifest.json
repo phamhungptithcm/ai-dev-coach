@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Dev Coach",
-  "version": "1.2.14",
+  "version": "1.2.15",
   "description": "Coach developers to use AI with better reasoning, prompting, and coding habits.",
   "minimum_chrome_version": "114",
   "homepage_url": "https://github.com/phamhungptithcm/ai-dev-coach",
@@ -30,6 +30,15 @@
     "default_icon": {
       "16": "assets/icon-16.png",
       "32": "assets/icon-32.png"
+    }
+  },
+  "commands": {
+    "toggle_prompt_builder": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+O",
+        "mac": "Command+Shift+O"
+      },
+      "description": "Open AI Dev Coach Prompt Builder"
     }
   },
   "options_page": "options/options.html",

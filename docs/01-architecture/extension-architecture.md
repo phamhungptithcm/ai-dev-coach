@@ -21,9 +21,9 @@ This order ensures toast runtime exists first, UI surfaces are injected, then pr
 
 ## Main Runtime Components
 
-- `content/quickBuilder.js`: in-page Prompt Builder launcher + panel, role selector, `Build + Insert`, `Build + Send`, keyboard shortcut (`Ctrl + O`) when focused in chat composer
+- `content/quickBuilder.js`: in-page Prompt Builder launcher + panel, role selector, `Build + Insert`, `Build + Send`, keyboard shortcuts (`Ctrl/Cmd + O` and command fallback `Ctrl/Cmd + Shift + O`) when focused in chat composer
 - `content/monitor.js`: prompt capture, send detection, realtime scoring, bad-prompt detection, dependency metrics
-- `content/liveCoachBubble.js`: floating realtime HUD for prompt score + habit snapshot, draggable and persisted
+- `content/liveCoachBubble.js`: floating realtime HUD for prompt score + habit snapshot, draggable, persisted, and auto-remounted on dynamic UI rerender
 - `content/interactionTracker.js`: copy/paste monitoring, fast-copy detection, large-paste warnings
 - `content/aiOverlay.js`: toast rendering layer (top-right notifications)
 

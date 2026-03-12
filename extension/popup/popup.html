@@ -53,17 +53,24 @@
       <div id="profileForm">
         <label for="roleSelect">Job / Role</label>
         <select id="roleSelect">
-          <option value="student">Student</option>
           <option value="teacher">Teacher</option>
           <option value="software_engineer" selected>Software Engineer</option>
           <option value="solution_architecture">Solution Architecture</option>
+          <option value="manager">Manager</option>
+          <option value="director">Director</option>
           <option value="doctor">Doctor</option>
           <option value="other">Other</option>
         </select>
         <input id="customRoleInput" class="hidden" type="text" placeholder="Enter your custom role" />
 
-        <label for="skillInput">Skill Level</label>
-        <input id="skillInput" type="text" placeholder="Junior, Mid, Senior" />
+        <label for="skillInput">Level</label>
+        <select id="skillInput">
+          <option value="">Select level</option>
+          <option value="Student">Student</option>
+          <option value="Junior">Junior</option>
+          <option value="Middle">Middle</option>
+          <option value="Senior">Senior</option>
+        </select>
 
         <label for="habitInput">Habit Goal</label>
         <textarea id="habitInput" rows="2" placeholder="Debug for 15 minutes before asking AI"></textarea>

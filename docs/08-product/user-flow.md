@@ -3,13 +3,13 @@
 ## First-Time Setup
 
 1. User opens extension popup.
-2. User enters role, skill, and habit goal.
+2. User enters role, level (`Student`, `Junior`, `Middle`, `Senior`), and habit goal.
 3. User saves profile.
 
 ## Prompt Preparation
 
 1. User selects a default template.
-2. User can open in-page Prompt Builder from launcher or by pressing `Ctrl + O` while focused in chat composer.
+2. User can open in-page Prompt Builder from launcher or by pressing `Ctrl/Cmd + O` while focused in chat composer (`Ctrl/Cmd + Shift + O` command fallback).
 3. User fills required fields (task, context, attempt).
 4. User generates structured prompt.
 5. User copies prompt into AI chat.

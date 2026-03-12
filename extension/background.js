@@ -106,3 +106,20 @@ chrome.runtime.onStartup.addListener(() => {
     console.error("AI Dev Coach startup sync error", error);
   });
 });
+
+chrome.commands.onCommand.addListener((command) => {
+  if (command !== "toggle_prompt_builder") {
+    return;
+  }
+
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const [activeTab] = tabs || [];
+    if (!activeTab || typeof activeTab.id !== "number") {
+      return;
+    }
+
+    chrome.tabs.sendMessage(activeTab.id, {
+      type: "ai-dev-coach:open-quick-builder"
+    });
+  });
+});
