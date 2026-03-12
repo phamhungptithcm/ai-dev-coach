@@ -249,6 +249,25 @@
     return null;
   }
 
+  function resolvePromptInputFromElement(platform, element) {
+    if (!platform || !(element instanceof Element)) {
+      return null;
+    }
+
+    if (isCoachOwnedElement(element)) {
+      return null;
+    }
+
+    for (const selector of platform.inputSelectors) {
+      const candidate = element.closest(selector);
+      if (candidate instanceof HTMLElement && isVisibleInput(candidate) && !isCoachOwnedElement(candidate)) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
   function isLikelySendButton(element) {
     if (!(element instanceof HTMLElement)) {
       return false;
@@ -706,12 +725,57 @@
     document.addEventListener("focusin", scheduleLayoutUpdate, true);
   }
 
+  function isShortcutToggleEvent(event) {
+    return (
+      event.key &&
+      event.key.toLowerCase() === "f1" &&
+      !event.shiftKey &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.isComposing &&
+      !event.repeat
+    );
+  }
+
+  function wireShortcut() {
+    document.addEventListener(
+      "keydown",
+      (event) => {
+        if (!isShortcutToggleEvent(event)) {
+          return;
+        }
+
+        const platform = detectPlatform();
+        if (!platform) {
+          return;
+        }
+
+        const activeElement = document.activeElement;
+        const focusedInput =
+          resolvePromptInputFromElement(platform, event.target) ||
+          resolvePromptInputFromElement(platform, activeElement);
+
+        if (!focusedInput) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        togglePanel(true);
+        scheduleLayoutUpdate();
+      },
+      true
+    );
+  }
+
   async function init() {
     createUI();
     renderTemplateOptions();
     await loadProfileAndTemplate();
     applyTemplateUI(state.selectedTemplate);
     startObservers();
+    wireShortcut();
     scheduleLayoutUpdate();
   }
 

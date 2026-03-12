@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS = {
   pasteThreshold: 320,
   longCopyThreshold: 360,
   minReadBeforeCopySeconds: 20,
-  overlayDurationMs: 6500
+  overlayDurationMs: 9000
 };
 
 const DEFAULT_STATS = {
@@ -124,8 +124,8 @@ async function saveSettings() {
     ),
     overlayDurationMs: clamp(
       overlayDuration.value,
-      2500,
-      15000,
+      9000,
+      20000,
       DEFAULT_SETTINGS.overlayDurationMs
     )
   };

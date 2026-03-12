@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.2.13
+
+- added `F1` shortcut to open in-page Prompt Builder when AI composer is focused
+- moved toast notifications to top-right and increased default display duration
+- upgraded prompt monitor scoring to evidence-based context checks (error + expected/actual + artifact)
+- upgraded independent-attempt detection to quality model (action + result + blocker) with explicit no-attempt penalties
+- added bilingual (EN + VI) prompt hint dictionaries for context, attempt quality, and shortcut detection
+- added debounced pre-send draft scoring (500ms) for realtime live bubble updates while typing
+- fixed live bubble visibility behavior when monitoring is enabled
+
 ## v1.2.12
 
 - fixed prompt capture reliability on ChatGPT by snapshotting composer content before send clears input

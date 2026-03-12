@@ -1,6 +1,9 @@
 (() => {
   const CONTAINER_ID = "ai-dev-coach-toast-container";
   const MAX_VISIBLE_TOASTS = 4;
+  const DEFAULT_TOAST_DURATION_MS = 9000;
+  const MIN_TOAST_DURATION_MS = 9000;
+  const MAX_TOAST_DURATION_MS = 20000;
 
   function getContainer() {
     let container = document.getElementById(CONTAINER_ID);
@@ -18,7 +21,7 @@
     return container;
   }
 
-  function show(message, type = "info", duration = 6500) {
+  function show(message, type = "info", duration = DEFAULT_TOAST_DURATION_MS) {
     if (!message || typeof message !== "string") {
       return;
     }
@@ -44,8 +47,8 @@
     }
 
     const normalizedDuration = Number.isFinite(duration)
-      ? Math.min(15000, Math.max(1500, duration))
-      : 6500;
+      ? Math.min(MAX_TOAST_DURATION_MS, Math.max(MIN_TOAST_DURATION_MS, duration))
+      : DEFAULT_TOAST_DURATION_MS;
 
     window.setTimeout(() => {
       item.classList.add("ai-coach-toast--exit");

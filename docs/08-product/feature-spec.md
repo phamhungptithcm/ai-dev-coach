@@ -29,20 +29,27 @@ Required fields:
 
 The extension generates a structured prompt and provides copy-to-clipboard.
 
+In-page access:
+
+- floating launcher beside composer on supported AI pages
+- keyboard shortcut `F1` to open Prompt Builder when chat input is focused
+
 See also: [Prompt Builder System](prompt-builder-system.md)
 
 ## 3. Prompt Quality Analyzer
 
 Analyzes each submitted prompt for:
 
-- context completeness
-- independent attempt evidence
+- context evidence completeness (error/failure + expected/actual + artifact)
+- independent attempt quality (action + result + blocker)
+- negative attempt phrases (for example, \"I didn't try\", \"chua thu\") as penalties
 - shortcut intent signals
 
 Outputs a quality score and targeted feedback.
 
 Trigger behavior:
 
+- run in draft mode while typing with 500ms debounce (live bubble updates)
 - run immediately when user presses `Enter`
 - run immediately when user clicks AI platform send/submit button
 
@@ -57,6 +64,11 @@ Tracks local counters:
 - fast copies (copied too soon after AI response)
 
 Displays warning when dependency exceeds configured threshold.
+
+Live bubble behavior:
+
+- bubble stays visible when monitoring is enabled (`prompt listener` or `behavior monitor`)
+- bubble updates from both draft typing analysis and send-time analysis
 
 ## 5. Copy-Paste Risk Alerts
 
@@ -82,3 +94,8 @@ User can configure:
 - minimum read time before copy
 - enable/disable output countdown reminders
 - overlay duration
+
+Notification behavior:
+
+- coaching toasts render in top-right
+- default toast duration is longer than baseline and can be tuned in settings

@@ -13,7 +13,7 @@
 .ai-coach-toast-container {
   position: fixed;
   right: 18px;
-  bottom: 18px;
+  top: 18px;
   display: flex;
   flex-direction: column;
   gap: 10px;

@@ -114,6 +114,7 @@ Grade mapping:
 ## In-Page Quick Builder (Chat Window)
 
 - The extension injects a floating `Prompt Builder` button beside the active AI chat composer.
+- Press `F1` while focused in the chat composer to open the Prompt Builder instantly.
 - Clicking the button opens a compact form with the same template + required fields as popup builder.
 - `Build + Insert` writes the generated prompt into the chat input.
 - `Build + Send` writes the prompt and triggers send automatically.
@@ -122,8 +123,23 @@ Grade mapping:
 ## Live Coaching Bubble (Realtime)
 
 - A floating bubble shows realtime `Prompt Score`, grade, and send-time coaching summary.
+- While user types in composer, draft scoring updates bubble in near realtime (500ms debounce).
 - Habit snapshot in bubble updates immediately with AI requests, manual attempts, dependency, bad prompts, shortcut prompts, and copy/paste behavior.
 - Bubble is driven by send-event listeners (`Enter`, submit, send-button click) and runtime analysis events.
+
+## Runtime Prompt Detection Rules (Monitoring Engine)
+
+- Context is scored from evidence, not length:
+  - failure/error signal
+  - expected vs actual signal
+  - artifact signal (file/line/snippet/log/endpoint)
+- Attempt quality is scored from:
+  - action user took
+  - result observed
+  - blocker described
+- Negative no-attempt phrases reduce score.
+- Shortcut requests (copy-paste intent) reduce score and increase warnings.
+- Dictionaries support English and Vietnamese phrasing.
 
 ## Current Implementation Files
 

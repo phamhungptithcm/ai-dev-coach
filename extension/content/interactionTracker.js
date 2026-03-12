@@ -12,7 +12,7 @@
     pasteThreshold: 320,
     longCopyThreshold: 360,
     minReadBeforeCopySeconds: 20,
-    overlayDurationMs: 6500
+    overlayDurationMs: 9000
   };
 
   const DEFAULT_STATS = {
@@ -88,7 +88,7 @@
     }
 
     if (window.AIDevCoachOverlay && typeof window.AIDevCoachOverlay.show === "function") {
-      window.AIDevCoachOverlay.show(message, type, settings.overlayDurationMs || 6500);
+      window.AIDevCoachOverlay.show(message, type, settings.overlayDurationMs || 9000);
       return;
     }
 

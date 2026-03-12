@@ -20,11 +20,12 @@ AI Dev Coach is designed to protect the learning loop:
 - Profile onboarding in popup (`job`, `skill`, `habit goal`)
 - Prompt Builder with required fields (`task`, `context`, `what you tried`)
 - In-page Quick Prompt Builder button beside AI chat composer (`Build + Insert`, `Build + Send`)
+- Keyboard shortcut `F1` to open Prompt Builder while focused in AI chat composer
 - In-page Live Coach bubble with realtime prompt score and habit snapshot
 - 6 prompt templates: debugging, code review, system design, refactoring, performance optimization, learning
 - Prompt scoring algorithm with grade + breakdown (`completeness`, `specificity`, `reasoning`, `learning safety`, `template fit`)
-- Real-time prompt quality scoring on AI chat websites
-- Warning overlays for shortcut prompts and risky copy-paste behavior
+- Real-time prompt quality scoring on AI chat websites (draft + submit paths)
+- Warning overlays in top-right for shortcut prompts and risky copy-paste behavior
 - AI dependency tracking (`ai requests`, `manual attempts`, `large pastes`)
 - Settings page for strict mode and warning thresholds
 

@@ -50,7 +50,7 @@
     pasteThreshold: 320,
     longCopyThreshold: 360,
     minReadBeforeCopySeconds: 20,
-    overlayDurationMs: 6500
+    overlayDurationMs: 9000
   };
 
   const DEFAULT_PROFILE = {
@@ -80,16 +80,126 @@
     at: 0
   };
 
-  const ATTEMPT_HINTS = [
-    /i tried/i,
-    /i attempted/i,
-    /i already/i,
-    /my hypothesis/i,
-    /stack trace/i,
-    /expected/i,
-    /actual/i,
-    /repro(duce)?/i,
-    /failing test/i
+  const CONTEXT_ERROR_HINTS = [
+    /\berror\b/i,
+    /\bexception\b/i,
+    /\btraceback\b/i,
+    /\bstack\s*trace\b/i,
+    /\bfailed?\b/i,
+    /\bfailure\b/i,
+    /\bcrash(ed)?\b/i,
+    /\bbug\b/i,
+    /l[ôo]i/i,
+    /ngo[ạa]i\s*l[ệe]/i,
+    /kh[ôo]ng\s+ch[ạa]y/i,
+    /b[ịi]\s*l[ôo]i/i
+  ];
+
+  const CONTEXT_EXPECTED_HINTS = [
+    /\bexpected\b/i,
+    /\bshould\b/i,
+    /\bintend(ed)?\b/i,
+    /\btarget behavior\b/i,
+    /mong\s*[đd]?[ợo]i/i,
+    /k[ỳy]\s*v[ọo]ng/i,
+    /\bmu[ốo]n\b/i,
+    /[đd][aá]ng\s*l[ẽe]/i
+  ];
+
+  const CONTEXT_ACTUAL_HINTS = [
+    /\bactual\b/i,
+    /\bcurrently\b/i,
+    /\binstead\b/i,
+    /\bobserved\b/i,
+    /\breturns?\b/i,
+    /\bhappens?\b/i,
+    /th[ựu]c\s*t[ếe]/i,
+    /hi[ệe]n\s*t[ạa]i/i,
+    /nh[ưu]ng/i,
+    /\bv[ẫa]n\b/i
+  ];
+
+  const CONTEXT_ARTIFACT_HINTS = [
+    /```/,
+    /line\s*\d+/i,
+    /[a-z0-9_./-]+\.[a-z0-9]+(:\d{1,5})?/i,
+    /\bfile\b/i,
+    /\bpath\b/i,
+    /\bmodule\b/i,
+    /\bclass\b/i,
+    /\bfunction\b/i,
+    /\bmethod\b/i,
+    /\bendpoint\b/i,
+    /\bsql\b/i,
+    /\blog\b/i,
+    /\brepo\b/i,
+    /\bbranch\b/i,
+    /\bcommit\b/i,
+    /\bdiff\b/i,
+    /\bpayload\b/i,
+    /\brequest\b/i,
+    /\bresponse\b/i,
+    /t[ệe]p/i,
+    /d[òo]ng\s*\d+/i,
+    /h[àa]m/i,
+    /nh[áa]nh/i,
+    /[ảa]nh\s*(m[àa]n\s*h[ìi]nh)?/i
+  ];
+
+  const ATTEMPT_ACTION_HINTS = [
+    /\bi tried\b/i,
+    /\bi attempted\b/i,
+    /\bi tested\b/i,
+    /\bi changed\b/i,
+    /\bi debugged\b/i,
+    /\bi ran\b/i,
+    /\bi checked\b/i,
+    /\bi profiled\b/i,
+    /[đd][aã]\s*th[ửu]/i,
+    /\bt[ôo]i\s*th[ửu]\b/i,
+    /\bem\s*th[ửu]\b/i,
+    /[đd][aã]\s*ch[ạa]y/i,
+    /[đd][aã]\s*ki[ểe]m\s*tra/i,
+    /[đd][aã]\s*debug/i
+  ];
+
+  const ATTEMPT_RESULT_HINTS = [
+    /\bit still\b/i,
+    /\bstill fails?\b/i,
+    /\bi got\b/i,
+    /\bresult(ed)?\b/i,
+    /\boutputs?\b/i,
+    /\bthrows?\b/i,
+    /\bnow\b/i,
+    /k[ếe]t\s*qu[ảa]/i,
+    /b[ịi]\s*l[ôo]i/i,
+    /ra\s*l[ôo]i/i,
+    /kh[ôo]ng\s*[đd][ổo]i/i,
+    /\bv[ẫa]n\b/i
+  ];
+
+  const ATTEMPT_BLOCKER_HINTS = [
+    /\bstuck\b/i,
+    /\bblocked\b/i,
+    /\bnot sure\b/i,
+    /\bdon'?t understand\b/i,
+    /\bcannot\b/i,
+    /\bcan'?t\b/i,
+    /\bunsure\b/i,
+    /\bneed help\b/i,
+    /\bb[íi]\b/i,
+    /v[ưu][ớo]ng/i,
+    /kh[ôo]ng\s*bi[ếe]t/i,
+    /ch[ưu]a\s*hi[ểe]u/i,
+    /kh[óo]\s*kh[ăa]n/i
+  ];
+
+  const ATTEMPT_NEGATIVE_HINTS = [
+    /\bi (did not|didn'?t|have not|haven'?t) (try|attempt)\b/i,
+    /\bi didn'?t do anything\b/i,
+    /\bch[ưu]a\s*th[ửu]\b/i,
+    /kh[ôo]ng\s*th[ửu]/i,
+    /ch[ưu]a\s*l[aà]m\s*g[ìi]/i
   ];
 
   const SHORTCUT_HINTS = [
@@ -98,7 +208,33 @@
     /just give me answer/i,
     /no explanation/i,
     /copy and paste/i,
-    /urgent.*fix/i
+    /urgent.*fix/i,
+    /vi[ếe]t.*full\s*code/i,
+    /l[aà]m\s+h[ộo]\s*t[ôo]i/i,
+    /cho\s*t[ôo]i\s*[đd][aá]p\s*[aá]n\s*ngay/i,
+    /kh[ôo]ng\s*c[ầa]n\s*gi[ảa]i\s*th[íi]ch/i
+  ];
+
+  const TASK_SECTION_HINTS = [
+    /task\s*:/i,
+    /goal\s*:/i,
+    /nhi[ệe]m\s*v[ụu]\s*:/i,
+    /m[ụu]c\s*ti[êe]u\s*:/i,
+    /y[êe]u\s*c[ầa]u\s*:/i
+  ];
+
+  const CONTEXT_SECTION_HINTS = [
+    /context\s*:/i,
+    /background\s*:/i,
+    /b[ốo]i\s*c[ảa]nh\s*:/i,
+    /ng[ữu]\s*c[ảa]nh\s*:/i
+  ];
+
+  const ATTEMPT_SECTION_HINTS = [
+    /(what i (already )?tried|attempt)\s*:/i,
+    /[đd][aã]\s*th[ửu]\s*:/i,
+    /t[ôo]i\s*[đd][aã]\s*th[ửu]\s*:/i,
+    /em\s*[đd][aã]\s*th[ửu]\s*:/i
   ];
 
   const SEND_BUTTON_HINTS = [
@@ -121,12 +257,16 @@
     /\bshare\b/i
   ];
   const DRAFT_PROMPT_TTL_MS = 15000;
+  const LIVE_SCORE_DEBOUNCE_MS = 500;
 
   const attachedInputs = new WeakSet();
   const attachedForms = new WeakSet();
   let lastPromptSignature = "";
   let lastPromptAt = 0;
   let lastSendPulseAt = 0;
+  let liveScoreTimer = null;
+  let lastLiveSignature = "";
+  let lastLiveAt = 0;
   let lastDraftPrompt = "";
   let lastDraftPromptAt = 0;
   let scanQueued = false;
@@ -341,40 +481,51 @@
     return input.innerText || "";
   }
 
-  function hasIndependentAttempt(prompt) {
-    return ATTEMPT_HINTS.some((pattern) => pattern.test(prompt));
+  function hasAnyHint(prompt, patterns) {
+    return patterns.some((pattern) => pattern.test(prompt));
   }
 
   function hasShortcutIntent(prompt) {
-    return SHORTCUT_HINTS.some((pattern) => pattern.test(prompt));
+    return hasAnyHint(prompt, SHORTCUT_HINTS);
   }
 
-  function hasConcreteContext(prompt) {
-    const signals = [
-      /```/,
-      /error/i,
-      /stack trace/i,
-      /line\s*\d+/i,
-      /function\s+[a-z0-9_]+/i,
-      /file(s)?\s*:/i,
-      /module/i,
-      /expected/i,
-      /actual/i,
-      /steps to reproduce/i
-    ];
+  function evaluateContextEvidence(prompt) {
+    const hasErrorSignal = hasAnyHint(prompt, CONTEXT_ERROR_HINTS);
+    const hasExpectedSignal = hasAnyHint(prompt, CONTEXT_EXPECTED_HINTS);
+    const hasActualSignal = hasAnyHint(prompt, CONTEXT_ACTUAL_HINTS);
+    const hasExpectedActualPair = hasExpectedSignal && hasActualSignal;
+    const hasArtifactSignal = hasAnyHint(prompt, CONTEXT_ARTIFACT_HINTS);
 
-    if (prompt.length > 170) {
-      return true;
-    }
+    return {
+      hasErrorSignal,
+      hasExpectedActualPair,
+      hasArtifactSignal
+    };
+  }
 
-    return signals.some((pattern) => pattern.test(prompt));
+  function evaluateAttemptQuality(prompt) {
+    const hasActionSignal = hasAnyHint(prompt, ATTEMPT_ACTION_HINTS);
+    const hasResultSignal = hasAnyHint(prompt, ATTEMPT_RESULT_HINTS);
+    const hasBlockerSignal = hasAnyHint(prompt, ATTEMPT_BLOCKER_HINTS);
+    const hasNegativeAttemptSignal = hasAnyHint(prompt, ATTEMPT_NEGATIVE_HINTS);
+
+    const hasIndependentAttempt =
+      !hasNegativeAttemptSignal && hasActionSignal && hasResultSignal;
+
+    return {
+      hasActionSignal,
+      hasResultSignal,
+      hasBlockerSignal,
+      hasNegativeAttemptSignal,
+      hasIndependentAttempt
+    };
   }
 
   function hasStructuredSections(prompt) {
     return (
-      /task\s*:/i.test(prompt) &&
-      /context\s*:/i.test(prompt) &&
-      /(what i (already )?tried|attempt)\s*:/i.test(prompt)
+      hasAnyHint(prompt, TASK_SECTION_HINTS) &&
+      hasAnyHint(prompt, CONTEXT_SECTION_HINTS) &&
+      hasAnyHint(prompt, ATTEMPT_SECTION_HINTS)
     );
   }
 
@@ -433,45 +584,93 @@
     const warnings = [];
     const suggestions = [];
 
-    if (prompt.length >= 40) {
-      score += 18;
-    } else if (prompt.length >= 20) {
+    if (prompt.length >= 25) {
       score += 10;
-      suggestions.push("Add more detail so AI can reason about your exact context.");
+      if (prompt.length >= 80) {
+        score += 6;
+      }
+    } else if (prompt.length >= 12) {
+      score += 4;
+      suggestions.push("Prompt is brief. Add more specifics before sending.");
     } else {
       warnings.push("Prompt is too short. Add context before asking AI.");
     }
 
-    if (hasConcreteContext(prompt)) {
-      score += 22;
+    const contextEvidence = evaluateContextEvidence(prompt);
+    const hasStrongContext =
+      contextEvidence.hasErrorSignal &&
+      contextEvidence.hasExpectedActualPair &&
+      contextEvidence.hasArtifactSignal;
+
+    if (hasStrongContext) {
+      score += 28;
     } else {
-      suggestions.push("Add concrete details: error, expected behavior, and current behavior.");
+      const evidenceCount =
+        Number(contextEvidence.hasErrorSignal) +
+        Number(contextEvidence.hasExpectedActualPair) +
+        Number(contextEvidence.hasArtifactSignal);
+
+      if (evidenceCount === 2) {
+        score += 12;
+      } else if (evidenceCount === 1) {
+        score += 5;
+      }
+
+      if (!contextEvidence.hasErrorSignal) {
+        suggestions.push("Add the concrete error/failure signal you see.");
+      }
+      if (!contextEvidence.hasExpectedActualPair) {
+        suggestions.push("Add both expected result and actual result.");
+      }
+      if (!contextEvidence.hasArtifactSignal) {
+        suggestions.push("Add artifacts: file path, line, snippet, log, or endpoint.");
+      }
     }
 
-    const independentAttempt = hasIndependentAttempt(prompt);
-    if (independentAttempt) {
-      score += 20;
-    } else {
-      suggestions.push("Add what you already tried so AI can coach your reasoning.");
+    const attemptQuality = evaluateAttemptQuality(prompt);
+    if (attemptQuality.hasNegativeAttemptSignal) {
+      score -= 16;
+      warnings.push("Prompt says no attempt was made. Try one step first, then ask AI.");
+    }
+
+    if (
+      attemptQuality.hasActionSignal &&
+      attemptQuality.hasResultSignal &&
+      attemptQuality.hasBlockerSignal &&
+      !attemptQuality.hasNegativeAttemptSignal
+    ) {
+      score += 26;
+    } else if (
+      attemptQuality.hasActionSignal &&
+      attemptQuality.hasResultSignal &&
+      !attemptQuality.hasNegativeAttemptSignal
+    ) {
+      score += 16;
+      suggestions.push("Good progress. Add your current blocker to improve coaching quality.");
+    } else if (attemptQuality.hasActionSignal && !attemptQuality.hasNegativeAttemptSignal) {
+      score += 8;
+      suggestions.push("Add result of your attempt and where you are blocked.");
+    } else if (!attemptQuality.hasNegativeAttemptSignal) {
+      suggestions.push("Add what you tried, what happened, and where you got stuck.");
     }
 
     const shortcutIntent = hasShortcutIntent(prompt);
     if (shortcutIntent) {
       warnings.push("Prompt asks for shortcuts. Ask for guidance first, not full copy-paste code.");
-      score -= 18;
+      score -= 20;
     } else {
-      score += 10;
+      score += 8;
     }
 
     if (hasStructuredSections(prompt)) {
-      score += 20;
+      score += 18;
     } else {
-      suggestions.push("Use a structured format: Task, Context, and What You Tried.");
+      suggestions.push("Use structured sections: Task/Context/Attempt (or Nhiem vu/Boi canh/Da thu).");
     }
 
-    if (strictMode && shortcutIntent && !independentAttempt) {
-      score -= 12;
-      warnings.push("Strict mode: include your attempt before asking for a final solution.");
+    if (strictMode && shortcutIntent && !attemptQuality.hasIndependentAttempt) {
+      score -= 14;
+      warnings.push("Strict mode: include your attempt and blocker before asking for final code.");
     }
 
     score = Math.max(0, Math.min(100, score));
@@ -482,16 +681,16 @@
       warnings,
       suggestions,
       hasShortcutIntent: shortcutIntent,
-      hasIndependentAttempt: independentAttempt
+      hasIndependentAttempt: attemptQuality.hasIndependentAttempt
     };
   }
 
-  async function updatePromptStats(prompt, analysis) {
+  async function updatePromptStats(analysis) {
     const data = await storageGet(["stats"]);
     const stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
 
     stats.aiRequests += 1;
-    if (hasIndependentAttempt(prompt)) {
+    if (analysis && analysis.hasIndependentAttempt) {
       stats.manualAttempts += 1;
     }
     if (analysis && analysis.score < 60) {
@@ -597,7 +796,7 @@
     const { settings, profile } = await getState();
     const analysis = analyzePrompt(prompt, settings.strictMode);
     const runtimeEvaluation = buildRuntimeEvaluation(prompt, analysis);
-    const statsPromise = updatePromptStats(prompt, analysis);
+    const statsPromise = updatePromptStats(analysis);
     const runtimePromise = persistRuntimeEvaluation(runtimeEvaluation);
 
     if (!settings.enableCoach || !settings.promptListenerEnabled || !settings.readPromptContentEnabled) {
@@ -751,6 +950,65 @@
     return false;
   }
 
+  function buildLivePromptSignature(prompt) {
+    return `${prompt.length}:${prompt.slice(0, 120)}:${prompt.slice(-60)}`;
+  }
+
+  function shouldSkipLivePrompt(prompt) {
+    const signature = buildLivePromptSignature(prompt);
+    const now = Date.now();
+
+    if (signature === lastLiveSignature && now - lastLiveAt < 700) {
+      return true;
+    }
+
+    lastLiveSignature = signature;
+    lastLiveAt = now;
+    return false;
+  }
+
+  async function runLivePromptScoring(promptSnapshot) {
+    const prompt = clean(promptSnapshot || getRecentDraftPrompt());
+    if (!prompt) {
+      return;
+    }
+
+    if (shouldSkipLivePrompt(prompt)) {
+      return;
+    }
+
+    const settings = await getCurrentSettings();
+    if (!settings.promptListenerEnabled || !settings.readPromptContentEnabled) {
+      return;
+    }
+
+    const analysis = analyzePrompt(prompt, settings.strictMode);
+    const runtimeEvaluation = buildRuntimeEvaluation(prompt, analysis);
+
+    emitPromptAnalyzed({
+      at: runtimeEvaluation.at,
+      promptPreview: runtimeEvaluation.promptPreview,
+      analysis: runtimeEvaluation,
+      draft: true
+    });
+  }
+
+  function scheduleLivePromptScoring(input) {
+    const promptSnapshot = readPrompt(input);
+    rememberDraftPrompt(promptSnapshot);
+
+    if (liveScoreTimer) {
+      window.clearTimeout(liveScoreTimer);
+    }
+
+    liveScoreTimer = window.setTimeout(() => {
+      liveScoreTimer = null;
+      runLivePromptScoring(promptSnapshot).catch((error) => {
+        console.error("AI Dev Coach live prompt scoring error", error);
+      });
+    }, LIVE_SCORE_DEBOUNCE_MS);
+  }
+
   async function submitPromptFromInput(input, promptSnapshot = "") {
     const initialPrompt = clean(promptSnapshot || readPrompt(input));
     if (initialPrompt) {
@@ -807,7 +1065,7 @@
     input.addEventListener(
       "input",
       () => {
-        rememberDraftPrompt(readPrompt(input));
+        scheduleLivePromptScoring(input);
       },
       true
     );
