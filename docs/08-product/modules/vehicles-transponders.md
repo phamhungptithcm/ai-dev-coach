@@ -1,3 +1,0 @@
-# Vehicles Transponders
-
-TBD.

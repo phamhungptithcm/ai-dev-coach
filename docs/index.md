@@ -1,28 +1,17 @@
-# AI Dev Coach
+# AI Dev Coach Docs
 
-AI Dev Coach is a behavior-first Chrome extension for new developers using AI coding assistants.
+AI Dev Coach helps developers use AI as a learning accelerator, not a shortcut dependency.
 
-## Mission
+## What This Documentation Covers
 
-Build strong engineering habits while still getting AI speed.
-
-## Product Principles
-
-- AI should extend capability, not replace reasoning.
-- Prompts should include evidence of thinking.
-- Copy-paste without understanding is a learning risk.
-- Coaching should happen in context, not after the mistake.
-
-## MVP Outcomes
-
-- Better prompts with clearer context and intent
-- Lower dependency on full-answer copy-paste patterns
-- Faster habit formation for debugging and self-review
+- product direction and core coaching philosophy
+- Chrome extension implementation details
+- planned VS Code and IntelliJ extensions
+- release, CI/CD, and branch governance policy
 
 ## Start Here
 
-- [Problem Statement](00-overview/problem.md)
-- [Vision](00-overview/vision.md)
-- [Feature Specification](08-product/feature-spec.md)
+- [Problem](00-overview/problem.md)
+- [Chrome Extension](01-extensions/chrome-extension.md)
 - [Prompt Builder System](08-product/prompt-builder-system.md)
-- [Roadmap](07-project/roadmap.md)
+- [Branching Strategy](07-project/branching-strategy.md)

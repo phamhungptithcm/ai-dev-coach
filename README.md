@@ -53,7 +53,7 @@ AI Dev Coach is designed to protect the learning loop:
 
 This repository includes [`.github/workflows/deploy-docs.yml`](.github/workflows/deploy-docs.yml).
 
-On push to `main`, the workflow:
+On push to `staging`, the workflow:
 
 1. Installs `mkdocs-material`
 2. Builds docs with `mkdocs build --strict`
@@ -63,21 +63,20 @@ On push to `main`, the workflow:
 
 1. Open repository **Settings** > **Pages**.
 2. Set **Source** to **GitHub Actions**.
-3. Push to `main` or run the workflow manually.
+3. Push to `staging` or run the workflow manually.
 
 ## Release Process
 
 - Version is defined in `extension/manifest.json`.
-- Create a tag matching the version: `v<manifest-version>` (example: `v1.2.0`).
-- Pushing the tag triggers `.github/workflows/release.yml` to:
-  - validate tag-version match
+- Pushing to `main` triggers `.github/workflows/release.yml` to:
+  - auto-create tag `v<manifest-version>` if it does not exist
   - package the extension zip
   - publish a GitHub Release with auto-generated release notes
   - upload and publish the package to Chrome Web Store
 
 ### Chrome Web Store Secrets
 
-Configure these repository secrets before tagging a release:
+Configure these repository secrets before a `main` release run:
 
 - `CWS_CLIENT_ID`
 - `CWS_CLIENT_SECRET`
@@ -86,6 +85,15 @@ Configure these repository secrets before tagging a release:
 - `CWS_EXTENSION_ID`
 
 The release workflow exchanges the refresh token for an access token using OAuth, then calls the Chrome Web Store API upload and publish endpoints.
+
+## Branching Strategy
+
+- `staging` is the integration branch for pull requests.
+- `main` is the stable core branch.
+- Every 2 weeks, merge `staging` into `main`.
+- Branch protections enforce PR flow with 1 approval (admins can bypass for emergencies).
+
+See [docs/07-project/branching-strategy.md](docs/07-project/branching-strategy.md).
 
 ## Repository Structure
 

@@ -1,14 +1,13 @@
-site_name: System Docs
-repo_name: system-docs
-
-repo_url: https://github.com/Quarterhill-Inc/bos-system-docs
-edit_uri: edit/main/docs/
+site_name: AI Dev Coach Docs
+repo_name: ai-dev-coach
+repo_url: https://github.com/phamhungptithcm/ai-dev-coach
+edit_uri: edit/staging/docs/
+site_url: https://phamhungptithcm.github.io/ai-dev-coach/
 
 theme:
   name: material
   logo: assets/qh-logo.svg
   favicon: assets/qh-favicon.svg
-#   custom_dir: overrides
   features:
     - navigation.tabs
     - navigation.sections
@@ -18,7 +17,7 @@ theme:
 
 plugins:
   - search
-site_url: https://quarterhill-inc.github.io/bos-system-docs
+
 markdown_extensions:
   - admonition
   - toc:
@@ -32,84 +31,41 @@ markdown_extensions:
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
 
-copyright: "© 2026 Quarterhill Inc. All rights reserved."
+copyright: "© 2026 AI Dev Coach. All rights reserved."
 extra_css:
   - stylesheets/extra.css
 extra_javascript:
   - https://unpkg.com/mermaid@10/dist/mermaid.min.js
   - javascripts/mermaid-init.js
+
 nav:
   - Home: index.md
   - Overview:
-      - System context: 00-overview/system-context.md
-      - Glossary: 00-overview/glossary.md
-  - Architecture:
-      - High-level design: 01-architecture/high-level-design.md
-      - UI ↔ Resource server: 01-architecture/ui-to-resource-server.md
-      - Domain model: 01-architecture/domain-model.md
-  - Security:
-      - Threat model: 02-security/threat-model.md
-      - AuthN/AuthZ: 02-security/authn-authz.md
-      - Data protection: 02-security/data-protection.md
-      - Secrets management: 02-security/secrets-management.md
-      - Audit logging: 02-security/audit-logging.md
-  - Deployment:
-      - Environments: 03-deployment/environments.md
-      - CI/CD: 03-deployment/ci-cd.md
-      - Kubernetes: 03-deployment/kubernetes.md
-      - Rollout strategy: 03-deployment/rollout-strategy.md
-      - Observability: 03-deployment/observability.md
-  - Networking:
-      - Load balancer: 04-networking/load-balancer.md
-      - Proxy / Ingress: 04-networking/proxy-ingress.md
-      - TLS / SSL: 04-networking/tls-ssl.md
-      - DNS: 04-networking/dns.md
-      - WAF / DDoS: 04-networking/waf-ddos.md
-  - Operations:
-      - Runbooks: 05-operations/runbooks.md
-      - Incident response: 05-operations/incident-response.md
-      - Backups & DR: 05-operations/backups-dr.md
-  - References:
-      - Links: 06-references/links.md
-      - ADRs: 06-references/adr/README.md
-      - Templates: 06-references/adr/0001-template.md
+      - Problem: 00-overview/problem.md
+      - Philosophy: 00-overview/philosophy.md
+      - Vision: 00-overview/vision.md
+  - Extensions:
+      - Chrome Extension: 01-extensions/chrome-extension.md
+      - VS Code Extension (Planned): 01-extensions/vscode-extension.md
+      - IntelliJ Plugin (Planned): 01-extensions/intellij-plugin.md
   - Product:
-      - Overview: 08-product/product.md
-      - Glossary: 08-product/glossary.md
-      - Adoption:
-          - Incremental: 08-product/adoption/incremental-adoption.md
-          - Migration: 08-product/adoption/migration-patterns.md
-          - Strategy: 08-product/adoption/plug-unplug-strategy.md
-      - Diagrams:
-          - Adoption Phases: 08-product/diagrams/adoption-phases.md
-          - Modular Overview: 08-product/diagrams/bos-modular-overview.md
-          - Module Interactions: 08-product/diagrams/module-interactions.md
-      - Integration:
-          - Overview: 08-product/integration/integration-overview.md
-          - Events & Contracts: 08-product/integration/events-and-contracts.md
-          - External Systems: 08-product/integration/external-systems.md
-      - Modules:
-          - Account: 08-product/modules/accounts.md
-          - Analytics: 08-product/modules/analytics.md
-          - Case Management: 08-product/modules/case-management.md
-          - Inventory: 08-product/modules/inventory.md
-          - Notification: 08-product/modules/notifications.md
-          - Payments: 08-product/modules/payments.md
-          - Vehicle & Transponder: 08-product/modules/vehicles-transponders.md
-      - Personas:
-          - Admin: 08-product/personas/admin.md
-          - Agent: 08-product/personas/agent.md
-          - Online User: 08-product/personas/online-user.md
-  - About:
-      - Project: 07-project/project.md
-      - Requirements: 07-project/requirement.md
-      - Architecture decision records: 07-project/architecture-decision-records.md
+      - Feature Specification: 08-product/feature-spec.md
+      - Prompt Builder System: 08-product/prompt-builder-system.md
+      - User Flow: 08-product/user-flow.md
+  - Architecture:
+      - Extension Architecture: 01-architecture/extension-architecture.md
+      - AI Coaching Engine: 01-architecture/ai-coaching-engine.md
+      - Runtime Design: 01-architecture/system-design.md
+  - Security:
+      - Privacy Model: 02-security/privacy-model.md
+  - Delivery:
+      - CI/CD Pipeline: 03-deployment/ci-cd.md
+      - Chrome Web Store: 03-deployment/chrome-store.md
+  - Operations:
+      - Monitoring: 05-operations/monitoring.md
+  - Project:
+      - Branching Strategy: 07-project/branching-strategy.md
       - Roadmap: 07-project/roadmap.md
       - Changelog: 07-project/changelog.md
-      - Team: 07-project/team.md
-      - Contact: 07-project/contact.md
-      - Contributing: 07-project/contributing.md
-      - Code of Conduct: 07-project/code-of-conduct.md
-      - Security policy: 07-project/security-policy.md
-      - Support: 07-project/support.md
-      - FAQ: 07-project/faq.md
+  - References:
+      - Research: 06-references/research.md

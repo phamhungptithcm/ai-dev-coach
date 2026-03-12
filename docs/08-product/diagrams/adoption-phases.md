@@ -1,3 +1,0 @@
-# Adoption Phases
-
-TBD.

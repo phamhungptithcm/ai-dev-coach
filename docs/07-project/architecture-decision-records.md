@@ -1,3 +1,0 @@
-# Architecture Decision Records
-
-TBD.

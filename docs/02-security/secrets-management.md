@@ -1,3 +1,0 @@
-# Secrets Management
-
-TBD.

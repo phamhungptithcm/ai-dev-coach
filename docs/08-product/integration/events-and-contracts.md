@@ -1,3 +1,0 @@
-# Events And Contracts
-
-TBD.

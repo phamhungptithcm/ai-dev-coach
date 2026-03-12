@@ -1,3 +1,0 @@
-# Incremental Adoption
-
-TBD.

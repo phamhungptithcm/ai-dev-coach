@@ -1,3 +1,0 @@
-# Plug Unplug Strategy
-
-TBD.

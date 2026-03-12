@@ -1,3 +1,0 @@
-# Threat Model
-
-TBD.

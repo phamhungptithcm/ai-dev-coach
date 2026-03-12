@@ -1,3 +1,0 @@
-# Migration Patterns
-
-TBD.
