@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-main
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -28,6 +32,9 @@ jobs:
           VERSION=$(node -p "require('./extension/manifest.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate extension package structure
+        run: node scripts/validate-extension.mjs
 
       - name: Check if release tag already exists
         id: tag_check
@@ -51,9 +58,13 @@ jobs:
       - name: Package extension
         if: steps.tag_check.outputs.exists == 'false'
         run: |
+          set -euo pipefail
           VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p dist
           cd extension
-          zip -r "../ai-dev-coach-${VERSION}.zip" .
+          zip -r "../dist/ai-dev-coach-${VERSION}.zip" . -x "*.DS_Store" -x "__MACOSX/*"
+          cd ..
+          unzip -l "dist/ai-dev-coach-${VERSION}.zip" | grep -q "manifest.json"
 
       - name: Create GitHub release with notes
         if: steps.tag_check.outputs.exists == 'false'
@@ -62,7 +73,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: AI Dev Coach ${{ steps.version.outputs.tag }}
           generate_release_notes: true
-          files: ai-dev-coach-${{ steps.version.outputs.version }}.zip
+          files: dist/ai-dev-coach-${{ steps.version.outputs.version }}.zip
 
       - name: Evaluate Chrome Web Store secret readiness
         if: steps.tag_check.outputs.exists == 'false'
@@ -97,7 +108,8 @@ jobs:
           CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
           CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
           CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
-          ZIP_FILE: ai-dev-coach-${{ steps.version.outputs.version }}.zip
+          CWS_PUBLISH_TARGET: ${{ secrets.CWS_PUBLISH_TARGET }}
+          ZIP_FILE: dist/ai-dev-coach-${{ steps.version.outputs.version }}.zip
         run: |
           set -euo pipefail
 
@@ -113,9 +125,10 @@ jobs:
             exit 1
           fi
 
+          PUBLISH_TARGET="${CWS_PUBLISH_TARGET:-default}"
           UPLOAD_URL="https://chromewebstore.googleapis.com/upload/v2/publishers/${CWS_PUBLISHER_ID}/items/${CWS_EXTENSION_ID}:upload"
           STATUS_URL="https://chromewebstore.googleapis.com/v2/publishers/${CWS_PUBLISHER_ID}/items/${CWS_EXTENSION_ID}:fetchStatus"
-          PUBLISH_URL="https://chromewebstore.googleapis.com/v2/publishers/${CWS_PUBLISHER_ID}/items/${CWS_EXTENSION_ID}:publish"
+          PUBLISH_URL="https://chromewebstore.googleapis.com/v2/publishers/${CWS_PUBLISHER_ID}/items/${CWS_EXTENSION_ID}:publish?publishTarget=${PUBLISH_TARGET}"
 
           UPLOAD_RESPONSE=$(curl --fail-with-body -sS -X POST \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \

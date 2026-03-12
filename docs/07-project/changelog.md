@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.2.3
+
+- added production validator script for extension package integrity
+- hardened prompt monitoring and paste detection for better real-world behavior
+- improved release packaging and Chrome publish workflow reliability
+- expanded Chrome Web Store deployment guide with listing/privacy/assets checklist
+
 ## v1.2.2
 
 - switched docs to MkDocs Material workflow

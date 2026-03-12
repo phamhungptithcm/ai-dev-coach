@@ -69,6 +69,7 @@
   ];
 
   const attachedInputs = new WeakSet();
+  const attachedForms = new WeakSet();
   let lastPromptSignature = "";
   let lastPromptAt = 0;
   let scanQueued = false;
@@ -131,16 +132,42 @@
     return rect.width > 0 && rect.height > 0;
   }
 
-  function findPromptInput(platform) {
+  function isPlatformInput(platform, element) {
+    return platform.inputSelectors.some((selector) => element.matches(selector));
+  }
+
+  function findPromptInputs(platform) {
+    const matches = [];
+    const seen = new Set();
+
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLElement &&
+      isPlatformInput(platform, activeElement) &&
+      isVisibleInput(activeElement)
+    ) {
+      matches.push(activeElement);
+      seen.add(activeElement);
+    }
+
     for (const selector of platform.inputSelectors) {
       const candidates = Array.from(document.querySelectorAll(selector));
-      const visible = candidates.find(isVisibleInput);
-      if (visible) {
-        return visible;
+      for (const candidate of candidates) {
+        if (!(candidate instanceof HTMLElement)) {
+          continue;
+        }
+        if (seen.has(candidate) || !isVisibleInput(candidate)) {
+          continue;
+        }
+        matches.push(candidate);
+        seen.add(candidate);
+        if (matches.length >= 8) {
+          return matches;
+        }
       }
     }
 
-    return null;
+    return matches;
   }
 
   function readPrompt(input) {
@@ -383,6 +410,51 @@
     return event.key === "Enter" && !event.shiftKey && !event.isComposing;
   }
 
+  function buildPromptSignature(prompt) {
+    return `${prompt.length}:${prompt.slice(0, 160)}:${prompt.slice(-80)}`;
+  }
+
+  function shouldSkipPrompt(prompt) {
+    const signature = buildPromptSignature(prompt);
+    const now = Date.now();
+
+    if (signature === lastPromptSignature && now - lastPromptAt < 1200) {
+      return true;
+    }
+
+    lastPromptSignature = signature;
+    lastPromptAt = now;
+    return false;
+  }
+
+  function submitPromptFromInput(input) {
+    const prompt = readPrompt(input).trim();
+    if (!prompt || shouldSkipPrompt(prompt)) {
+      return;
+    }
+
+    handlePrompt(prompt).catch((error) => {
+      console.error("AI Dev Coach prompt handling error", error);
+    });
+  }
+
+  function attachFormListener(input) {
+    const form = input.closest("form");
+    if (!form || attachedForms.has(form)) {
+      return;
+    }
+
+    form.addEventListener(
+      "submit",
+      () => {
+        submitPromptFromInput(input);
+      },
+      true
+    );
+
+    attachedForms.add(form);
+  }
+
   function attachInputListener(input) {
     if (!input || attachedInputs.has(input)) {
       return;
@@ -395,29 +467,13 @@
           return;
         }
 
-        const prompt = readPrompt(input).trim();
-        if (!prompt) {
-          return;
-        }
-
-        const signature = `${prompt.length}:${prompt.slice(0, 140)}`;
-        const now = Date.now();
-
-        if (signature === lastPromptSignature && now - lastPromptAt < 1200) {
-          return;
-        }
-
-        lastPromptSignature = signature;
-        lastPromptAt = now;
-
-        handlePrompt(prompt).catch((error) => {
-          console.error("AI Dev Coach prompt handling error", error);
-        });
+        submitPromptFromInput(input);
       },
       true
     );
 
     attachedInputs.add(input);
+    attachFormListener(input);
   }
 
   function scanAndAttach() {
@@ -426,12 +482,8 @@
       return;
     }
 
-    const input = findPromptInput(platform);
-    if (!input) {
-      return;
-    }
-
-    attachInputListener(input);
+    const inputs = findPromptInputs(platform);
+    inputs.forEach((input) => attachInputListener(input));
   }
 
   function scheduleScan() {
@@ -455,6 +507,14 @@
     childList: true,
     subtree: true
   });
+
+  document.addEventListener(
+    "focusin",
+    () => {
+      scheduleScan();
+    },
+    true
+  );
 
   scanAndAttach();
 })();
