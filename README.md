@@ -73,6 +73,19 @@ On push to `main`, the workflow:
   - validate tag-version match
   - package the extension zip
   - publish a GitHub Release with auto-generated release notes
+  - upload and publish the package to Chrome Web Store
+
+### Chrome Web Store Secrets
+
+Configure these repository secrets before tagging a release:
+
+- `CWS_CLIENT_ID`
+- `CWS_CLIENT_SECRET`
+- `CWS_REFRESH_TOKEN`
+- `CWS_PUBLISHER_ID`
+- `CWS_EXTENSION_ID`
+
+The release workflow exchanges the refresh token for an access token using OAuth, then calls the Chrome Web Store API upload and publish endpoints.
 
 ## Repository Structure
 

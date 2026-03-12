@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -47,3 +48,91 @@ jobs:
           name: AI Dev Coach ${{ github.ref_name }}
           generate_release_notes: true
           files: ai-dev-coach-${{ steps.version.outputs.version }}.zip
+
+      - name: Validate Chrome Web Store secrets
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -z "${CWS_CLIENT_ID:-}" ] && missing+=("CWS_CLIENT_ID")
+          [ -z "${CWS_CLIENT_SECRET:-}" ] && missing+=("CWS_CLIENT_SECRET")
+          [ -z "${CWS_REFRESH_TOKEN:-}" ] && missing+=("CWS_REFRESH_TOKEN")
+          [ -z "${CWS_EXTENSION_ID:-}" ] && missing+=("CWS_EXTENSION_ID")
+          [ -z "${CWS_PUBLISHER_ID:-}" ] && missing+=("CWS_PUBLISHER_ID")
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Missing required GitHub repository secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Upload and publish to Chrome Web Store
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          ZIP_FILE: ai-dev-coach-${{ steps.version.outputs.version }}.zip
+        run: |
+          set -euo pipefail
+
+          TOKEN_RESPONSE=$(curl --fail-with-body -sS https://oauth2.googleapis.com/token \
+            -d "client_id=${CWS_CLIENT_ID}" \
+            -d "client_secret=${CWS_CLIENT_SECRET}" \
+            -d "refresh_token=${CWS_REFRESH_TOKEN}" \
+            -d "grant_type=refresh_token")
+
+          ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("access_token",""))')
+          if [ -z "$ACCESS_TOKEN" ]; then
+            echo "::error::Failed to get access token from OAuth response"
+            exit 1
+          fi
+
+          UPLOAD_URL="https://chromewebstore.googleapis.com/upload/v2/publishers/${CWS_PUBLISHER_ID}/items/${CWS_EXTENSION_ID}:upload"
+          STATUS_URL="https://chromewebstore.googleapis.com/v2/publishers/${CWS_PUBLISHER_ID}/items/${CWS_EXTENSION_ID}:fetchStatus"
+          PUBLISH_URL="https://chromewebstore.googleapis.com/v2/publishers/${CWS_PUBLISHER_ID}/items/${CWS_EXTENSION_ID}:publish"
+
+          UPLOAD_RESPONSE=$(curl --fail-with-body -sS -X POST \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -T "${ZIP_FILE}" \
+            "${UPLOAD_URL}")
+          echo "Upload response: ${UPLOAD_RESPONSE}"
+
+          FINAL_UPLOAD_STATE=$(echo "$UPLOAD_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("uploadState",""))')
+          if [ -z "$FINAL_UPLOAD_STATE" ]; then
+            echo "::error::Upload response missing uploadState"
+            exit 1
+          fi
+
+          if [ "$FINAL_UPLOAD_STATE" = "UPLOAD_IN_PROGRESS" ]; then
+            for attempt in $(seq 1 18); do
+              STATUS_RESPONSE=$(curl --fail-with-body -sS \
+                -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+                "${STATUS_URL}")
+              FINAL_UPLOAD_STATE=$(echo "$STATUS_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("uploadState",""))')
+              echo "Upload polling attempt ${attempt}: ${FINAL_UPLOAD_STATE}"
+              if [ "$FINAL_UPLOAD_STATE" = "SUCCESS" ]; then
+                break
+              fi
+              if [ "$FINAL_UPLOAD_STATE" != "UPLOAD_IN_PROGRESS" ]; then
+                echo "::error::Unexpected uploadState while polling: ${FINAL_UPLOAD_STATE}"
+                echo "${STATUS_RESPONSE}"
+                exit 1
+              fi
+              sleep 10
+            done
+          fi
+
+          if [ "$FINAL_UPLOAD_STATE" != "SUCCESS" ]; then
+            echo "::error::Upload did not reach SUCCESS. Final uploadState=${FINAL_UPLOAD_STATE}"
+            exit 1
+          fi
+
+          PUBLISH_RESPONSE=$(curl --fail-with-body -sS -X POST \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            "${PUBLISH_URL}")
+          echo "Publish response: ${PUBLISH_RESPONSE}"
