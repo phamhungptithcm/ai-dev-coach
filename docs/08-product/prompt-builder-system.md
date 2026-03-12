@@ -119,10 +119,17 @@ Grade mapping:
 - `Build + Send` writes the prompt and triggers send automatically.
 - Works on ChatGPT, Claude, Gemini, Grok, and DeepSeek pages.
 
+## Live Coaching Bubble (Realtime)
+
+- A floating bubble shows realtime `Prompt Score`, grade, and send-time coaching summary.
+- Habit snapshot in bubble updates immediately with AI requests, manual attempts, dependency, bad prompts, shortcut prompts, and copy/paste behavior.
+- Bubble is driven by send-event listeners (`Enter`, submit, send-button click) and runtime analysis events.
+
 ## Current Implementation Files
 
 - `extension/popup/popup.html`
 - `extension/popup/popup.css`
 - `extension/popup/popup.js`
+- `extension/content/liveCoachBubble.js`
 - `extension/content/quickBuilder.js`
 - `extension/content/monitor.js`

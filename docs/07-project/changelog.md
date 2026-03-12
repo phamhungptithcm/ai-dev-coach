@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.2.7
+
+- added in-page Live Coach bubble with realtime prompt score and habit snapshot on AI chat sites
+- added prompt-analyzed runtime event bridge so UI updates immediately when user sends a prompt
+- persisted last runtime prompt evaluation in storage for stable state after page refresh
+- improved send-only tracking path to update live habit stats even when prompt-content reading is disabled
+
 ## v1.2.6
 
 - added in-page Quick Prompt Builder launcher beside AI chat input on supported sites

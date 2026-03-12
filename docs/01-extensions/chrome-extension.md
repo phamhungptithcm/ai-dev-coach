@@ -6,6 +6,7 @@ The Chrome extension is the current production implementation of AI Dev Coach.
 
 - prompt quality coaching on AI chat pages
 - in-page Quick Prompt Builder button beside AI chat composer
+- live coach bubble with realtime prompt score and habit snapshot
 - copy/paste behavior warnings
 - dependency tracking (AI requests vs manual attempts)
 - prompt builder with 6 templates

@@ -1,5 +1,6 @@
 (() => {
   const COACH_OWNED_SELECTOR = '[data-ai-coach-owned="true"]';
+  const PROMPT_ANALYZED_EVENT = "ai-dev-coach:prompt-analyzed";
 
   const PLATFORM_CONFIG = [
     {
@@ -61,6 +62,17 @@
     shortcutPrompts: 0
   };
 
+  const DEFAULT_RUNTIME_EVALUATION = {
+    score: null,
+    grade: "N/A",
+    warnings: [],
+    suggestions: [],
+    hasShortcutIntent: false,
+    hasIndependentAttempt: false,
+    promptPreview: "",
+    at: 0
+  };
+
   const ATTEMPT_HINTS = [
     /i tried/i,
     /i attempted/i,
@@ -119,6 +131,10 @@
 
   function clean(value) {
     return (value || "").trim();
+  }
+
+  function buildPromptPreview(prompt) {
+    return clean(prompt).replace(/\s+/g, " ").slice(0, 220);
   }
 
   function mergeSettings(rawSettings) {
@@ -343,6 +359,43 @@
     return "D";
   }
 
+  function computeDependency(stats) {
+    const total = stats.aiRequests + stats.manualAttempts;
+    if (total === 0) {
+      return 0;
+    }
+    return Math.round((stats.aiRequests / total) * 100);
+  }
+
+  function emitPromptAnalyzed(payload) {
+    document.dispatchEvent(
+      new CustomEvent(PROMPT_ANALYZED_EVENT, {
+        detail: payload
+      })
+    );
+  }
+
+  function buildRuntimeEvaluation(prompt, analysis) {
+    if (!analysis) {
+      return {
+        ...DEFAULT_RUNTIME_EVALUATION,
+        promptPreview: buildPromptPreview(prompt),
+        at: Date.now()
+      };
+    }
+
+    return {
+      score: analysis.score,
+      grade: analysis.grade,
+      warnings: analysis.warnings.slice(0, 4),
+      suggestions: analysis.suggestions.slice(0, 4),
+      hasShortcutIntent: analysis.hasShortcutIntent,
+      hasIndependentAttempt: analysis.hasIndependentAttempt,
+      promptPreview: buildPromptPreview(prompt),
+      at: Date.now()
+    };
+  }
+
   function analyzePrompt(prompt, strictMode) {
     let score = 0;
     const warnings = [];
@@ -418,10 +471,7 @@
 
     await storageSet({ stats });
 
-    const total = stats.aiRequests + stats.manualAttempts;
-    const dependency = total > 0 ? Math.round((stats.aiRequests / total) * 100) : 0;
-
-    return { stats, dependency };
+    return { stats, dependency: computeDependency(stats) };
   }
 
   async function updateSendOnlyStats() {
@@ -429,7 +479,25 @@
     const stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
     stats.aiRequests += 1;
     await storageSet({ stats });
-    return stats;
+    return { stats, dependency: computeDependency(stats) };
+  }
+
+  async function persistRuntimeEvaluation(runtimeEvaluation) {
+    await storageSet({ lastRuntimePromptEvaluation: runtimeEvaluation });
+  }
+
+  async function handleSendOnly() {
+    if (shouldSkipSendPulse()) {
+      return;
+    }
+
+    const { stats, dependency } = await updateSendOnlyStats();
+    emitPromptAnalyzed({
+      at: Date.now(),
+      sendOnly: true,
+      stats,
+      dependency
+    });
   }
 
   function buildHabitTip(profile, analysis) {
@@ -496,10 +564,20 @@
 
     const { settings, profile } = await getState();
     const analysis = analyzePrompt(prompt, settings.strictMode);
+    const runtimeEvaluation = buildRuntimeEvaluation(prompt, analysis);
     const statsPromise = updatePromptStats(prompt, analysis);
+    const runtimePromise = persistRuntimeEvaluation(runtimeEvaluation);
 
     if (!settings.enableCoach || !settings.promptListenerEnabled || !settings.readPromptContentEnabled) {
-      await statsPromise;
+      const { stats, dependency } = await statsPromise;
+      await runtimePromise;
+      emitPromptAnalyzed({
+        at: runtimeEvaluation.at,
+        promptPreview: runtimeEvaluation.promptPreview,
+        analysis: runtimeEvaluation,
+        stats,
+        dependency
+      });
       return;
     }
 
@@ -521,7 +599,17 @@
     messages.push({ type: "info", text: buildHabitTip(profile, analysis) });
     queueMessages(messages, settings);
 
-    const { dependency } = await statsPromise;
+    const { stats, dependency } = await statsPromise;
+    await runtimePromise;
+
+    emitPromptAnalyzed({
+      at: runtimeEvaluation.at,
+      promptPreview: runtimeEvaluation.promptPreview,
+      analysis: runtimeEvaluation,
+      stats,
+      dependency
+    });
+
     if (dependency >= settings.dependencyWarningThreshold) {
       showCoachMessage(
         `AI dependency is ${dependency}%. Try one manual debugging pass first.`,
@@ -638,10 +726,7 @@
     }
 
     if (!settings.readPromptContentEnabled) {
-      if (shouldSkipSendPulse()) {
-        return;
-      }
-      await updateSendOnlyStats();
+      await handleSendOnly();
       return;
     }
 
@@ -651,10 +736,7 @@
 
     const prompt = readPrompt(input).trim();
     if (!prompt) {
-      if (shouldSkipSendPulse()) {
-        return;
-      }
-      await updateSendOnlyStats();
+      await handleSendOnly();
       return;
     }
 
@@ -833,10 +915,7 @@
         }
 
         if (!settings.readPromptContentEnabled) {
-          if (shouldSkipSendPulse()) {
-            return;
-          }
-          await updateSendOnlyStats();
+          await handleSendOnly();
           return;
         }
 

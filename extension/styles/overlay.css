@@ -55,6 +55,145 @@
   line-height: 1.35;
 }
 
+.ai-coach-live-bubble {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  width: min(360px, calc(100vw - 24px));
+  z-index: 2147482850;
+  border: 1px solid #d7dee5;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 14px 30px rgba(9, 30, 66, 0.2);
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: #162029;
+}
+
+.ai-coach-live-bubble__hidden {
+  display: none !important;
+}
+
+.ai-coach-live-bubble__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e6ebf0;
+}
+
+.ai-coach-live-bubble__header strong {
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+
+.ai-coach-live-bubble__toggle {
+  border: 1px solid #d7dee5;
+  background: #f8fafc;
+  border-radius: 999px;
+  width: 26px;
+  height: 26px;
+  color: #3d4c5f;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ai-coach-live-bubble__body {
+  padding: 10px 12px 12px;
+  display: grid;
+  gap: 7px;
+}
+
+.ai-coach-live-bubble__score-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-coach-live-bubble__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #3d4c5f;
+}
+
+.ai-coach-live-bubble__score {
+  margin-left: auto;
+  font-size: 20px;
+  font-weight: 800;
+  color: #162029;
+}
+
+.ai-coach-live-bubble__grade {
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 3px 8px;
+  border: 1px solid #d7dee5;
+  background: #f8fafc;
+  color: #3d4c5f;
+}
+
+.ai-coach-live-bubble__grade--a {
+  background: #ecfdf3;
+  border-color: #abefc6;
+  color: #067647;
+}
+
+.ai-coach-live-bubble__grade--b {
+  background: #edf5ff;
+  border-color: #b2ddff;
+  color: #175cd3;
+}
+
+.ai-coach-live-bubble__grade--c {
+  background: #fff6ed;
+  border-color: #ffd6ae;
+  color: #b54708;
+}
+
+.ai-coach-live-bubble__grade--d {
+  background: #fef3f2;
+  border-color: #fecdca;
+  color: #b42318;
+}
+
+.ai-coach-live-bubble__grade--na {
+  background: #f8fafc;
+  border-color: #d7dee5;
+  color: #667085;
+}
+
+.ai-coach-live-bubble__summary,
+.ai-coach-live-bubble__habit,
+.ai-coach-live-bubble__behavior,
+.ai-coach-live-bubble__preview,
+.ai-coach-live-bubble__meta {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.36;
+}
+
+.ai-coach-live-bubble__summary {
+  color: #344054;
+  font-weight: 600;
+}
+
+.ai-coach-live-bubble__preview {
+  color: #475467;
+}
+
+.ai-coach-live-bubble__meta {
+  color: #667085;
+}
+
+.ai-coach-live-bubble__muted {
+  color: #98a2b3;
+}
+
+.ai-coach-live-bubble--minimized .ai-coach-live-bubble__body {
+  display: none;
+}
+
 .ai-coach-builder__hidden {
   display: none !important;
 }
