@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Dev Coach",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Coach developers to use AI with better reasoning, prompting, and coding habits.",
   "minimum_chrome_version": "114",
   "homepage_url": "https://github.com/phamhungptithcm/ai-dev-coach",

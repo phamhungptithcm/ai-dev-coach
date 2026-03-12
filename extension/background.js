@@ -1,8 +1,16 @@
 const DEFAULT_SETTINGS = {
   enableCoach: true,
+  promptListenerEnabled: true,
+  behaviorMonitorEnabled: true,
+  readPromptContentEnabled: true,
+  readCopiedContentEnabled: true,
+  readBeforeCopyEnabled: true,
+  showOutputCountdown: true,
   strictMode: true,
   dependencyWarningThreshold: 70,
   pasteThreshold: 320,
+  longCopyThreshold: 360,
+  minReadBeforeCopySeconds: 20,
   overlayDurationMs: 6500
 };
 
@@ -15,7 +23,9 @@ const DEFAULT_PROFILE = {
 const DEFAULT_STATS = {
   aiRequests: 0,
   manualAttempts: 0,
-  largePastes: 0
+  largePastes: 0,
+  aiCopies: 0,
+  fastAiCopies: 0
 };
 
 const DEFAULT_TEMPLATE = "debugging";

@@ -53,6 +53,8 @@ Tracks local counters:
 - AI requests
 - manual attempts
 - large code pastes
+- long AI output copies
+- fast copies (copied too soon after AI response)
 
 Displays warning when dependency exceeds configured threshold.
 
@@ -62,12 +64,21 @@ When large multi-line code pastes are detected, the user gets coaching prompts t
 
 If a user copies long AI-generated output and pastes it back into a prompt composer, the extension warns them to rewrite with their own reasoning before sending.
 
+The extension also tracks AI output timestamp and copy timestamp. If copy happens faster than configured minimum read time, it triggers a \"read first\" warning.
+
 ## 6. Settings and Controls
 
 User can configure:
 
 - enable/disable coaching
+- enable/disable prompt listener
+- enable/disable behavior monitor
+- allow/disallow prompt content reading
+- allow/disallow copied AI content reading
 - strict mode
 - dependency warning threshold
 - large paste threshold
+- long AI copy threshold
+- minimum read time before copy
+- enable/disable output countdown reminders
 - overlay duration

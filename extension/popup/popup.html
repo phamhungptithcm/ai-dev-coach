@@ -11,20 +11,43 @@
     <header class="popup__header">
       <h1>AI Dev Coach</h1>
       <p>Build better AI habits: think first, ask better, ship safer.</p>
+      <p id="profileBadge" class="profile-badge profile-badge--empty">Profile: Not set</p>
     </header>
 
     <section class="card">
-      <h2>Developer Profile</h2>
-      <label for="roleInput">Job / Role</label>
-      <input id="roleInput" type="text" placeholder="Frontend Developer" />
+      <h2>Live Monitoring</h2>
+      <label class="checkbox-row">
+        <input id="promptListenerToggle" type="checkbox" />
+        Enable prompt listener on send
+      </label>
+      <label class="checkbox-row">
+        <input id="behaviorMonitorToggle" type="checkbox" />
+        Enable behavior monitor (copy/paste alerts)
+      </label>
+      <button id="saveMonitoringBtn" class="button">Save Monitoring</button>
+      <p id="monitorStatus" class="status"></p>
+    </section>
 
-      <label for="skillInput">Skill Level</label>
-      <input id="skillInput" type="text" placeholder="Junior, Mid, Senior" />
+    <section class="card">
+      <div class="profile-card__head">
+        <h2>Developer Profile</h2>
+        <button id="editProfileBtn" class="button button--small hidden" type="button">Edit</button>
+      </div>
+      <p id="profileSummary" class="muted hidden"></p>
 
-      <label for="habitInput">Habit Goal</label>
-      <textarea id="habitInput" rows="2" placeholder="Debug for 15 minutes before asking AI"></textarea>
+      <div id="profileForm">
+        <label for="roleInput">Job / Role</label>
+        <input id="roleInput" type="text" placeholder="Frontend Developer" />
 
-      <button id="saveProfileBtn" class="button button--primary">Save Profile</button>
+        <label for="skillInput">Skill Level</label>
+        <input id="skillInput" type="text" placeholder="Junior, Mid, Senior" />
+
+        <label for="habitInput">Habit Goal</label>
+        <textarea id="habitInput" rows="2" placeholder="Debug for 15 minutes before asking AI"></textarea>
+
+        <button id="saveProfileBtn" class="button button--primary">Save Profile</button>
+      </div>
+
       <p id="profileStatus" class="status"></p>
     </section>
 
