@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added daily session summaries to learning analytics with prompt category breakdowns and friendly coaching suggestions
 - added local learning analytics event tracking for prompt submissions with popup snapshot summary
 - added future backend sync payload contract for prompt-session analytics rollout
 - added learning-analytics smoke checks in CI

@@ -1036,10 +1036,10 @@
 
     try {
       const nextState = await learningAnalytics.trackPromptEvent(chrome.storage.local, {
+        prompt,
         source: clean(options.source) || "composer_submit",
         platform: clean(options.platform) || clean(platform?.name) || "Unknown",
         timestamp: Date.now(),
-        promptLength: typeof prompt === "string" ? prompt.length : null,
         score: analysis && Number.isFinite(analysis.score) ? analysis.score : null,
         grade: clean(analysis?.grade || ""),
         dependency,

@@ -102,12 +102,13 @@ Live bubble behavior:
 
 ## 4.1 Learning Analytics (V2 Foundation)
 
-The first V2 analytics slice tracks prompt-session metadata locally.
+The first V2 analytics slice tracks prompt-session metadata locally and builds a daily summary from that history.
 
 Tracked prompt-event fields currently include:
 
 - prompt source (`composer_submit`, `quick_builder`, send-only variants)
 - platform
+- prompt category
 - timestamp
 - prompt length
 - prompt score and grade
@@ -123,6 +124,13 @@ Privacy defaults:
 - analytics history is stored locally in `chrome.storage.local`
 - prompt text is not stored in the analytics event log
 - future backend sync is documented but not enabled yet
+
+Daily summary output includes:
+
+- total prompts for today
+- average quality score
+- top prompt categories
+- readable coaching suggestions
 
 ## 5. Sensitive Data Guardrail
 
