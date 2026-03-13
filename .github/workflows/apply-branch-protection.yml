@@ -13,15 +13,19 @@ jobs:
       GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
       REPO: ${{ github.repository }}
     steps:
-      - name: Validate admin token
+      - name: Detect admin token
+        id: token
         run: |
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::error::Missing REPO_ADMIN_TOKEN secret. This workflow needs an admin-scoped token."
-            exit 1
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Missing REPO_ADMIN_TOKEN secret. Skipping branch protection apply because this workflow needs an admin-scoped token."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Apply protection to main
+        if: steps.token.outputs.available == 'true'
         run: |
           set -euo pipefail
           cat > main-protection.json <<'JSON'
@@ -40,7 +44,7 @@ jobs:
               "require_last_push_approval": false
             },
             "restrictions": null,
-            "required_linear_history": true,
+            "required_linear_history": false,
             "allow_force_pushes": false,
             "allow_deletions": false,
             "block_creations": false,
@@ -57,6 +61,7 @@ jobs:
           echo "Applied protection to main."
 
       - name: Apply protection to staging
+        if: steps.token.outputs.available == 'true'
         run: |
           set -euo pipefail
           cat > staging-protection.json <<'JSON'
@@ -64,7 +69,8 @@ jobs:
             "required_status_checks": {
               "strict": true,
               "contexts": [
-                "CI / validate"
+                "CI / validate",
+                "Staging Version Guard / guard"
               ]
             },
             "enforce_admins": false,
@@ -75,7 +81,7 @@ jobs:
               "require_last_push_approval": false
             },
             "restrictions": null,
-            "required_linear_history": true,
+            "required_linear_history": false,
             "allow_force_pushes": false,
             "allow_deletions": false,
             "block_creations": false,
@@ -90,3 +96,8 @@ jobs:
             "/repos/${REPO}/branches/staging/protection" \
             --input staging-protection.json >/dev/null
           echo "Applied protection to staging."
+
+      - name: Report skipped apply
+        if: steps.token.outputs.available != 'true'
+        run: |
+          echo "Branch protection workflow completed without changes because REPO_ADMIN_TOKEN is not configured."

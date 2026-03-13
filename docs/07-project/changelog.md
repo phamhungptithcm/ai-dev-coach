@@ -20,6 +20,10 @@
 - enforced release-only version policy by adding `staging-version-guard.yml` for PRs into `staging`
 - added weekly `staging` to `main` sync automation workflow with auto-merge request and admin fallback
 - added `apply-branch-protection.yml` to manage branch protection policy as code
+- fixed release tagging in GitHub Actions by configuring bot git identity before annotated tags are created
+- hardened release preparation and weekly sync to use `REPO_ADMIN_TOKEN` when repository policy blocks PR creation from the default Actions token
+- changed Chrome Web Store "item in review" handling so GitHub release workflows finish successfully and report store publish as deferred
+- aligned branch protection automation with merge-commit release flow and required `Staging Version Guard / guard` on `staging`
 
 ## v1.2.15
 

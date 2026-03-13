@@ -122,6 +122,7 @@ jobs:
           fi
 
       - name: Upload and publish to Chrome Web Store
+        id: cws
         if: env.PUBLISH_TO_CWS == 'true'
         env:
           CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
@@ -133,6 +134,7 @@ jobs:
           ZIP_FILE: dist/ai-dev-coach-${{ steps.version.outputs.version }}.zip
         run: |
           set -euo pipefail
+          echo "status=publishing" >> "$GITHUB_OUTPUT"
 
           TOKEN_RESPONSE=$(curl --fail-with-body -sS https://oauth2.googleapis.com/token \
             -d "client_id=${CWS_CLIENT_ID}" \
@@ -161,16 +163,20 @@ jobs:
 
           if [ "${upload_status}" -ge 400 ]; then
             if printf '%s' "${upload_body}" | grep -qi "in review"; then
-              echo "::error::Chrome Web Store item is currently in review. GitHub release is ready, but store publish must wait until review completes."
+              echo "::notice::Chrome Web Store item is currently in review. GitHub release is ready, but store publish must wait until review completes."
+              echo "status=deferred_in_review" >> "$GITHUB_OUTPUT"
             else
               echo "::error::Chrome Web Store upload failed: ${upload_body}"
+              echo "status=failed_upload" >> "$GITHUB_OUTPUT"
+              exit 1
             fi
-            exit 1
+            exit 0
           fi
 
           final_upload_state=$(printf '%s' "${upload_body}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("uploadState",""))')
           if [ -z "${final_upload_state}" ]; then
             echo "::error::Upload response missing uploadState"
+            echo "status=failed_upload_state" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
@@ -187,6 +193,7 @@ jobs:
               if [ "${final_upload_state}" != "UPLOAD_IN_PROGRESS" ]; then
                 echo "::error::Unexpected uploadState while polling: ${final_upload_state}"
                 echo "${status_response}"
+                echo "status=failed_upload_state" >> "$GITHUB_OUTPUT"
                 exit 1
               fi
               sleep 10
@@ -195,6 +202,7 @@ jobs:
 
           if [ "${final_upload_state}" != "SUCCESS" ]; then
             echo "::error::Upload did not reach SUCCESS. Final uploadState=${final_upload_state}"
+            echo "status=failed_upload_state" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
@@ -206,8 +214,44 @@ jobs:
           publish_body=$(printf '%s\n' "${publish_raw}" | sed '$d')
 
           if [ "${publish_status}" -ge 400 ]; then
+            if printf '%s' "${publish_body}" | grep -qi "in review"; then
+              echo "::notice::Chrome Web Store accepted the release package, but publish is deferred while the item remains in review."
+              echo "status=deferred_in_review" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             echo "::error::Chrome Web Store publish failed: ${publish_body}"
+            echo "status=failed_publish" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
           echo "Publish response: ${publish_body}"
+          echo "status=published" >> "$GITHUB_OUTPUT"
+
+      - name: Write release summary
+        if: always()
+        run: |
+          {
+            echo "## Extension release summary"
+            echo ""
+            echo "- Version: \`${{ steps.version.outputs.version }}\`"
+            echo "- Tag: \`${{ steps.version.outputs.tag }}\`"
+            echo "- GitHub release: completed"
+            if [ "${PUBLISH_TO_CWS}" != "true" ]; then
+              echo "- Chrome Web Store: skipped by workflow input"
+            else
+              case "${{ steps.cws.outputs.status }}" in
+                published)
+                  echo "- Chrome Web Store: published successfully"
+                  ;;
+                deferred_in_review)
+                  echo "- Chrome Web Store: deferred because the item is currently in review"
+                  ;;
+                "")
+                  echo "- Chrome Web Store: not reached"
+                  ;;
+                *)
+                  echo "- Chrome Web Store: failed (\`${{ steps.cws.outputs.status }}\`)"
+                  ;;
+              esac
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

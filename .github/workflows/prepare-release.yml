@@ -21,7 +21,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  actions: write
 
 concurrency:
   group: prepare-extension-release-main
@@ -116,31 +115,54 @@ jobs:
 
       - name: Create or update release PR
         if: steps.changes.outputs.has_changes == 'true'
-        id: cpr
-        uses: peter-evans/create-pull-request@v8
-        with:
-          token: ${{ github.token }}
-          commit-message: "chore(release): cut v${{ steps.version.outputs.version }}"
-          title: "chore(release): cut v${{ steps.version.outputs.version }}"
-          body: |
-            ## Summary
-            - bump extension manifest version to `${{ steps.version.outputs.version }}`
-            - prepare GitHub release tag `${{ steps.version.outputs.tag }}`
-            - keep release publish step on post-merge automation
-
-            ## Next
-            - review and approve this PR
-            - merge into `main`
-            - `Publish Extension Release` will tag, package, write release notes, and publish to Chrome Web Store
-          branch: release/v${{ steps.version.outputs.version }}
-          base: main
-          delete-branch: true
-
-      - name: Trigger CI for release PR branch
-        if: steps.cpr.outputs.pull-request-number != ''
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN || github.token }}
+          PUSH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN || github.token }}
         run: |
           set -euo pipefail
-          gh workflow run CI --ref "${{ steps.cpr.outputs.pull-request-branch }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          BRANCH="release/v${VERSION}"
+          TITLE="chore(release): cut ${TAG}"
 
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/${{ github.repository }}.git"
+
+          git switch -C "${BRANCH}"
+          git add extension/manifest.json
+
+          if git diff --cached --quiet; then
+            echo "No manifest changes to commit for ${BRANCH}."
+          else
+            git commit -m "${TITLE}"
+          fi
+
+          git push --force-with-lease origin "HEAD:${BRANCH}"
+
+          cat > release-pr-body.md <<EOF
+          ## Summary
+          - bump extension manifest version to \`${VERSION}\`
+          - prepare GitHub release tag \`${TAG}\`
+          - keep release publish step on post-merge automation
+
+          ## Next
+          - review and approve this PR
+          - merge into \`main\`
+          - \`Publish Extension Release\` will tag, package, write release notes, and publish to Chrome Web Store
+          EOF
+
+          existing_pr=$(gh pr list --base main --head "${BRANCH}" --state open --json number --jq '.[0].number' || true)
+          if [ -n "${existing_pr}" ]; then
+            gh pr edit "${existing_pr}" --title "${TITLE}" --body-file release-pr-body.md
+            echo "Updated existing release PR #${existing_pr}."
+          else
+            gh pr create \
+              --base main \
+              --head "${BRANCH}" \
+              --title "${TITLE}" \
+              --body-file release-pr-body.md || {
+              echo "::warning::Release branch ${BRANCH} was pushed, but the workflow could not open the PR automatically."
+              echo "::warning::If GitHub Actions PR creation is disabled, create the PR manually from ${BRANCH} to main."
+            }
+          fi
