@@ -190,7 +190,7 @@ jobs:
                 "${STATUS_URL}")
               final_upload_state=$(printf '%s' "${status_response}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("uploadState",""))')
               echo "Upload polling attempt ${attempt}: ${final_upload_state}"
-              if [ "${final_upload_state}" = "SUCCESS" ]; then
+              if [ "${final_upload_state}" = "SUCCESS" ] || [ "${final_upload_state}" = "SUCCEEDED" ]; then
                 break
               fi
               if [ "${final_upload_state}" != "UPLOAD_IN_PROGRESS" ]; then
@@ -203,7 +203,7 @@ jobs:
             done
           fi
 
-          if [ "${final_upload_state}" != "SUCCESS" ]; then
+          if [ "${final_upload_state}" != "SUCCESS" ] && [ "${final_upload_state}" != "SUCCEEDED" ]; then
             echo "::error::Upload did not reach SUCCESS. Final uploadState=${final_upload_state}"
             echo "status=failed_upload_state" >> "$GITHUB_OUTPUT"
             exit 1

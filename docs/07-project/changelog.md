@@ -26,6 +26,7 @@
 - aligned branch protection automation with merge-commit release flow and required `Staging Version Guard / guard` on `staging`
 - updated GitHub Actions dependencies to `actions/setup-python@v6` and `actions/upload-pages-artifact@v4` to stay ahead of the Node 20 deprecation path
 - enabled GitHub's `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` opt-in across workflows so future Node 24 runner changes are exercised now
+- fixed Chrome Web Store upload polling to accept both `SUCCESS` and `SUCCEEDED` upload-state responses from the API
 
 ## v1.2.15
 
