@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- added prompt linter with rule-based checks for short prompts, missing technical context, missing failure signals, and sensitive data
+- added prompt-linter smoke checks in CI and popup lint results UI
+- added prompt quality engine v2 with shared scoring between popup prompt builder and live monitoring
+- added prompt-quality smoke checks in CI to guard scoring regressions
 - replaced direct-to-main release bumping with protected-branch-safe release PR automation
 - split release CI into `prepare-release.yml` and publish-only `release.yml`
 - added manual CI dispatch support so release PR branches receive required checks
@@ -118,13 +122,3 @@
 
 - switched docs to MkDocs Material workflow
 - aligned docs/nav for extension-focused scope
-- CI/CD and release pipeline improvements
-
-## v1.2.1
-
-- prompt builder and scoring enhancements
-- docs deployment improvements
-
-## v1.2.0
-
-- initial extension MVP release
