@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added local secret detection and redaction guardrail before prompt submission
+- added sprint planning documentation with prioritized backlog estimates
 - split CI/CD so docs deploy and extension release run independently
 - constrained docs deployment trigger to docs-related changes only
 - rebuilt extension release pipeline to bump manifest version only
