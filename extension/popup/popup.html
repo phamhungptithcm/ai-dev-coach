@@ -87,6 +87,14 @@
       <label for="templateSelect">Template</label>
       <select id="templateSelect"></select>
       <p id="templateHint" class="muted"></p>
+      <section class="score-card role-coaching-card" aria-label="Role coaching guide">
+        <div class="score-card__header">
+          <span>Role Coaching</span>
+          <strong id="roleCoachingLabel">Software Engineer</strong>
+        </div>
+        <p id="roleCoachingFocus" class="muted"></p>
+        <ul id="roleCoachingList" class="score-list score-list--tips"></ul>
+      </section>
 
       <label for="taskInput">Task (Required)</label>
       <textarea id="taskInput" rows="2" placeholder="What do you need from AI?"></textarea>
@@ -103,15 +111,24 @@
       <label for="acceptanceInput">Acceptance Criteria (Optional)</label>
       <textarea id="acceptanceInput" rows="2" placeholder="How should we know the solution is complete and correct?"></textarea>
 
-      <p id="requiredChecklist" class="required-checklist"></p>
+      <div id="requiredChecklist" class="required-checklist" role="status" aria-live="polite"></div>
 
       <div class="button-row">
         <button id="generatePromptBtn" class="button button--primary">Generate Prompt</button>
         <button id="copyPromptBtn" class="button">Copy Prompt</button>
       </div>
 
-      <label for="generatedPrompt">Generated Prompt</label>
-      <textarea id="generatedPrompt" rows="11" readonly placeholder="Your coaching prompt will appear here"></textarea>
+      <section class="output-card" aria-label="Generated prompt">
+        <div class="output-card__header">
+          <label for="generatedPrompt">Generated Prompt</label>
+          <span id="generatedPromptMeta" class="profile-badge profile-badge--empty output-card__badge">No prompt yet</span>
+        </div>
+        <div id="generatedPromptPreview" class="prompt-preview prompt-preview--empty">Your coaching prompt will appear here.</div>
+        <details id="rawPromptDetails" class="raw-prompt">
+          <summary>View raw prompt text</summary>
+          <textarea id="generatedPrompt" rows="11" readonly placeholder="Your coaching prompt will appear here"></textarea>
+        </details>
+      </section>
 
       <section class="score-card" aria-label="Prompt score breakdown">
         <div class="score-card__header">
@@ -146,6 +163,44 @@
 
     <section class="card">
       <div class="profile-card__head">
+        <h2>Prompt Marketplace</h2>
+        <span id="marketplaceCountBadge" class="profile-badge profile-badge--empty">Loading...</span>
+      </div>
+      <p class="muted">Browse curated prompts from the local markdown library, then copy, insert, or send them on supported AI chat pages.</p>
+
+      <label for="marketplaceSearchInput">Search Prompts</label>
+      <input id="marketplaceSearchInput" type="search" placeholder="Search debugging, writing, learning, business..." />
+
+      <div class="marketplace-shell">
+        <aside class="marketplace-sidebar" aria-label="Prompt categories">
+          <span class="marketplace-sidebar__title">Categories</span>
+          <div id="marketplaceCategoryList" class="marketplace-category-list"></div>
+        </aside>
+
+        <div class="marketplace-main">
+          <section class="marketplace-panel" aria-label="Trending prompts">
+            <div class="marketplace-panel__head">
+              <span>Trending</span>
+              <span id="marketplaceTrendingMeta" class="trend-delta">Local</span>
+            </div>
+            <div id="marketplaceTrendingList" class="marketplace-trending-list"></div>
+          </section>
+
+          <section class="marketplace-panel" aria-label="Prompt results">
+            <div class="marketplace-panel__head">
+              <span>Prompt Library</span>
+              <span id="marketplaceResultsMeta" class="trend-delta">0 results</span>
+            </div>
+            <div id="marketplacePromptList" class="marketplace-prompt-list"></div>
+          </section>
+        </div>
+      </div>
+
+      <p id="marketplaceStatus" class="status"></p>
+    </section>
+
+    <section class="card">
+      <div class="profile-card__head">
         <h2>Learning Analytics</h2>
         <span class="profile-badge">Local only</span>
       </div>
@@ -166,11 +221,58 @@
       </div>
       <p id="analyticsSummary" class="stats"></p>
       <p id="analyticsMeta" class="muted"></p>
+
+      <section class="score-card" aria-label="Daily session summary">
+        <div class="score-card__header">
+          <span>Today's Session</span>
+          <strong id="sessionSummaryScore">--/100</strong>
+          <span id="sessionSummaryDay" class="grade grade--na">Today</span>
+        </div>
+        <p id="sessionSummaryHeadline" class="muted"></p>
+        <p id="sessionSummaryStats" class="stats"></p>
+        <ul id="sessionCategoryList" class="score-list"></ul>
+        <ul id="sessionSuggestionList" class="score-list score-list--tips"></ul>
+      </section>
+
+      <section class="score-card" aria-label="Trend dashboard">
+        <div class="score-card__header">
+          <span>Trend Dashboard</span>
+          <strong id="trendWindowLabel">7 days</strong>
+          <span id="trendActiveDays" class="grade grade--na">0 active</span>
+        </div>
+        <div class="trend-panel">
+          <div class="trend-panel__head">
+            <span>Quality over time</span>
+            <span id="qualityTrendDelta" class="trend-delta">--</span>
+          </div>
+          <svg id="qualityTrendChart" class="trend-chart" viewBox="0 0 220 84" role="img" aria-label="Prompt quality trend"></svg>
+          <p id="qualityTrendSummary" class="muted"></p>
+        </div>
+        <div class="trend-panel">
+          <div class="trend-panel__head">
+            <span>Warning frequency</span>
+            <span id="warningTrendDelta" class="trend-delta">--</span>
+          </div>
+          <svg id="warningTrendChart" class="trend-chart" viewBox="0 0 220 84" role="img" aria-label="Warning frequency trend"></svg>
+          <p id="warningTrendSummary" class="muted"></p>
+        </div>
+        <div class="trend-panel">
+          <div class="trend-panel__head">
+            <span>Prompt types</span>
+            <span id="trendTopCategory" class="trend-delta">--</span>
+          </div>
+          <div id="categoryTrendBars" class="category-bars"></div>
+          <p id="trendRulesSummary" class="muted"></p>
+        </div>
+      </section>
     </section>
   </main>
 
+  <script src="../shared/roleCoaching.js"></script>
   <script src="../shared/promptQualityEngine.js"></script>
   <script src="../shared/learningAnalytics.js"></script>
+  <script src="../shared/promptLibrarySource.js"></script>
+  <script src="../shared/promptMarketplace.js"></script>
   <script src="../content/secretDetection.js"></script>
   <script src="../shared/promptLinter.js"></script>
   <script src="popup.js"></script>

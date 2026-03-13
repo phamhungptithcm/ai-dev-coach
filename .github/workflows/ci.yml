@@ -38,14 +38,25 @@ jobs:
       - name: Validate extension package structure
         run: node scripts/validate-extension.mjs
 
+      - name: Validate prompt library sync
+        run: |
+          node scripts/sync-prompt-library.mjs
+          git diff --exit-code -- extension/shared/promptLibrarySource.js
+
       - name: Validate prompt quality engine smoke checks
         run: node scripts/test-prompt-quality-engine.mjs
 
       - name: Validate prompt linter smoke checks
         run: node scripts/test-prompt-linter.mjs
 
+      - name: Validate role coaching smoke checks
+        run: node scripts/test-role-coaching.mjs
+
       - name: Validate learning analytics smoke checks
         run: node scripts/test-learning-analytics.mjs
+
+      - name: Validate prompt marketplace smoke checks
+        run: node scripts/test-prompt-marketplace.mjs
 
       - name: Validate extension JavaScript syntax
         run: |

@@ -47,6 +47,42 @@ In-page access:
 
 See also: [Prompt Builder System](prompt-builder-system.md)
 
+Role-specific builder behavior:
+
+- role and level change the recommended template
+- role-aware examples are shown in the popup and in-page quick builder
+- role guardrails stay visible for sensitive modes such as `Doctor`
+
+## 2.1 Prompt Marketplace
+
+The popup now includes a local Prompt Marketplace powered by a markdown prompt library.
+
+Capabilities:
+
+- browse prompt cards by category
+- search prompt text locally
+- filter by category
+- copy a prompt
+- insert a prompt into the active supported AI chat
+- insert and auto-send a prompt into the active supported AI chat
+
+Marketplace data flow:
+
+- source markdown lives in `docs/prompts.md`
+- a sync script exports that markdown into the extension bundle
+- the extension parses markdown into structured prompt objects locally
+- local usage counts drive trending prompts
+
+Prompt categories:
+
+- Developer
+- Learning
+- Writing
+- Productivity
+- Image Generation
+- Business
+- Daily Life
+
 ## 3. Prompt Quality Analyzer
 
 Analyzes each submitted prompt for:
@@ -59,6 +95,13 @@ Analyzes each submitted prompt for:
 - shortcut intent signals
 
 Outputs a shared quality score and targeted feedback across both popup prompt builder and live monitoring.
+
+Role-aware prompt feedback now adds:
+
+- role-specific warning copy
+- role-specific evidence suggestions
+- software-engineering specialization hints for frontend, backend, DevOps, and fullstack wording
+- level-aware nudges for `Student` and `Junior`
 
 ## 3.1 Prompt Linter
 
@@ -102,12 +145,13 @@ Live bubble behavior:
 
 ## 4.1 Learning Analytics (V2 Foundation)
 
-The first V2 analytics slice tracks prompt-session metadata locally.
+The first V2 analytics slice tracks prompt-session metadata locally and builds a daily summary from that history.
 
 Tracked prompt-event fields currently include:
 
 - prompt source (`composer_submit`, `quick_builder`, send-only variants)
 - platform
+- prompt category
 - timestamp
 - prompt length
 - prompt score and grade
@@ -123,6 +167,22 @@ Privacy defaults:
 - analytics history is stored locally in `chrome.storage.local`
 - prompt text is not stored in the analytics event log
 - future backend sync is documented but not enabled yet
+
+Daily summary output includes:
+
+- total prompts for today
+- average quality score
+- top prompt categories
+- readable coaching suggestions
+
+Those coaching suggestions can now reflect the latest tracked role and level metadata.
+
+Trend dashboard output includes:
+
+- 7-day quality trend
+- warning frequency trend
+- prompt category mix view
+- explainable calculation rules shown in the UI copy/docs
 
 ## 5. Sensitive Data Guardrail
 

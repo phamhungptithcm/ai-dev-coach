@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- added Prompt Marketplace with local markdown-backed prompt browsing, search, filtering, and trending
+- added marketplace prompt actions to copy, insert, or send prompts into supported AI chat pages
+- added prompt-library sync tooling so `docs/prompts.md` can drive the extension bundle
+- refreshed popup prompt output with a structured preview card, metadata badge, and clearer raw-text fallback
+- redesigned live coaching bubble into a smaller stats-first layout with readable prompt preview and coaching signals
+- polished in-page Quick Prompt Builder with grouped sections, better helper copy, and clearer action feedback
+- added a shared role-coaching module so popup builder, quick builder, live monitoring, and analytics can use the same role-aware hints and warnings
+- added role-specific coaching examples and warnings for Teacher, Software Engineer, Solution Architecture, Manager, Director, Doctor, and Other profiles
+- added software-engineering specialization guidance for frontend, backend, DevOps, and fullstack wording
+- improved generated prompt formatting with cleaner section breaks for easier reading and copy/paste
+- added a lightweight local trend dashboard with quality-over-time, warning-frequency, and prompt-category views
+- added daily session summaries to learning analytics with prompt category breakdowns and friendly coaching suggestions
 - added local learning analytics event tracking for prompt submissions with popup snapshot summary
 - added future backend sync payload contract for prompt-session analytics rollout
 - added learning-analytics smoke checks in CI

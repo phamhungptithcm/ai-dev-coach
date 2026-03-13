@@ -20,6 +20,7 @@ It tracks:
 
 - prompt source
 - AI platform
+- prompt category
 - timestamp
 - prompt length
 - prompt score / grade
@@ -29,12 +30,40 @@ It tracks:
 
 The event log does not store full prompt bodies. This keeps analytics useful for learning trends while preserving a conservative privacy boundary.
 
+## Daily session summary
+
+The popup derives a local daily session summary from the tracked prompt events.
+
+Current summary fields include:
+
+- total prompts for the selected day
+- average quality score
+- average prompt length
+- prompt category mix
+- independent-attempt rate
+- shortcut and lint-issue counts
+- up to three improvement suggestions
+
+## Trend dashboard rules
+
+The analytics popup also exposes a recent-window trend dashboard.
+
+Current rules:
+
+- quality trend = daily average of scored prompt events
+- warning trend = daily count of prompt events with `warningCount > 0`
+- category trend = prompt-category mix across the selected local window
+
+These rules are derived in shared analytics code so popup visuals and future analytics surfaces stay consistent.
+
 ## Prompt Monitoring Modes
 
 - `draft` analysis: runs on input debounce (500ms) for realtime score preview
 - `submit` analysis: runs on send and updates counters
 
 Draft analysis updates the live bubble but does not increment send-based counters.
+
+Role-based coaching is applied in both draft and submit analysis paths, so role-specific examples and warnings stay consistent between popup scoring and in-page monitoring.
 
 ## Product Quality Signals
 

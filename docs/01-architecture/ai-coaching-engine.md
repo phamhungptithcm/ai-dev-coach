@@ -15,6 +15,20 @@ The coaching engine combines prompt analysis, habit heuristics, and dependency s
 - user profile (role, level, habit goals)
 - bilingual phrase detection (English + Vietnamese)
 
+## Shared Role Coaching Layer
+
+Role-specific guidance is centralized in a shared role-coaching module.
+
+That shared layer provides:
+
+- normalized role and level handling
+- recommended template selection
+- role-specific context and attempt hints
+- role-specific examples and warning copy
+- specialization-aware coaching for software-engineering profiles (frontend, backend, DevOps, fullstack)
+
+The popup builder, in-page quick builder, prompt-quality engine, live monitor, and analytics summaries all read from the same role definitions.
+
 ## Prompt Analysis Modes
 
 - Draft mode (pre-send): runs with 500ms debounce while user types and updates the live bubble only
