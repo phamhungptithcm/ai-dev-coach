@@ -78,6 +78,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch --tags --force
           TAG="${{ steps.version.outputs.tag }}"
           if git rev-parse "${TAG}" >/dev/null 2>&1; then
