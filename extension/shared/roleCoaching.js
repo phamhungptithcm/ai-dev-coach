@@ -360,15 +360,16 @@
 
   function buildRoleHeaderLines(roleProfile) {
     const lines = [
-      `Primary job role: ${roleProfile.label}`,
-      `Role guidance: ${roleProfile.builderHint}`
+      "ROLE CONTEXT",
+      `- Primary role: ${roleProfile.label}`,
+      `- Coaching focus: ${roleProfile.builderHint}`
     ];
 
     if (roleProfile.specializationLabel) {
-      lines.push(`Technical specialization: ${roleProfile.specializationLabel}`);
+      lines.push(`- Technical specialization: ${roleProfile.specializationLabel}`);
     }
     if (roleProfile.safetyGuardrail) {
-      lines.push(`Safety guardrail: ${roleProfile.safetyGuardrail}`);
+      lines.push(`- Safety guardrail: ${roleProfile.safetyGuardrail}`);
     }
 
     return lines;

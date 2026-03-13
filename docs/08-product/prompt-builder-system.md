@@ -158,6 +158,7 @@ Grade mapping:
 - Role selector in the in-page builder adjusts guidance and prompt framing per job role.
 - `Build + Insert` writes the generated prompt into the chat input.
 - `Build + Send` writes the prompt and triggers send automatically.
+- generated prompts now use cleaner document-style sections (`PROFILE`, `TASK`, `CONTEXT`, `WHAT I TRIED`, `CONSTRAINTS`, `ACCEPTANCE CRITERIA`, `HOW TO RESPOND`) for easier reading and copy/paste
 - Works on ChatGPT, Claude, Gemini, Grok, and DeepSeek pages.
 
 ## Live Coaching Bubble (Realtime)

@@ -96,6 +96,7 @@
       defaultGoal: "Debug independently before asking for final code",
       defaultConstraints: "None",
       defaultAcceptance: "Confirm root cause, fix, and regression checks",
+      taskLabel: "Debugging goal",
       responseRules: [
         "1) Start with diagnosis and probable causes.",
         "2) Suggest one minimal next check.",
@@ -112,6 +113,7 @@
       defaultGoal: "Improve code quality and review judgment",
       defaultConstraints: "None",
       defaultAcceptance: "Clear prioritized findings with test suggestions",
+      taskLabel: "Review goal",
       responseRules: [
         "1) List findings by severity.",
         "2) Explain impact and fix direction.",
@@ -128,6 +130,7 @@
       defaultGoal: "Reason with tradeoffs before implementation",
       defaultConstraints: "Latency, cost, reliability, and team bandwidth",
       defaultAcceptance: "Architecture, tradeoffs, and rollout plan",
+      taskLabel: "Design problem",
       responseRules: [
         "1) Clarify functional and non-functional requirements.",
         "2) Propose architecture with tradeoffs.",
@@ -144,6 +147,7 @@
       defaultGoal: "Improve design while preserving behavior",
       defaultConstraints: "No functional regressions, limited time",
       defaultAcceptance: "Cleaner structure with tests proving unchanged behavior",
+      taskLabel: "Refactoring target",
       responseRules: [
         "1) Identify core code smells first.",
         "2) Provide low-risk refactor sequence.",
@@ -160,6 +164,7 @@
       defaultGoal: "Measure first, optimize second",
       defaultConstraints: "Throughput, latency, memory, cost",
       defaultAcceptance: "Measurable performance improvement with stable correctness",
+      taskLabel: "Performance goal",
       responseRules: [
         "1) Validate baseline and bottleneck hypothesis.",
         "2) Propose top optimizations by expected impact.",
@@ -176,6 +181,7 @@
       defaultGoal: "Strengthen independent reasoning",
       defaultConstraints: "Use concise examples and avoid jargon overload",
       defaultAcceptance: "Clear understanding, practice task, and recap",
+      taskLabel: "Learning goal",
       responseRules: [
         "1) Ask one guiding question first.",
         "2) Explain in progressive steps.",
@@ -629,23 +635,70 @@
     );
   }
 
+  function normalizeResponseRule(rule, index) {
+    const normalized = clean(rule).replace(/^\d+[.)]\s*/, "");
+    return `${index + 1}. ${normalized}`;
+  }
+
+  function buildPrettyPrompt({
+    intro,
+    profile,
+    taskLabel,
+    task,
+    context,
+    attempt,
+    constraints,
+    acceptance,
+    rules,
+    defaultGoal,
+    defaultConstraints,
+    defaultAcceptance
+  }) {
+    return [
+      intro,
+      "",
+      "PROFILE",
+      `- Role: ${profile.role || "Not provided"}`,
+      `- Level: ${profile.skill || "Not provided"}`,
+      `- Habit goal: ${profile.habitGoals || defaultGoal}`,
+      "",
+      "TASK",
+      `${taskLabel}: ${task}`,
+      "",
+      "CONTEXT",
+      context,
+      "",
+      "WHAT I TRIED",
+      attempt,
+      "",
+      "CONSTRAINTS",
+      constraints || defaultConstraints,
+      "",
+      "ACCEPTANCE CRITERIA",
+      acceptance || defaultAcceptance,
+      "",
+      "HOW TO RESPOND",
+      ...rules.map((rule, index) => normalizeResponseRule(rule, index))
+    ].join("\n");
+  }
+
   function buildPrompt(templateKey, profile, fields, roleProfile) {
     const template = TEMPLATES[templateKey] || TEMPLATES[DEFAULT_TEMPLATE];
-    const basePrompt = [
-      template.intro,
-      `Role: ${profile.role || "Not provided"}`,
-      `Level: ${profile.skill || "Not provided"}`,
-      `Habit goal: ${profile.habitGoals || template.defaultGoal}`,
-      "",
-      `Task: ${fields.task}`,
-      `Context: ${fields.context}`,
-      `What I already tried: ${fields.attempt}`,
-      `Constraints: ${fields.constraints || template.defaultConstraints}`,
-      `Acceptance criteria: ${fields.acceptance || template.defaultAcceptance}`,
-      "",
-      "Response rules:",
-      ...template.responseRules
-    ].join("\n");
+    const taskLabel = template.taskLabel || "Task";
+    const basePrompt = buildPrettyPrompt({
+      intro: template.intro,
+      profile,
+      taskLabel,
+      task: fields.task,
+      context: fields.context,
+      attempt: fields.attempt,
+      constraints: fields.constraints,
+      acceptance: fields.acceptance,
+      rules: template.responseRules || [],
+      defaultGoal: template.defaultGoal,
+      defaultConstraints: template.defaultConstraints,
+      defaultAcceptance: template.defaultAcceptance
+    });
 
     return [...buildRoleHeaderLines(roleProfile), "", basePrompt].join("\n");
   }

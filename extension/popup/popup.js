@@ -1,9 +1,62 @@
+function normalizeResponseRule(rule, index) {
+  const normalized = clean(rule).replace(/^\d+[.)]\s*/, "");
+  return `${index + 1}. ${normalized}`;
+}
+
+function buildPrettyPrompt({
+  intro,
+  profile,
+  taskLabel,
+  task,
+  context,
+  attempt,
+  constraints,
+  acceptance,
+  rules,
+  defaultGoal,
+  defaultConstraints,
+  defaultAcceptance
+}) {
+  const sections = [
+    intro,
+    "",
+    "PROFILE",
+    `- Role: ${profile.role || "Not provided"}`,
+    `- Level: ${profile.skill || "Not provided"}`,
+    `- Habit goal: ${profile.habitGoals || defaultGoal}`,
+    "",
+    "TASK",
+    `${taskLabel}: ${task}`,
+    "",
+    "CONTEXT",
+    context,
+    "",
+    "WHAT I TRIED",
+    attempt,
+    "",
+    "CONSTRAINTS",
+    constraints || defaultConstraints,
+    "",
+    "ACCEPTANCE CRITERIA",
+    acceptance || defaultAcceptance,
+    "",
+    "HOW TO RESPOND",
+    ...rules.map((rule, index) => normalizeResponseRule(rule, index))
+  ];
+
+  return sections.join("\n");
+}
+
 const TEMPLATES = {
   debugging: {
     label: "Debugging Prompt",
     hint: "Diagnose runtime errors, broken logic, and failing tests.",
     contextPlaceholder: "Error text, stack trace, file path, expected vs actual behavior",
     attemptPlaceholder: "What you already tried, hypotheses, and what changed",
+    defaultGoal: "Debug independently before asking for final code",
+    defaultConstraints: "None",
+    defaultAcceptance: "Confirm root cause, fix, and regression checks",
+    taskLabel: "Debugging goal",
     rules: [
       "Start with a diagnosis path and likely root causes.",
       "Ask one clarifying question if context is missing.",
@@ -11,24 +64,20 @@ const TEMPLATES = {
       "Explain why the fix works and what to test."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "You are my debugging mentor.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Debug independently before asking for final code"}`,
-        "",
-        `Debug task: ${task}`,
-        `Context: ${context}`,
-        `What I already tried: ${attempt}`,
-        `Constraints: ${constraints || "None"}`,
-        `Acceptance criteria: ${acceptance || "Confirm root cause, fix, and regression checks"}`,
-        "",
-        "Response rules:",
-        "1) Start with diagnosis and probable causes.",
-        "2) Suggest one minimal next check.",
-        "3) Provide patch guidance only after reasoning.",
-        "4) End with verification steps."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "You are my debugging mentor.",
+        profile,
+        taskLabel: "Debugging goal",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
   },
   code_review: {
@@ -36,6 +85,10 @@ const TEMPLATES = {
     hint: "Get structured review findings with impact and fix direction.",
     contextPlaceholder: "PR summary, changed files, risks, known constraints",
     attemptPlaceholder: "Your self-review findings so far",
+    defaultGoal: "Improve code quality and review judgment",
+    defaultConstraints: "None",
+    defaultAcceptance: "Clear prioritized findings with test suggestions",
+    taskLabel: "Review goal",
     rules: [
       "Prioritize bugs, regressions, security, and data integrity issues.",
       "Explain impact and confidence for each finding.",
@@ -43,24 +96,20 @@ const TEMPLATES = {
       "Keep advice specific to the given code context."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "Act as a pragmatic senior reviewer and coach.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Improve code quality and review judgment"}`,
-        "",
-        `Review goal: ${task}`,
-        `Code context: ${context}`,
-        `My self-review first pass: ${attempt}`,
-        `Constraints: ${constraints || "None"}`,
-        `Acceptance criteria: ${acceptance || "Clear prioritized findings with test suggestions"}`,
-        "",
-        "Response rules:",
-        "1) List findings by severity.",
-        "2) Explain impact and fix direction.",
-        "3) Include missing tests and edge cases.",
-        "4) End with one learning takeaway."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "Act as a pragmatic senior reviewer and coach.",
+        profile,
+        taskLabel: "Review goal",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
   },
   system_design: {
@@ -68,6 +117,10 @@ const TEMPLATES = {
     hint: "Design architecture with tradeoffs, reliability, and scale.",
     contextPlaceholder: "Users, traffic profile, constraints, current architecture",
     attemptPlaceholder: "Your proposed architecture and open questions",
+    defaultGoal: "Reason with tradeoffs before implementation",
+    defaultConstraints: "Latency, cost, reliability, and team bandwidth",
+    defaultAcceptance: "Architecture, tradeoffs, and rollout plan",
+    taskLabel: "Design problem",
     rules: [
       "Define requirements and constraints first.",
       "Present architecture with tradeoffs and failure modes.",
@@ -75,24 +128,20 @@ const TEMPLATES = {
       "Recommend phased implementation if needed."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "Act as a staff engineer helping with system design.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Reason with tradeoffs before implementation"}`,
-        "",
-        `Design problem: ${task}`,
-        `System context: ${context}`,
-        `My current design attempt: ${attempt}`,
-        `Constraints: ${constraints || "Latency, cost, reliability, and team bandwidth"}`,
-        `Acceptance criteria: ${acceptance || "Architecture, tradeoffs, and rollout plan"}`,
-        "",
-        "Response rules:",
-        "1) Clarify functional and non-functional requirements.",
-        "2) Propose architecture with tradeoffs.",
-        "3) Cover data model, scaling, failure handling.",
-        "4) Provide phased rollout and risk mitigations."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "Act as a staff engineer helping with system design.",
+        profile,
+        taskLabel: "Design problem",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
   },
   refactoring: {
@@ -100,6 +149,10 @@ const TEMPLATES = {
     hint: "Improve structure and maintainability without behavior changes.",
     contextPlaceholder: "Current module pain points, code smells, boundaries",
     attemptPlaceholder: "Refactor directions you considered and blockers",
+    defaultGoal: "Improve design while preserving behavior",
+    defaultConstraints: "No functional regressions, limited time",
+    defaultAcceptance: "Cleaner structure with tests proving unchanged behavior",
+    taskLabel: "Refactoring target",
     rules: [
       "Preserve behavior first.",
       "Prioritize readability and maintainability.",
@@ -107,24 +160,20 @@ const TEMPLATES = {
       "Include regression test strategy."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "Act as a refactoring coach.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Improve design while preserving behavior"}`,
-        "",
-        `Refactoring target: ${task}`,
-        `Current code context: ${context}`,
-        `My initial refactor attempt: ${attempt}`,
-        `Constraints: ${constraints || "No functional regressions, limited time"}`,
-        `Acceptance criteria: ${acceptance || "Cleaner structure with tests proving unchanged behavior"}`,
-        "",
-        "Response rules:",
-        "1) Identify core code smells first.",
-        "2) Provide low-risk refactor sequence.",
-        "3) Keep behavior stable and testable.",
-        "4) Explain before/after design rationale."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "Act as a refactoring coach.",
+        profile,
+        taskLabel: "Refactoring target",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
   },
   performance_optimization: {
@@ -132,6 +181,10 @@ const TEMPLATES = {
     hint: "Optimize bottlenecks with metrics and measurable impact.",
     contextPlaceholder: "Current latency/CPU/memory metrics and bottleneck hints",
     attemptPlaceholder: "What profiling or measurement you already ran",
+    defaultGoal: "Measure first, optimize second",
+    defaultConstraints: "Throughput, latency, memory, cost",
+    defaultAcceptance: "Measurable performance improvement with stable correctness",
+    taskLabel: "Performance goal",
     rules: [
       "Use measurements before optimization decisions.",
       "Focus highest-impact bottlenecks first.",
@@ -139,24 +192,20 @@ const TEMPLATES = {
       "Define benchmark and regression guardrails."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "Act as a performance optimization mentor.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Measure first, optimize second"}`,
-        "",
-        `Performance goal: ${task}`,
-        `Metrics and context: ${context}`,
-        `What I measured or tried: ${attempt}`,
-        `Constraints: ${constraints || "Throughput, latency, memory, cost"}`,
-        `Acceptance criteria: ${acceptance || "Measurable performance improvement with stable correctness"}`,
-        "",
-        "Response rules:",
-        "1) Validate baseline and bottleneck hypothesis.",
-        "2) Propose top optimizations by expected impact.",
-        "3) Explain tradeoffs and regression risks.",
-        "4) Provide benchmark and rollback strategy."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "Act as a performance optimization mentor.",
+        profile,
+        taskLabel: "Performance goal",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
   },
   learning: {
@@ -164,6 +213,10 @@ const TEMPLATES = {
     hint: "Learn concepts step-by-step without over-relying on final answers.",
     contextPlaceholder: "Topic background, confusion points, known concepts",
     attemptPlaceholder: "Your current understanding and where you get stuck",
+    defaultGoal: "Strengthen independent reasoning",
+    defaultConstraints: "Use concise examples and avoid jargon overload",
+    defaultAcceptance: "Clear understanding, practice task, and recap",
+    taskLabel: "Learning goal",
     rules: [
       "Guide with questions before giving final answer.",
       "Use progressive explanation from simple to advanced.",
@@ -171,24 +224,20 @@ const TEMPLATES = {
       "Call out common mistakes and anti-patterns."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "Teach me like a technical mentor.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Strengthen independent reasoning"}`,
-        "",
-        `Learning goal: ${task}`,
-        `Current context: ${context}`,
-        `My current understanding: ${attempt}`,
-        `Constraints: ${constraints || "Use concise examples and avoid jargon overload"}`,
-        `Acceptance criteria: ${acceptance || "Clear understanding, practice task, and recap"}`,
-        "",
-        "Response rules:",
-        "1) Ask one guiding question first.",
-        "2) Explain in progressive steps.",
-        "3) Give one short exercise.",
-        "4) End with recap and common mistakes."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "Teach me like a technical mentor.",
+        profile,
+        taskLabel: "Learning goal",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
   }
 };
