@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added local learning analytics event tracking for prompt submissions with popup snapshot summary
+- added future backend sync payload contract for prompt-session analytics rollout
+- added learning-analytics smoke checks in CI
 - added prompt linter with rule-based checks for short prompts, missing technical context, missing failure signals, and sensitive data
 - added prompt-linter smoke checks in CI and popup lint results UI
 - added prompt quality engine v2 with shared scoring between popup prompt builder and live monitoring
