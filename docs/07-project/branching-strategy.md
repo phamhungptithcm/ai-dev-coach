@@ -12,6 +12,7 @@
 - each pull request requires at least 1 approval
 - admins can bypass branch protection when emergency fixes are needed
 - release versions are never bumped in `staging` pull requests
+- docs deployments are independent and never bump extension version
 - release version/tag/release notes are generated automatically only from `main` release automation
 
 ## Release Cadence

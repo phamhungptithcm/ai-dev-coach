@@ -1,8 +1,10 @@
-name: Release
+name: Release Extension
 
 on:
   push:
     branches: ["main"]
+    paths:
+      - "extension/**"
   workflow_dispatch:
     inputs:
       bump:
@@ -24,7 +26,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-main
+  group: release-extension-main
   cancel-in-progress: false
 
 jobs:
@@ -43,7 +45,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Validate extension package structure
         run: node scripts/validate-extension.mjs
@@ -80,12 +82,6 @@ jobs:
           esac
 
           NEXT_VERSION="${major}.${minor}.${patch}"
-          VERSION=$(node -p "require('./extension/manifest.json').version")
-          if [ "$VERSION" != "$NEXT_VERSION" ]; then
-            echo "Current manifest version: ${VERSION}"
-            echo "Next release version: ${NEXT_VERSION}"
-          fi
-
           echo "version=${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=v${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
 
@@ -111,7 +107,7 @@ jobs:
             exit 1
           fi
 
-      - name: Bump version files
+      - name: Bump extension version
         run: |
           set -euo pipefail
           NEXT_VERSION="${{ steps.version.outputs.version }}"
@@ -123,22 +119,6 @@ jobs:
             fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
           " "${NEXT_VERSION}"
 
-          python3 - <<'PY'
-          import re
-          from pathlib import Path
-          path = Path("docs/index.md")
-          text = path.read_text(encoding="utf-8")
-          version = "${{ steps.version.outputs.tag }}"
-          updated = re.sub(
-              r"(\*\*Current development version:\*\*\s*`)(v\d+\.\d+\.\d+)(`)",
-              lambda m: f"{m.group(1)}{version}{m.group(3)}",
-              text,
-              count=1,
-          )
-          if updated != text:
-              path.write_text(updated, encoding="utf-8")
-          PY
-
       - name: Commit and push release bump
         id: release_commit
         run: |
@@ -146,7 +126,7 @@ jobs:
           NEXT_VERSION="${{ steps.version.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add extension/manifest.json docs/index.md
+          git add extension/manifest.json
           if git diff --cached --quiet; then
             echo "No version changes detected; skipping release."
             echo "skip_release=true" >> "$GITHUB_OUTPUT"
@@ -175,13 +155,21 @@ jobs:
           cd ..
           unzip -l "dist/ai-dev-coach-${VERSION}.zip" | grep -q "manifest.json"
 
-      - name: Create GitHub release with notes
+      - name: Generate friendly release notes
+        if: steps.release_commit.outputs.skip_release == 'false'
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_NOTES_PATH: dist/release-notes.md
+        run: node scripts/generate-friendly-release-notes.mjs
+
+      - name: Create GitHub release with friendly notes
         if: steps.release_commit.outputs.skip_release == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: AI Dev Coach ${{ steps.version.outputs.tag }}
-          generate_release_notes: true
+          body_path: dist/release-notes.md
           files: dist/ai-dev-coach-${{ steps.version.outputs.version }}.zip
 
       - name: Upload and publish to Chrome Web Store

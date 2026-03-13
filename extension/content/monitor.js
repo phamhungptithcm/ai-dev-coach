@@ -81,6 +81,7 @@
     grade: "N/A",
     warnings: [],
     suggestions: [],
+    secretFindings: [],
     hasShortcutIntent: false,
     hasIndependentAttempt: false,
     promptPreview: "",
@@ -286,6 +287,9 @@
   let lastLiveAt = 0;
   let lastDraftPrompt = "";
   let lastDraftPromptAt = 0;
+  let cachedSettings = { ...DEFAULT_SETTINGS };
+  let lastSecretBlockSignature = "";
+  let lastSecretBlockAt = 0;
   let scanQueued = false;
 
   function storageGet(keys) {
@@ -298,6 +302,17 @@
 
   function clean(value) {
     return (value || "").trim();
+  }
+
+  function getSecretGuard() {
+    if (
+      window.AIDevCoachSecretGuard &&
+      typeof window.AIDevCoachSecretGuard.inspectPromptForSecrets === "function"
+    ) {
+      return window.AIDevCoachSecretGuard;
+    }
+
+    return null;
   }
 
   function rememberDraftPrompt(prompt) {
@@ -330,9 +345,15 @@
     return { ...DEFAULT_SETTINGS, ...(rawSettings || {}) };
   }
 
+  function syncCachedSettings(nextSettings) {
+    cachedSettings = mergeSettings(nextSettings);
+  }
+
   async function getCurrentSettings() {
     const data = await storageGet(["settings"]);
-    return mergeSettings(data.settings);
+    const settings = mergeSettings(data.settings);
+    syncCachedSettings(settings);
+    return settings;
   }
 
   async function getState() {
@@ -353,6 +374,50 @@
     }
 
     console.log("AI Dev Coach:", message);
+  }
+
+  function writePrompt(input, text) {
+    if (!(input instanceof HTMLElement)) {
+      return false;
+    }
+
+    const value = text || "";
+
+    if (input.tagName === "TEXTAREA") {
+      input.focus();
+      const prototype = window.HTMLTextAreaElement?.prototype;
+      const descriptor = prototype ? Object.getOwnPropertyDescriptor(prototype, "value") : null;
+      if (descriptor && typeof descriptor.set === "function") {
+        descriptor.set.call(input, value);
+      } else {
+        input.value = value;
+      }
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    }
+
+    if (input.isContentEditable) {
+      input.focus();
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(input);
+      range.deleteContents();
+      const textNode = document.createTextNode(value);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      input.dispatchEvent(
+        new InputEvent("input", { bubbles: true, data: value, inputType: "insertText" })
+      );
+      return true;
+    }
+
+    return false;
   }
 
   function detectPlatform() {
@@ -623,6 +688,25 @@
     return text;
   }
 
+  function summarizeSecretFindings(findings) {
+    const labels = Array.from(new Set((findings || []).map((finding) => finding.name))).slice(0, 3);
+    if (labels.length === 0) {
+      return "Sensitive data";
+    }
+    return labels.join(", ");
+  }
+
+  function buildSecretWarningText(findings, wasRedacted) {
+    const prefix = wasRedacted
+      ? "Possible secret detected. AI Dev Coach redacted sensitive values."
+      : "Possible secret detected in this prompt.";
+    return `${prefix} Review before sending to AI tools.`;
+  }
+
+  function buildSecretDetailText(findings) {
+    return `Detected: ${summarizeSecretFindings(findings)}. Remove credentials or private material before sending.`;
+  }
+
   function hasAnyHint(prompt, patterns) {
     return patterns.some((pattern) => pattern.test(prompt));
   }
@@ -714,6 +798,7 @@
       grade: analysis.grade,
       warnings: analysis.warnings.slice(0, 4),
       suggestions: analysis.suggestions.slice(0, 4),
+      secretFindings: Array.isArray(analysis.secretFindings) ? analysis.secretFindings.slice(0, 4) : [],
       hasShortcutIntent: analysis.hasShortcutIntent,
       hasIndependentAttempt: analysis.hasIndependentAttempt,
       promptPreview: buildPromptPreview(prompt),
@@ -822,8 +907,42 @@
       grade: scoreGrade(score),
       warnings,
       suggestions,
+      secretFindings: [],
       hasShortcutIntent: shortcutIntent,
       hasIndependentAttempt: attemptQuality.hasIndependentAttempt
+    };
+  }
+
+  function applySecretFindingsToAnalysis(prompt, analysis) {
+    const secretGuard = getSecretGuard();
+    if (!secretGuard || !prompt) {
+      return analysis;
+    }
+
+    const secretScan = secretGuard.inspectPromptForSecrets(prompt);
+    if (!secretScan.findings.length) {
+      return analysis;
+    }
+
+    const warnings = analysis.warnings.slice();
+    const suggestions = analysis.suggestions.slice();
+
+    warnings.unshift(buildSecretWarningText(secretScan.findings, secretScan.redactedPrompt !== prompt));
+    suggestions.unshift("Remove or redact credentials, tokens, and private material before sending.");
+
+    const riskPenalty = Math.min(24, secretScan.findings.length * 8);
+    const score = Math.max(0, analysis.score - riskPenalty);
+
+    return {
+      ...analysis,
+      score,
+      grade: scoreGrade(score),
+      warnings,
+      suggestions,
+      secretFindings: secretScan.findings.map((finding) => ({
+        name: finding.name,
+        severity: finding.severity
+      }))
     };
   }
 
@@ -948,7 +1067,10 @@
     }
 
     const { settings, profile } = await getState();
-    const analysis = analyzePrompt(prompt, settings.strictMode);
+    const analysis = applySecretFindingsToAnalysis(
+      prompt,
+      analyzePrompt(prompt, settings.strictMode)
+    );
     const runtimeEvaluation = buildRuntimeEvaluation(prompt, analysis);
     const statsPromise = updatePromptStats(analysis);
     const runtimePromise = persistRuntimeEvaluation(runtimeEvaluation);
@@ -1121,6 +1243,107 @@
     return false;
   }
 
+  function buildPromptSubmissionContext(input, promptSnapshot = "") {
+    const initialPrompt = clean(promptSnapshot || readPrompt(input));
+    if (initialPrompt) {
+      rememberDraftPrompt(initialPrompt);
+    }
+
+    return {
+      settings: cachedSettings,
+      prompt: initialPrompt || getRecentDraftPrompt()
+    };
+  }
+
+  function rememberSecretBlock(prompt) {
+    lastSecretBlockSignature = buildPromptSignature(prompt);
+    lastSecretBlockAt = Date.now();
+  }
+
+  function wasRecentlyBlockedBySecret(prompt) {
+    if (!prompt) {
+      return false;
+    }
+
+    return (
+      buildPromptSignature(prompt) === lastSecretBlockSignature &&
+      Date.now() - lastSecretBlockAt < 2000
+    );
+  }
+
+  function blockNativeSubmission(event) {
+    if (!event) {
+      return;
+    }
+
+    if (typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+    if (typeof event.stopImmediatePropagation === "function") {
+      event.stopImmediatePropagation();
+    }
+    if (typeof event.stopPropagation === "function") {
+      event.stopPropagation();
+    }
+  }
+
+  function maybeBlockSecretSubmission(event, input, submissionContext) {
+    const prompt = submissionContext?.prompt || "";
+    const settings = submissionContext?.settings || cachedSettings;
+
+    if (!settings.promptListenerEnabled || !settings.readPromptContentEnabled || !prompt) {
+      return false;
+    }
+
+    const secretGuard = getSecretGuard();
+    if (!secretGuard) {
+      return false;
+    }
+
+    const secretScan = secretGuard.inspectPromptForSecrets(prompt);
+    if (!secretScan.findings.length) {
+      return false;
+    }
+
+    blockNativeSubmission(event);
+
+    const redactedPrompt = secretScan.redactedPrompt || prompt;
+    const wasRedacted = redactedPrompt !== prompt;
+
+    if (wasRedacted && input) {
+      writePrompt(input, redactedPrompt);
+    }
+
+    rememberDraftPrompt(redactedPrompt);
+    rememberSecretBlock(prompt);
+
+    const analysis = applySecretFindingsToAnalysis(
+      redactedPrompt,
+      analyzePrompt(redactedPrompt, settings.strictMode)
+    );
+    const runtimeEvaluation = buildRuntimeEvaluation(redactedPrompt, analysis);
+
+    persistRuntimeEvaluation(runtimeEvaluation).catch((error) => {
+      console.error("AI Dev Coach secret runtime persistence error", error);
+    });
+
+    emitPromptAnalyzed({
+      at: runtimeEvaluation.at,
+      promptPreview: runtimeEvaluation.promptPreview,
+      analysis: runtimeEvaluation,
+      draft: true
+    });
+
+    showCoachMessage(buildSecretWarningText(secretScan.findings, wasRedacted), "warning", settings);
+    showCoachMessage(buildSecretDetailText(secretScan.findings), "info", settings);
+
+    if (wasRedacted) {
+      showCoachMessage("The chat input was redacted for you. Review it, then send again.", "success", settings);
+    }
+
+    return true;
+  }
+
   async function runLivePromptScoring(promptSnapshot) {
     const prompt = clean(promptSnapshot || getRecentDraftPrompt());
     if (!prompt) {
@@ -1136,7 +1359,10 @@
       return;
     }
 
-    const analysis = analyzePrompt(prompt, settings.strictMode);
+    const analysis = applySecretFindingsToAnalysis(
+      prompt,
+      analyzePrompt(prompt, settings.strictMode)
+    );
     const runtimeEvaluation = buildRuntimeEvaluation(prompt, analysis);
 
     emitPromptAnalyzed({
@@ -1163,14 +1389,17 @@
     }, LIVE_SCORE_DEBOUNCE_MS);
   }
 
-  async function submitPromptFromInput(input, promptSnapshot = "") {
-    const initialPrompt = clean(promptSnapshot || readPrompt(input));
-    if (initialPrompt) {
-      rememberDraftPrompt(initialPrompt);
-    }
-    const prompt = initialPrompt || getRecentDraftPrompt();
+  async function submitPromptFromInput(input, promptSnapshotOrContext = "") {
+    const submissionContext =
+      promptSnapshotOrContext &&
+      typeof promptSnapshotOrContext === "object" &&
+      Object.prototype.hasOwnProperty.call(promptSnapshotOrContext, "settings")
+        ? promptSnapshotOrContext
+        : buildPromptSubmissionContext(input, promptSnapshotOrContext);
 
-    const settings = await getCurrentSettings();
+    const settings = submissionContext.settings || (await getCurrentSettings());
+    const prompt = submissionContext.prompt || "";
+
     if (!settings.promptListenerEnabled) {
       return;
     }
@@ -1200,8 +1429,13 @@
 
     form.addEventListener(
       "submit",
-      () => {
-        submitPromptFromInput(input).catch((error) => {
+      (event) => {
+        const submissionContext = buildPromptSubmissionContext(input, readPrompt(input));
+        if (maybeBlockSecretSubmission(event, input, submissionContext)) {
+          return;
+        }
+
+        submitPromptFromInput(input, submissionContext).catch((error) => {
           console.error("AI Dev Coach form submission error", error);
         });
       },
@@ -1231,7 +1465,12 @@
           return;
         }
 
-        submitPromptFromInput(input, readPrompt(input)).catch((error) => {
+        const submissionContext = buildPromptSubmissionContext(input, readPrompt(input));
+        if (maybeBlockSecretSubmission(event, input, submissionContext)) {
+          return;
+        }
+
+        submitPromptFromInput(input, submissionContext).catch((error) => {
           console.error("AI Dev Coach prompt submission error", error);
         });
       },
@@ -1291,7 +1530,12 @@
         return;
       }
 
-      submitPromptFromInput(input, readPrompt(input)).catch((error) => {
+      const submissionContext = buildPromptSubmissionContext(input, readPrompt(input));
+      if (maybeBlockSecretSubmission(event, input, submissionContext)) {
+        return;
+      }
+
+      submitPromptFromInput(input, submissionContext).catch((error) => {
         console.error("AI Dev Coach global keydown submission error", error);
       });
     },
@@ -1313,7 +1557,12 @@
       const scopedInput = formTarget ? findVisibleInputInScope(formTarget, platform) : null;
       const input = scopedInput || resolveActivePromptInput(platform);
 
-      submitPromptFromInput(input, readPrompt(input)).catch((error) => {
+      const submissionContext = buildPromptSubmissionContext(input, readPrompt(input));
+      if (maybeBlockSecretSubmission(event, input, submissionContext)) {
+        return;
+      }
+
+      submitPromptFromInput(input, submissionContext).catch((error) => {
         console.error("AI Dev Coach global form submission error", error);
       });
     },
@@ -1346,7 +1595,12 @@
         return;
       }
 
-      submitPromptFromInput(input, readPrompt(input)).catch((error) => {
+      const submissionContext = buildPromptSubmissionContext(input, readPrompt(input));
+      if (maybeBlockSecretSubmission(event, input, submissionContext)) {
+        return;
+      }
+
+      submitPromptFromInput(input, submissionContext).catch((error) => {
         console.error("AI Dev Coach send-button submission error", error);
       });
     },
@@ -1360,6 +1614,9 @@
       if (!prompt) {
         return;
       }
+      if (wasRecentlyBlockedBySecret(prompt)) {
+        return;
+      }
 
       const analyzeFromBuilder = async () => {
         const settings = await getCurrentSettings();
@@ -1369,6 +1626,10 @@
 
         if (!settings.readPromptContentEnabled) {
           await handleSendOnly();
+          return;
+        }
+
+        if (maybeBlockSecretSubmission(null, null, { settings, prompt })) {
           return;
         }
 
@@ -1385,6 +1646,18 @@
     },
     true
   );
+
+  getCurrentSettings().catch((error) => {
+    console.error("AI Dev Coach settings hydration error", error);
+  });
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !changes.settings) {
+      return;
+    }
+
+    syncCachedSettings(changes.settings.newValue);
+  });
 
   document.addEventListener(
     "focusin",

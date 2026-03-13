@@ -22,3 +22,5 @@ Only local extension data is saved:
 - minimum required Chrome permissions
 - host access limited to supported AI chat domains
 - no dynamic code loading in runtime
+- secret detection and redaction run locally before prompt submission
+- no detected secret values are sent to external services by the extension

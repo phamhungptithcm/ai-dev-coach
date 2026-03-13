@@ -3,6 +3,11 @@ name: Deploy MkDocs to GitHub Pages
 on:
   push:
     branches: ["staging"]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "requirements-docs.txt"
+      - ".github/workflows/deploy-docs.yml"
   workflow_dispatch:
 
 permissions:
