@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- replaced direct-to-main release bumping with protected-branch-safe release PR automation
+- split release CI into `prepare-release.yml` and publish-only `release.yml`
+- added manual CI dispatch support so release PR branches receive required checks
+- updated workflow actions to current major versions for checkout and setup-node
 - added local secret detection and redaction guardrail before prompt submission
 - added sprint planning documentation with prioritized backlog estimates
 - split CI/CD so docs deploy and extension release run independently
