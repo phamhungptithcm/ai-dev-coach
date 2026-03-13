@@ -53,6 +53,36 @@ Role-specific builder behavior:
 - role-aware examples are shown in the popup and in-page quick builder
 - role guardrails stay visible for sensitive modes such as `Doctor`
 
+## 2.1 Prompt Marketplace
+
+The popup now includes a local Prompt Marketplace powered by a markdown prompt library.
+
+Capabilities:
+
+- browse prompt cards by category
+- search prompt text locally
+- filter by category
+- copy a prompt
+- insert a prompt into the active supported AI chat
+- insert and auto-send a prompt into the active supported AI chat
+
+Marketplace data flow:
+
+- source markdown lives in `docs/prompts.md`
+- a sync script exports that markdown into the extension bundle
+- the extension parses markdown into structured prompt objects locally
+- local usage counts drive trending prompts
+
+Prompt categories:
+
+- Developer
+- Learning
+- Writing
+- Productivity
+- Image Generation
+- Business
+- Daily Life
+
 ## 3. Prompt Quality Analyzer
 
 Analyzes each submitted prompt for:

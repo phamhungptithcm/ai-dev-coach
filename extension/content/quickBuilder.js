@@ -636,6 +636,16 @@
     );
   }
 
+  function showOverlayMessage(message, type = "info") {
+    try {
+      if (window.AIDevCoachOverlay && typeof window.AIDevCoachOverlay.show === "function") {
+        window.AIDevCoachOverlay.show(message, type);
+      }
+    } catch (error) {
+      console.debug("AI Dev Coach overlay message skipped", error);
+    }
+  }
+
   function normalizeResponseRule(rule, index) {
     const normalized = clean(rule).replace(/^\d+[.)]\s*/, "");
     return `${index + 1}. ${normalized}`;
@@ -877,6 +887,61 @@
     }
 
     setStatus(`Prompt built and inserted into ${platform.name}.`, true);
+  }
+
+  async function runMarketplacePrompt(prompt, action) {
+    const platform = detectPlatform();
+    const promptInput = findPromptInput(platform);
+    const normalizedPrompt = clean(prompt);
+    const mode = clean(action).toLowerCase() === "send" ? "send" : "insert";
+
+    if (!platform || !promptInput) {
+      return {
+        ok: false,
+        error: "Cannot find AI prompt input on this page."
+      };
+    }
+
+    if (!normalizedPrompt) {
+      return {
+        ok: false,
+        error: "Prompt text is empty."
+      };
+    }
+
+    const inserted = setPromptInputValue(promptInput, normalizedPrompt);
+    if (!inserted) {
+      return {
+        ok: false,
+        error: "Failed to write prompt into AI input."
+      };
+    }
+
+    if (mode === "send") {
+      const sent = await attemptSend(promptInput);
+      if (sent) {
+        emitQuickBuilderSendEvent(normalizedPrompt);
+      }
+      const message = sent
+        ? `Marketplace prompt sent to ${platform.name}.`
+        : `Marketplace prompt inserted into ${platform.name}. Send it manually.`;
+      showOverlayMessage(message, sent ? "success" : "warning");
+      return {
+        ok: true,
+        action: sent ? "send" : "insert",
+        platform: platform.name,
+        message
+      };
+    }
+
+    const message = `Marketplace prompt inserted into ${platform.name}.`;
+    showOverlayMessage(message, "success");
+    return {
+      ok: true,
+      action: "insert",
+      platform: platform.name,
+      message
+    };
   }
 
   function updateLauncherPosition() {
@@ -1170,21 +1235,39 @@
   }
 
   function wireRuntimeMessages() {
-    chrome.runtime.onMessage.addListener((message) => {
-      if (!message || message.type !== "ai-dev-coach:open-quick-builder") {
-        return;
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (!message) {
+        return undefined;
       }
 
-      const platform = detectPlatform();
-      if (!platform) {
-        return;
+      if (message.type === "ai-dev-coach:open-quick-builder") {
+        const platform = detectPlatform();
+        if (!platform) {
+          return undefined;
+        }
+
+        togglePanel(true);
+        scheduleLayoutUpdate();
+        if (state.refs?.taskInput) {
+          state.refs.taskInput.focus();
+        }
+        return undefined;
       }
 
-      togglePanel(true);
-      scheduleLayoutUpdate();
-      if (state.refs?.taskInput) {
-        state.refs.taskInput.focus();
+      if (message.type === "ai-dev-coach:prompt-marketplace-run") {
+        runMarketplacePrompt(message.prompt, message.action)
+          .then((result) => sendResponse(result))
+          .catch((error) => {
+            console.error("AI Dev Coach marketplace action error", error);
+            sendResponse({
+              ok: false,
+              error: "Failed to run marketplace prompt."
+            });
+          });
+        return true;
       }
+
+      return undefined;
     });
   }
 

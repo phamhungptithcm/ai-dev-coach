@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added Prompt Marketplace with local markdown-backed prompt browsing, search, filtering, and trending
+- added marketplace prompt actions to copy, insert, or send prompts into supported AI chat pages
+- added prompt-library sync tooling so `docs/prompts.md` can drive the extension bundle
 - refreshed popup prompt output with a structured preview card, metadata badge, and clearer raw-text fallback
 - redesigned live coaching bubble into a smaller stats-first layout with readable prompt preview and coaching signals
 - polished in-page Quick Prompt Builder with grouped sections, better helper copy, and clearer action feedback

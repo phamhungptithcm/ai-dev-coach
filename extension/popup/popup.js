@@ -326,6 +326,21 @@ const warningTrendSummary = document.getElementById("warningTrendSummary");
 const trendTopCategory = document.getElementById("trendTopCategory");
 const categoryTrendBars = document.getElementById("categoryTrendBars");
 const trendRulesSummary = document.getElementById("trendRulesSummary");
+const marketplaceCountBadge = document.getElementById("marketplaceCountBadge");
+const marketplaceSearchInput = document.getElementById("marketplaceSearchInput");
+const marketplaceCategoryList = document.getElementById("marketplaceCategoryList");
+const marketplaceTrendingMeta = document.getElementById("marketplaceTrendingMeta");
+const marketplaceTrendingList = document.getElementById("marketplaceTrendingList");
+const marketplaceResultsMeta = document.getElementById("marketplaceResultsMeta");
+const marketplacePromptList = document.getElementById("marketplacePromptList");
+const marketplaceStatus = document.getElementById("marketplaceStatus");
+
+const marketplaceViewState = {
+  query: "",
+  categoryKey: "all",
+  library: null,
+  storageState: null
+};
 
 function storageGet(keys) {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
@@ -525,6 +540,14 @@ function getLearningAnalytics() {
     throw new Error("Learning analytics engine is unavailable.");
   }
   return analytics;
+}
+
+function getPromptMarketplace() {
+  const marketplace = window.AIDevCoachPromptMarketplace;
+  if (!marketplace || typeof marketplace.getPromptLibrary !== "function") {
+    throw new Error("Prompt marketplace is unavailable.");
+  }
+  return marketplace;
 }
 
 function normalizeLevel(value) {
@@ -1067,6 +1090,208 @@ function renderAnalyticsSnapshot(rawState) {
   renderTrendDashboard(trendDashboard);
 }
 
+function createMarketplaceEmpty(message) {
+  const node = document.createElement("p");
+  node.className = "marketplace-empty";
+  node.textContent = message;
+  return node;
+}
+
+function renderMarketplaceCategories(library, activeCategoryKey) {
+  marketplaceCategoryList.innerHTML = "";
+
+  (library?.categories || []).forEach((category) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `marketplace-category-chip${category.key === activeCategoryKey ? " marketplace-category-chip--active" : ""}`;
+    button.dataset.categoryKey = category.key;
+    button.innerHTML = `
+      <span class="marketplace-category-chip__name">${escapeHtml(category.label)}</span>
+      <span class="marketplace-category-chip__count">${category.promptCount}</span>
+    `;
+    marketplaceCategoryList.appendChild(button);
+  });
+}
+
+function renderMarketplaceCards(target, prompts, options = {}) {
+  target.innerHTML = "";
+
+  if (!Array.isArray(prompts) || prompts.length === 0) {
+    target.appendChild(createMarketplaceEmpty(options.emptyText || "No prompts available yet."));
+    return;
+  }
+
+  prompts.forEach((prompt) => {
+    const usage = prompt.usage || {};
+    const card = document.createElement("article");
+    card.className = "marketplace-card";
+
+    const duplicateBadge =
+      prompt.duplicateCount > 1
+        ? `<span class="profile-badge marketplace-card__badge">${prompt.duplicateCount}x in source</span>`
+        : "";
+    const usageBadge =
+      Number.isFinite(usage.totalUses) && usage.totalUses > 0
+        ? `<span class="profile-badge marketplace-card__badge">${usage.totalUses} local use${usage.totalUses === 1 ? "" : "s"}</span>`
+        : "";
+
+    card.innerHTML = `
+      <div class="marketplace-card__head">
+        <h3 class="marketplace-card__title">${escapeHtml(prompt.title)}</h3>
+        <div class="marketplace-card__meta">
+          <span class="profile-badge marketplace-card__badge">${escapeHtml(prompt.categoryLabel)}</span>
+          ${duplicateBadge}
+          ${usageBadge}
+        </div>
+      </div>
+      <p class="marketplace-card__text">${escapeHtml(prompt.text)}</p>
+      <div class="marketplace-card__footer">
+        <button type="button" class="button marketplace-card__action" data-marketplace-action="copy" data-prompt-id="${escapeHtml(prompt.id)}">Copy</button>
+        <button type="button" class="button marketplace-card__action" data-marketplace-action="insert" data-prompt-id="${escapeHtml(prompt.id)}">Insert</button>
+        <button type="button" class="button button--primary marketplace-card__action" data-marketplace-action="send" data-prompt-id="${escapeHtml(prompt.id)}">Send</button>
+      </div>
+    `;
+
+    target.appendChild(card);
+  });
+}
+
+function renderMarketplace() {
+  const library = marketplaceViewState.library;
+  if (!library) {
+    marketplaceCountBadge.textContent = "Unavailable";
+    marketplaceCountBadge.classList.add("profile-badge--empty");
+    marketplaceTrendingMeta.textContent = "--";
+    marketplaceResultsMeta.textContent = "0 results";
+    marketplaceCategoryList.innerHTML = "";
+    marketplaceTrendingList.innerHTML = "";
+    marketplacePromptList.innerHTML = "";
+    marketplacePromptList.appendChild(createMarketplaceEmpty("Prompt marketplace is unavailable in this popup build."));
+    return;
+  }
+
+  const marketplace = getPromptMarketplace();
+  const results = marketplace.filterPrompts(library, {
+    query: marketplaceViewState.query,
+    categoryKey: marketplaceViewState.categoryKey
+  });
+  const trending = marketplace.getTrendingPrompts(library, marketplaceViewState.storageState, {
+    limit: 4
+  });
+
+  marketplaceCountBadge.textContent = `${library.summary.promptCount} prompts`;
+  marketplaceCountBadge.classList.remove("profile-badge--empty");
+  marketplaceTrendingMeta.textContent = `${library.summary.duplicatePromptCount} duplicates normalized`;
+  marketplaceResultsMeta.textContent = `${results.total} result${results.total === 1 ? "" : "s"}`;
+
+  renderMarketplaceCategories(library, results.categoryKey);
+  renderMarketplaceCards(
+    marketplaceTrendingList,
+    trending,
+    {
+      emptyText: "Use copy, insert, or send to build local trending prompts."
+    }
+  );
+  renderMarketplaceCards(
+    marketplacePromptList,
+    results.results,
+    {
+      emptyText: marketplaceViewState.query
+        ? "No prompts match this search yet. Try a simpler phrase or another category."
+        : "No prompts available in this category."
+    }
+  );
+}
+
+function findMarketplacePrompt(promptId) {
+  const prompts = marketplaceViewState.library?.prompts || [];
+  return prompts.find((prompt) => prompt.id === promptId) || null;
+}
+
+function sendMarketplacePrompt(promptText, action) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      {
+        type: "ai-dev-coach:run-marketplace-prompt",
+        prompt: promptText,
+        action
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          resolve({
+            ok: false,
+            error: chrome.runtime.lastError.message || "Unable to reach the active tab."
+          });
+          return;
+        }
+        resolve(response || { ok: false, error: "No response from the active tab." });
+      }
+    );
+  });
+}
+
+async function handleMarketplaceAction(promptId, action) {
+  const prompt = findMarketplacePrompt(promptId);
+  if (!prompt) {
+    setStatus(marketplaceStatus, "Prompt could not be found in the local library.", false);
+    return;
+  }
+
+  let result = null;
+
+  if (action === "copy") {
+    try {
+      await navigator.clipboard.writeText(prompt.text);
+      result = {
+        ok: true,
+        action: "copy",
+        message: "Marketplace prompt copied to clipboard."
+      };
+    } catch (error) {
+      result = {
+        ok: false,
+        error: "Clipboard access is blocked in this popup."
+      };
+    }
+  } else {
+    result = await sendMarketplacePrompt(prompt.text, action);
+  }
+
+  if (!result?.ok) {
+    setStatus(marketplaceStatus, result?.error || "Prompt action failed.", false);
+    return;
+  }
+
+  try {
+    marketplaceViewState.storageState = await getPromptMarketplace().recordPromptUsage(chrome.storage.local, {
+      promptId: prompt.id,
+      categoryKey: prompt.categoryKey,
+      action: result.action || action
+    });
+  } catch (error) {
+    console.error("Prompt marketplace usage tracking failed", error);
+  }
+
+  renderMarketplace();
+  setStatus(marketplaceStatus, result.message || "Prompt action completed.", true);
+}
+
+async function loadPromptMarketplace() {
+  try {
+    const marketplace = getPromptMarketplace();
+    const library = marketplace.getPromptLibrary();
+    marketplaceViewState.library = library;
+    marketplaceViewState.storageState = await marketplace.syncLibraryCache(chrome.storage.local, library);
+    renderMarketplace();
+  } catch (error) {
+    console.error("Prompt marketplace load error", error);
+    marketplaceViewState.library = null;
+    marketplaceViewState.storageState = null;
+    renderMarketplace();
+    setStatus(marketplaceStatus, "Prompt marketplace could not be loaded.", false);
+  }
+}
+
 function renderList(target, items, emptyText) {
   target.innerHTML = "";
 
@@ -1418,6 +1643,7 @@ async function loadState() {
   renderStats(stats);
   renderAnalyticsSnapshot(data.learningAnalytics);
   renderChecklist(readPromptForm());
+  marketplaceSearchInput.value = marketplaceViewState.query;
   updateGeneratedPromptOutput(data.lastGeneratedPrompt || "");
 
   if (data.lastPromptAnalysis) {
@@ -1429,6 +1655,8 @@ async function loadState() {
   if (data.lastPromptLintReport) {
     renderLintResults(data.lastPromptLintReport);
   }
+
+  await loadPromptMarketplace();
 }
 
 function wireEvents() {
@@ -1465,6 +1693,37 @@ function wireEvents() {
 
   document.getElementById("openOptionsBtn").addEventListener("click", () => {
     chrome.runtime.openOptionsPage();
+  });
+
+  marketplaceSearchInput.addEventListener("input", () => {
+    marketplaceViewState.query = clean(marketplaceSearchInput.value);
+    renderMarketplace();
+  });
+
+  marketplaceCategoryList.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const button = target ? target.closest("[data-category-key]") : null;
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    marketplaceViewState.categoryKey = button.dataset.categoryKey || "all";
+    renderMarketplace();
+  });
+
+  [marketplaceTrendingList, marketplacePromptList].forEach((container) => {
+    container.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const button = target ? target.closest("[data-marketplace-action][data-prompt-id]") : null;
+      if (!(button instanceof HTMLElement)) {
+        return;
+      }
+
+      handleMarketplaceAction(button.dataset.promptId || "", button.dataset.marketplaceAction || "copy").catch((error) => {
+        console.error("Prompt marketplace action failed", error);
+        setStatus(marketplaceStatus, "Prompt action failed.", false);
+      });
+    });
   });
 
   templateSelect.addEventListener("change", async () => {
