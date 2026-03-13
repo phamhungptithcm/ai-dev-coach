@@ -163,6 +163,44 @@
 
     <section class="card">
       <div class="profile-card__head">
+        <h2>Prompt Marketplace</h2>
+        <span id="marketplaceCountBadge" class="profile-badge profile-badge--empty">Loading...</span>
+      </div>
+      <p class="muted">Browse curated prompts from the local markdown library, then copy, insert, or send them on supported AI chat pages.</p>
+
+      <label for="marketplaceSearchInput">Search Prompts</label>
+      <input id="marketplaceSearchInput" type="search" placeholder="Search debugging, writing, learning, business..." />
+
+      <div class="marketplace-shell">
+        <aside class="marketplace-sidebar" aria-label="Prompt categories">
+          <span class="marketplace-sidebar__title">Categories</span>
+          <div id="marketplaceCategoryList" class="marketplace-category-list"></div>
+        </aside>
+
+        <div class="marketplace-main">
+          <section class="marketplace-panel" aria-label="Trending prompts">
+            <div class="marketplace-panel__head">
+              <span>Trending</span>
+              <span id="marketplaceTrendingMeta" class="trend-delta">Local</span>
+            </div>
+            <div id="marketplaceTrendingList" class="marketplace-trending-list"></div>
+          </section>
+
+          <section class="marketplace-panel" aria-label="Prompt results">
+            <div class="marketplace-panel__head">
+              <span>Prompt Library</span>
+              <span id="marketplaceResultsMeta" class="trend-delta">0 results</span>
+            </div>
+            <div id="marketplacePromptList" class="marketplace-prompt-list"></div>
+          </section>
+        </div>
+      </div>
+
+      <p id="marketplaceStatus" class="status"></p>
+    </section>
+
+    <section class="card">
+      <div class="profile-card__head">
         <h2>Learning Analytics</h2>
         <span class="profile-badge">Local only</span>
       </div>
@@ -233,6 +271,8 @@
   <script src="../shared/roleCoaching.js"></script>
   <script src="../shared/promptQualityEngine.js"></script>
   <script src="../shared/learningAnalytics.js"></script>
+  <script src="../shared/promptLibrarySource.js"></script>
+  <script src="../shared/promptMarketplace.js"></script>
   <script src="../content/secretDetection.js"></script>
   <script src="../shared/promptLinter.js"></script>
   <script src="popup.js"></script>

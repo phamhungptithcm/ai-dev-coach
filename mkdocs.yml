@@ -52,6 +52,7 @@ nav:
   - Product:
       - Feature Specification: 08-product/feature-spec.md
       - Learning Analytics: 08-product/learning-analytics.md
+      - Prompt Marketplace: 08-product/prompt-marketplace.md
       - Prompt Builder System: 08-product/prompt-builder-system.md
       - User Flow: 08-product/user-flow.md
   - Architecture:
@@ -72,3 +73,4 @@ nav:
       - Changelog: 07-project/changelog.md
   - References:
       - Research: 06-references/research.md
+      - Prompt Library Source: prompts.md
