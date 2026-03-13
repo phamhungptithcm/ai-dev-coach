@@ -944,10 +944,32 @@
     };
   }
 
+  function ensureUiAttached() {
+    if (!state.refs || !document.body) {
+      return false;
+    }
+
+    let reattached = false;
+
+    if (state.refs.launcher && !document.contains(state.refs.launcher)) {
+      document.body.appendChild(state.refs.launcher);
+      reattached = true;
+    }
+
+    if (state.refs.panel && !document.contains(state.refs.panel)) {
+      document.body.appendChild(state.refs.panel);
+      reattached = true;
+    }
+
+    return reattached;
+  }
+
   function updateLauncherPosition() {
     if (!state.refs) {
       return;
     }
+
+    ensureUiAttached();
 
     const platform = detectPlatform();
     const input = findPromptInput(platform);
@@ -1014,6 +1036,8 @@
     if (!state.refs) {
       return;
     }
+
+    ensureUiAttached();
 
     state.panelOpen = typeof open === "boolean" ? open : !state.panelOpen;
     state.refs.panel.classList.toggle("ai-coach-builder__hidden", !state.panelOpen);
@@ -1189,6 +1213,7 @@
     window.addEventListener("resize", scheduleLayoutUpdate, { passive: true });
     window.addEventListener("scroll", scheduleLayoutUpdate, { passive: true, capture: true });
     document.addEventListener("focusin", scheduleLayoutUpdate, true);
+    document.addEventListener("visibilitychange", scheduleLayoutUpdate, true);
   }
 
   function isShortcutToggleEvent(event) {
