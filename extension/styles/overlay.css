@@ -322,6 +322,116 @@
   border-color: #72add8;
 }
 
+.ai-coach-inline-suggestions {
+  position: fixed;
+  z-index: 2147483646;
+  border: 1px solid var(--ai-coach-border-strong);
+  border-radius: 14px;
+  background: linear-gradient(184deg, rgba(255, 255, 255, 0.98), rgba(243, 251, 255, 0.95));
+  box-shadow: var(--ai-coach-shadow-lift);
+  overflow: hidden;
+  color: var(--ai-coach-text);
+  animation: ai-coach-slide-in 180ms ease both;
+}
+
+.ai-coach-inline-suggestions__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(186, 218, 237, 0.82);
+  background: linear-gradient(120deg, rgba(195, 238, 250, 0.52), rgba(157, 202, 235, 0.44));
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+.ai-coach-inline-suggestions__header strong {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.ai-coach-inline-suggestions__meta {
+  font-size: 11px;
+  color: var(--ai-coach-muted);
+}
+
+.ai-coach-inline-suggestions__list {
+  display: grid;
+  gap: 0;
+  max-height: min(320px, 50vh);
+  overflow: auto;
+}
+
+.ai-coach-inline-suggestion {
+  border: 0;
+  border-top: 1px solid rgba(205, 227, 242, 0.72);
+  background: transparent;
+  text-align: left;
+  padding: 12px;
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
+  transition: background 140ms ease, transform 140ms ease;
+}
+
+.ai-coach-inline-suggestion:first-child {
+  border-top: 0;
+}
+
+.ai-coach-inline-suggestion:hover,
+.ai-coach-inline-suggestion--active {
+  background: rgba(195, 238, 250, 0.34);
+}
+
+.ai-coach-inline-suggestion__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-coach-inline-suggestion__head strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ai-coach-text);
+}
+
+.ai-coach-inline-suggestion__badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #567185;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(184, 216, 235, 0.9);
+  border-radius: 999px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.ai-coach-inline-suggestion__text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #47667d;
+}
+
+.ai-coach-inline-suggestion__reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ai-coach-inline-suggestion__reasons span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #446b85;
+  background: rgba(157, 202, 235, 0.16);
+  border-radius: 999px;
+  padding: 3px 7px;
+}
+
 .ai-coach-builder-panel {
   position: fixed;
   right: 16px;
