@@ -5,7 +5,9 @@ The coaching engine combines prompt analysis, habit heuristics, and dependency s
 ## Input Signals
 
 - prompt structure (`Task/Context/Attempt` style sections)
+- task clarity and vague-language detection
 - context evidence (error/failure + expected/actual + artifact such as file path/snippet/log)
+- framework and stack hints (for example React, Next.js, Spring Boot, SQL, Docker)
 - attempt quality evidence (action + result + blocker)
 - negative attempt phrases (`I didn't try`, `chua thu`, `khong thu`)
 - shortcut intent patterns (for example, asking for full copy-paste code)
@@ -20,8 +22,11 @@ The coaching engine combines prompt analysis, habit heuristics, and dependency s
 
 ## Decision Rules
 
+- calculate a shared 0-100 score across popup builder and live monitor
+- scoring dimensions: `clarity`, `context`, `specificity`, `risk guardrails`
 - missing context evidence => suggest concrete evidence gaps
 - missing attempt quality => suggest adding action/result/blocker
+- vague phrase detection => reduce clarity and risk score
 - explicit no-attempt phrase => hard warning and score penalty
 - shortcut prompt => stricter warning in strict mode
 - high dependency score => recommendation to run manual debugging first

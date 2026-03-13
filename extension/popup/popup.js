@@ -280,9 +280,6 @@ const ROLE_TEMPLATE_RECOMMENDATIONS = {
 };
 const LEVEL_OPTIONS = new Set(["Student", "Junior", "Middle", "Senior"]);
 const REQUIRED_KEYS = ["task", "context", "attempt"];
-const REASONING_HINTS = [/tried/i, /attempt/i, /hypothesis/i, /debug/i, /test/i, /measure/i, /analy/i];
-const CONTEXT_HINTS = [/error/i, /stack/i, /file/i, /endpoint/i, /metric/i, /latency/i, /throughput/i, /trace/i];
-const SHORTCUT_PATTERNS = [/give me full code/i, /do it for me/i, /just answer/i, /no explanation/i, /copy paste/i];
 
 const roleSelect = document.getElementById("roleSelect");
 const customRoleInput = document.getElementById("customRoleInput");
@@ -313,6 +310,8 @@ const promptScoreGrade = document.getElementById("promptGrade");
 const promptScoreSummary = document.getElementById("promptScoreSummary");
 const scoreBreakdown = document.getElementById("scoreBreakdown");
 const scoreTips = document.getElementById("scoreTips");
+const promptLintSummary = document.getElementById("promptLintSummary");
+const lintResults = document.getElementById("lintResults");
 
 function storageGet(keys) {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
@@ -324,6 +323,22 @@ function storageSet(payload) {
 
 function clean(value) {
   return (value || "").trim();
+}
+
+function getPromptQualityEngine() {
+  const engine = window.AIDevCoachPromptQualityEngine;
+  if (!engine || typeof engine.calculatePromptScore !== "function") {
+    throw new Error("Prompt quality engine is unavailable.");
+  }
+  return engine;
+}
+
+function getPromptLinter() {
+  const linter = window.AIDevCoachPromptLinter;
+  if (!linter || typeof linter.lintPrompt !== "function") {
+    throw new Error("Prompt linter is unavailable.");
+  }
+  return linter;
 }
 
 function normalizeLevel(value) {
@@ -605,19 +620,6 @@ function renderStats(stats) {
   habitStats.textContent = `AI requests: ${stats.aiRequests} | Manual attempts: ${stats.manualAttempts} | Dependency: ${dependency}% | Bad prompts: ${stats.badPrompts} | Shortcut prompts: ${stats.shortcutPrompts} | Large pastes: ${stats.largePastes} | AI copies: ${stats.aiCopies} | Fast copies: ${stats.fastAiCopies}`;
 }
 
-function gradeFromScore(score) {
-  if (score >= 90) {
-    return "A";
-  }
-  if (score >= 75) {
-    return "B";
-  }
-  if (score >= 60) {
-    return "C";
-  }
-  return "D";
-}
-
 function gradeClass(grade) {
   if (grade === "A") {
     return "grade--a";
@@ -634,166 +636,24 @@ function gradeClass(grade) {
   return "grade--na";
 }
 
-function countKeywordMatches(text, patterns) {
-  return patterns.filter((pattern) => pattern.test(text)).length;
-}
-
 function scorePrompt({ templateKey, profile, fields, prompt, roleProfile }) {
   const resolvedRoleProfile = roleProfile || getRoleProfile(profile);
-  const joined = `${fields.task}\n${fields.context}\n${fields.attempt}\n${fields.constraints}\n${fields.acceptance}`;
-
-  const breakdown = [];
-  const tips = [];
-  const warnings = [];
-
-  let completeness = 0;
-  if (fields.task.length >= 20) {
-    completeness += 12;
-  } else if (fields.task.length >= 8) {
-    completeness += 6;
-    tips.push("Make the task more specific with expected output and scope.");
-  } else {
-    warnings.push("Task is too short.");
-  }
-
-  if (fields.context.length >= 40) {
-    completeness += 12;
-  } else if (fields.context.length >= 15) {
-    completeness += 6;
-    tips.push("Add richer context (files, errors, expected vs actual behavior).");
-  } else {
-    warnings.push("Context is too thin.");
-  }
-
-  if (fields.attempt.length >= 30) {
-    completeness += 10;
-  } else if (fields.attempt.length >= 12) {
-    completeness += 5;
-    tips.push("Describe your attempts and blockers more clearly.");
-  } else {
-    warnings.push("What you tried needs more detail.");
-  }
-
-  if (profile.role) {
-    completeness += 3;
-  }
-  if (profile.skill) {
-    completeness += 3;
-  }
-
-  completeness = Math.min(40, completeness);
-  breakdown.push({ label: "Completeness", score: completeness, max: 40 });
-
-  let specificity = 0;
-  const contextSignalCount = countKeywordMatches(joined, CONTEXT_HINTS);
-  specificity += Math.min(10, contextSignalCount * 2);
-  const roleSignalCount = countKeywordMatches(joined, resolvedRoleProfile.roleSignals || []);
-  specificity += Math.min(4, roleSignalCount);
-
-  if (fields.constraints.length >= 16) {
-    specificity += 6;
-  }
-
-  if (fields.acceptance.length >= 16) {
-    specificity += 5;
-  }
-
-  if (prompt.length >= 450) {
-    specificity += 4;
-  }
-
-  specificity = Math.min(25, specificity);
-  if (specificity < 12) {
-    tips.push("Add concrete technical context (metrics, paths, traces, API details).");
-  }
-  if (roleSignalCount === 0) {
-    tips.push(`Add role-specific context for ${resolvedRoleProfile.label.toLowerCase()} scenarios.`);
-  }
-  breakdown.push({ label: "Specificity", score: specificity, max: 25 });
-
-  let reasoning = 0;
-  const reasoningSignalCount = countKeywordMatches(fields.attempt, REASONING_HINTS);
-  reasoning += Math.min(12, reasoningSignalCount * 3);
-
-  if (/why|trade-?off|because|assumption/i.test(joined)) {
-    reasoning += 4;
-  }
-
-  if (/test|verify|benchmark|validate/i.test(joined)) {
-    reasoning += 4;
-  }
-
-  reasoning = Math.min(20, reasoning);
-  if (reasoning < 10) {
-    tips.push("Include reasoning: assumptions, hypotheses, and validation plan.");
-  }
-  breakdown.push({ label: "Reasoning Evidence", score: reasoning, max: 20 });
-
-  let safety = 15;
-  const shortcutHit = SHORTCUT_PATTERNS.some((pattern) => pattern.test(joined));
-  if (shortcutHit) {
-    safety -= 8;
-    warnings.push("Shortcut language detected. Ask for guidance before final code.");
-  }
-
-  if (/step-?by-?step|explain|coach|review/i.test(prompt)) {
-    safety += 2;
-  }
-
-  if (/just.*answer|only.*code/i.test(joined)) {
-    safety -= 4;
-  }
-
-  if (
-    resolvedRoleProfile.key === "doctor" &&
-    /\bdiagnos(e|is)|prescrib|dosage|treatment plan|medical advice\b/i.test(joined)
-  ) {
-    safety -= 4;
-    warnings.push(
-      "Doctor mode safety: ask for educational reasoning and differential guidance, not direct diagnosis or prescriptions."
-    );
-  }
-
-  safety = Math.max(0, Math.min(15, safety));
-  breakdown.push({ label: "Learning Safety", score: safety, max: 15 });
-
-  let templateFit = 0;
-  const templateSignals = {
-    debugging: /error|stack|trace|bug|failing/i,
-    code_review: /review|regression|security|test/i,
-    system_design: /architecture|scal|throughput|availability|trade-?off/i,
-    refactoring: /refactor|maintain|readability|structure/i,
-    performance_optimization: /latency|cpu|memory|throughput|benchmark|optimi/i,
-    learning: /learn|explain|exercise|understand|concept/i
-  };
-
-  if (templateSignals[templateKey] && templateSignals[templateKey].test(joined)) {
-    templateFit = 5;
-  } else {
-    tips.push("Add terms that match the selected template objective.");
-  }
-  breakdown.push({ label: "Template Fit", score: templateFit, max: 5 });
-
-  const total = breakdown.reduce((sum, item) => sum + item.score, 0);
-  const score = Math.max(0, Math.min(100, total));
-  const grade = gradeFromScore(score);
-
-  let summary = "Strong prompt. Ready to use with AI.";
-  if (grade === "B") {
-    summary = "Good prompt. A bit more context can improve answer quality.";
-  } else if (grade === "C") {
-    summary = "Fair prompt. Improve context and reasoning before sending.";
-  } else if (grade === "D") {
-    summary = "Weak prompt. Add details and attempt notes first.";
-  }
+  const engine = getPromptQualityEngine();
+  const analysis = engine.calculatePromptScore({
+    prompt,
+    fields,
+    templateKey,
+    roleSignals: resolvedRoleProfile.roleSignals || [],
+    profile: {
+      roleKey: resolvedRoleProfile.key || profile.roleKey || "",
+      role: profile.role || "",
+      skill: profile.skill || ""
+    }
+  });
 
   return {
-    score,
-    grade,
-    summary,
-    warnings,
-    tips,
-    breakdown
+    ...analysis,
+    tips: analysis.suggestions
   };
 }
 
@@ -824,6 +684,42 @@ function renderScore(analysis) {
     const item = document.createElement("li");
     item.textContent = tip;
     scoreTips.appendChild(item);
+  });
+}
+
+function lintClassForResult(result) {
+  if (result.passed) {
+    return result.severity === "info" ? "lint-result--info" : "lint-result--pass";
+  }
+  return result.severity === "error" ? "lint-result--error" : "lint-result--warning";
+}
+
+function renderLintResults(report) {
+  if (!report || !Array.isArray(report.results)) {
+    promptLintSummary.textContent = "--";
+    lintResults.innerHTML = "";
+    return;
+  }
+
+  const summaryParts = [];
+  if (report.summary.errors > 0) {
+    summaryParts.push(`${report.summary.errors} error`);
+  }
+  if (report.summary.warnings > 0) {
+    summaryParts.push(`${report.summary.warnings} warning`);
+  }
+  if (report.summary.passed > 0) {
+    summaryParts.push(`${report.summary.passed} passed`);
+  }
+  promptLintSummary.textContent = summaryParts.join(" | ") || "Clear";
+
+  lintResults.innerHTML = "";
+  report.results.forEach((result) => {
+    const item = document.createElement("li");
+    item.className = lintClassForResult(result);
+    const prefix = result.passed ? "✓" : result.severity === "error" ? "⛔" : "⚠";
+    item.textContent = `${prefix} ${result.message}`;
+    lintResults.appendChild(item);
   });
 }
 
@@ -906,18 +802,35 @@ async function generatePrompt() {
   const prompt = [...buildRoleHeaderLines(roleProfile), "", basePrompt].join("\n");
 
   const analysis = scorePrompt({ templateKey, profile, fields, prompt, roleProfile });
+  const lintReport = getPromptLinter().lintPrompt({
+    prompt,
+    analysis,
+    fields,
+    templateKey,
+    profile: {
+      roleKey: resolvedRoleKey(profile),
+      role: profile.role || "",
+      skill: profile.skill || ""
+    }
+  });
 
   generatedPrompt.value = prompt;
   renderScore(analysis);
+  renderLintResults(lintReport);
 
   await storageSet({
     selectedTemplate: templateKey,
     profile,
     lastGeneratedPrompt: prompt,
-    lastPromptAnalysis: analysis
+    lastPromptAnalysis: analysis,
+    lastPromptLintReport: lintReport
   });
 
-  setStatus(promptStatus, `Prompt generated (${analysis.score}/100, grade ${analysis.grade}).`, true);
+  setStatus(
+    promptStatus,
+    `Prompt generated (${analysis.score}/100, grade ${analysis.grade}, ${lintReport.summary.failed} lint issue(s)).`,
+    true
+  );
 }
 
 async function copyGeneratedPrompt() {
@@ -943,6 +856,8 @@ function resetScoreCard() {
   promptScoreSummary.textContent = "Generate a prompt to calculate quality score.";
   scoreBreakdown.innerHTML = "";
   scoreTips.innerHTML = "";
+  promptLintSummary.textContent = "--";
+  lintResults.innerHTML = "";
 }
 
 async function loadState() {
@@ -952,7 +867,8 @@ async function loadState() {
     "stats",
     "selectedTemplate",
     "lastGeneratedPrompt",
-    "lastPromptAnalysis"
+    "lastPromptAnalysis",
+    "lastPromptLintReport"
   ]);
 
   const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
@@ -984,6 +900,10 @@ async function loadState() {
     renderScore(data.lastPromptAnalysis);
   } else {
     resetScoreCard();
+  }
+
+  if (data.lastPromptLintReport) {
+    renderLintResults(data.lastPromptLintReport);
   }
 }
 

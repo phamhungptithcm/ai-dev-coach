@@ -124,6 +124,14 @@
         <ul id="scoreTips" class="score-list score-list--tips"></ul>
       </section>
 
+      <section class="score-card" aria-label="Prompt lint results">
+        <div class="score-card__header">
+          <span>Prompt Lint</span>
+          <strong id="promptLintSummary">--</strong>
+        </div>
+        <ul id="lintResults" class="score-list lint-list"></ul>
+      </section>
+
       <p id="promptStatus" class="status"></p>
     </section>
 
@@ -137,6 +145,9 @@
     </section>
   </main>
 
+  <script src="../shared/promptQualityEngine.js"></script>
+  <script src="../content/secretDetection.js"></script>
+  <script src="../shared/promptLinter.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
