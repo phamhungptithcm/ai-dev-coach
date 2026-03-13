@@ -206,15 +206,18 @@
     state.refs.scoreSummary.textContent = formatScoreSummary(state.runtime);
 
     const dependency = computeDependency(state.stats);
+    state.refs.metricDependency.textContent = `${dependency}%`;
+    state.refs.metricBadPrompts.textContent = String(state.stats.badPrompts);
+    state.refs.metricAiRequests.textContent = String(state.stats.aiRequests);
+    state.refs.metricFastCopies.textContent = String(state.stats.fastAiCopies);
     state.refs.habitSummary.textContent =
-      `AI: ${state.stats.aiRequests} | Manual: ${state.stats.manualAttempts} | ` +
-      `Dependency: ${dependency}% | Bad: ${state.stats.badPrompts} | Shortcut: ${state.stats.shortcutPrompts}`;
+      `Manual attempts: ${state.stats.manualAttempts} · Shortcut prompts: ${state.stats.shortcutPrompts}`;
     state.refs.behaviorSummary.textContent =
-      `Large pastes: ${state.stats.largePastes} | AI copies: ${state.stats.aiCopies} | Fast copies: ${state.stats.fastAiCopies}`;
+      `Large pastes: ${state.stats.largePastes} · AI copies: ${state.stats.aiCopies}`;
 
-    const preview = state.runtime.promptPreview ? `Prompt: ${state.runtime.promptPreview}` : "";
+    const preview = state.runtime.promptPreview || "Waiting for the next prompt preview.";
     state.refs.preview.textContent = preview;
-    state.refs.preview.classList.toggle("ai-coach-live-bubble__muted", !preview);
+    state.refs.preview.classList.toggle("ai-coach-live-bubble__muted", !state.runtime.promptPreview);
 
     state.refs.meta.textContent = formatEventTime(state.runtime);
   }
@@ -349,9 +352,32 @@
           <span class="ai-coach-live-bubble__grade ai-coach-live-bubble__grade--na">N/A</span>
         </div>
         <p class="ai-coach-live-bubble__summary">No scored prompt yet. Send a prompt to see realtime coaching.</p>
-        <p class="ai-coach-live-bubble__habit"></p>
-        <p class="ai-coach-live-bubble__behavior"></p>
-        <p class="ai-coach-live-bubble__preview ai-coach-live-bubble__muted"></p>
+        <div class="ai-coach-live-bubble__metrics" aria-label="Live coaching metrics">
+          <article class="ai-coach-live-bubble__metric">
+            <span class="ai-coach-live-bubble__metric-label">Dependency</span>
+            <strong class="ai-coach-live-bubble__metric-value">0%</strong>
+          </article>
+          <article class="ai-coach-live-bubble__metric">
+            <span class="ai-coach-live-bubble__metric-label">Bad prompts</span>
+            <strong class="ai-coach-live-bubble__metric-value">0</strong>
+          </article>
+          <article class="ai-coach-live-bubble__metric">
+            <span class="ai-coach-live-bubble__metric-label">AI requests</span>
+            <strong class="ai-coach-live-bubble__metric-value">0</strong>
+          </article>
+          <article class="ai-coach-live-bubble__metric">
+            <span class="ai-coach-live-bubble__metric-label">Fast copies</span>
+            <strong class="ai-coach-live-bubble__metric-value">0</strong>
+          </article>
+        </div>
+        <div class="ai-coach-live-bubble__signals">
+          <p class="ai-coach-live-bubble__habit"></p>
+          <p class="ai-coach-live-bubble__behavior"></p>
+        </div>
+        <div class="ai-coach-live-bubble__preview-card">
+          <span class="ai-coach-live-bubble__preview-label">Latest prompt</span>
+          <p class="ai-coach-live-bubble__preview ai-coach-live-bubble__muted">Waiting for the next prompt preview.</p>
+        </div>
         <p class="ai-coach-live-bubble__meta">Waiting for first send event</p>
       </div>
     `;
@@ -365,6 +391,10 @@
       scoreValue: root.querySelector(".ai-coach-live-bubble__score"),
       gradeValue: root.querySelector(".ai-coach-live-bubble__grade"),
       scoreSummary: root.querySelector(".ai-coach-live-bubble__summary"),
+      metricDependency: root.querySelector(".ai-coach-live-bubble__metric:nth-of-type(1) .ai-coach-live-bubble__metric-value"),
+      metricBadPrompts: root.querySelector(".ai-coach-live-bubble__metric:nth-of-type(2) .ai-coach-live-bubble__metric-value"),
+      metricAiRequests: root.querySelector(".ai-coach-live-bubble__metric:nth-of-type(3) .ai-coach-live-bubble__metric-value"),
+      metricFastCopies: root.querySelector(".ai-coach-live-bubble__metric:nth-of-type(4) .ai-coach-live-bubble__metric-value"),
       habitSummary: root.querySelector(".ai-coach-live-bubble__habit"),
       behaviorSummary: root.querySelector(".ai-coach-live-bubble__behavior"),
       preview: root.querySelector(".ai-coach-live-bubble__preview"),
