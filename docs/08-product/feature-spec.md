@@ -132,6 +132,13 @@ Daily summary output includes:
 - top prompt categories
 - readable coaching suggestions
 
+Trend dashboard output includes:
+
+- 7-day quality trend
+- warning frequency trend
+- prompt category mix view
+- explainable calculation rules shown in the UI copy/docs
+
 ## 5. Sensitive Data Guardrail
 
 Before a prompt is sent, the extension can scan for likely secrets such as:

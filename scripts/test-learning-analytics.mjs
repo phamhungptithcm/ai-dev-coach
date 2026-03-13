@@ -131,4 +131,30 @@ assert.ok(
   "daily summary headline should be readable for end users"
 );
 
+const trendDashboard = analytics.buildTrendDashboard(mockStorage.read(), {
+  timestamp: Date.parse("2026-03-13T23:59:00Z"),
+  days: 3
+});
+
+assert.equal(trendDashboard.days, 3, "trend dashboard should respect the requested window size");
+assert.equal(trendDashboard.activeDays, 2, "trend dashboard should count active days with prompts");
+assert.equal(trendDashboard.qualitySeries.length, 3, "quality trend should include one point per day in the window");
+assert.equal(
+  trendDashboard.qualitySeries[2].averageScore,
+  65,
+  "quality trend should use the daily average score for the most recent day"
+);
+assert.equal(
+  trendDashboard.warningSeries[2].warningEventCount,
+  2,
+  "warning trend should count prompt events that emitted warnings"
+);
+assert.equal(trendDashboard.topCategory.key, "debugging", "trend dashboard should rank prompt categories");
+assert.equal(trendDashboard.qualityTrend.direction, "down", "quality trend should compare first vs last scored day");
+assert.equal(trendDashboard.warningTrend.direction, "up", "warning trend should compare first vs last warning count");
+assert.ok(
+  trendDashboard.rules.qualityOverTime.includes("Average prompt score per day"),
+  "trend dashboard should expose explainable calculation rules"
+);
+
 console.log("Learning analytics checks passed.");

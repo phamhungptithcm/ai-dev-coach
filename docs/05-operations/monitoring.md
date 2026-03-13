@@ -44,6 +44,18 @@ Current summary fields include:
 - shortcut and lint-issue counts
 - up to three improvement suggestions
 
+## Trend dashboard rules
+
+The analytics popup also exposes a recent-window trend dashboard.
+
+Current rules:
+
+- quality trend = daily average of scored prompt events
+- warning trend = daily count of prompt events with `warningCount > 0`
+- category trend = prompt-category mix across the selected local window
+
+These rules are derived in shared analytics code so popup visuals and future analytics surfaces stay consistent.
+
 ## Prompt Monitoring Modes
 
 - `draft` analysis: runs on input debounce (500ms) for realtime score preview
