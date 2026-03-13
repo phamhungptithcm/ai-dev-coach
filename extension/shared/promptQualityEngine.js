@@ -221,6 +221,26 @@
     return (value || "").trim();
   }
 
+  function getRoleCoachingModule() {
+    if (
+      typeof globalThis !== "undefined" &&
+      globalThis.AIDevCoachRoleCoaching &&
+      typeof globalThis.AIDevCoachRoleCoaching.getRoleProfile === "function"
+    ) {
+      return globalThis.AIDevCoachRoleCoaching;
+    }
+
+    if (typeof require === "function") {
+      try {
+        return require("./roleCoaching.js");
+      } catch (error) {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
   function uniquePush(list, value) {
     if (!value || list.includes(value)) {
       return;
@@ -348,10 +368,16 @@
     const taskText = clean(fields.task || prompt.split(/\n+/)[0] || "");
     const constraintsText = clean(fields.constraints);
     const acceptanceText = clean(fields.acceptance);
-    const roleSignals = Array.isArray(options.roleSignals) ? options.roleSignals : [];
+    const roleCoaching = getRoleCoachingModule();
     const strictMode = !!options.strictMode;
     const templateKey = options.templateKey || "";
     const roleKey = options.profile && options.profile.roleKey ? options.profile.roleKey : "";
+    const roleProfile = roleCoaching ? roleCoaching.getRoleProfile(options.profile || {}) : null;
+    const roleSignals = Array.isArray(options.roleSignals) && options.roleSignals.length > 0
+      ? options.roleSignals
+      : roleProfile && Array.isArray(roleProfile.roleSignals)
+        ? roleProfile.roleSignals
+        : [];
 
     const warnings = [];
     const suggestions = [];
@@ -529,6 +555,26 @@
       uniquePush(suggestions, "Add constraints, acceptance criteria, or measurable targets to narrow the answer.");
     }
 
+    const roleAdvice = roleCoaching
+      ? roleCoaching.buildRoleCoachingAdvice({
+          profile: options.profile || {},
+          prompt,
+          fields,
+          templateKey,
+          signals: {
+            contextEvidence,
+            attemptQuality,
+            roleSignalCount,
+            shortcutIntent
+          }
+        })
+      : null;
+
+    if (roleAdvice) {
+      roleAdvice.warnings.forEach((warning) => uniquePush(warnings, warning));
+      roleAdvice.suggestions.forEach((suggestion) => uniquePush(suggestions, suggestion));
+    }
+
     const total = clarity + context + specificity + risk;
     const grade = gradeFromScore(total);
     const breakdown = [
@@ -560,7 +606,9 @@
         attemptQuality,
         frameworkMatches: contextEvidence.frameworkMatches,
         roleSignalCount,
-        templateAligned
+        templateAligned,
+        roleProfileKey: roleProfile ? roleProfile.key : roleKey || "",
+        specialization: roleProfile ? roleProfile.specialization || "" : ""
       }
     };
   }

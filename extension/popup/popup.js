@@ -1,9 +1,62 @@
+function normalizeResponseRule(rule, index) {
+  const normalized = clean(rule).replace(/^\d+[.)]\s*/, "");
+  return `${index + 1}. ${normalized}`;
+}
+
+function buildPrettyPrompt({
+  intro,
+  profile,
+  taskLabel,
+  task,
+  context,
+  attempt,
+  constraints,
+  acceptance,
+  rules,
+  defaultGoal,
+  defaultConstraints,
+  defaultAcceptance
+}) {
+  const sections = [
+    intro,
+    "",
+    "PROFILE",
+    `- Role: ${profile.role || "Not provided"}`,
+    `- Level: ${profile.skill || "Not provided"}`,
+    `- Habit goal: ${profile.habitGoals || defaultGoal}`,
+    "",
+    "TASK",
+    `${taskLabel}: ${task}`,
+    "",
+    "CONTEXT",
+    context,
+    "",
+    "WHAT I TRIED",
+    attempt,
+    "",
+    "CONSTRAINTS",
+    constraints || defaultConstraints,
+    "",
+    "ACCEPTANCE CRITERIA",
+    acceptance || defaultAcceptance,
+    "",
+    "HOW TO RESPOND",
+    ...rules.map((rule, index) => normalizeResponseRule(rule, index))
+  ];
+
+  return sections.join("\n");
+}
+
 const TEMPLATES = {
   debugging: {
     label: "Debugging Prompt",
     hint: "Diagnose runtime errors, broken logic, and failing tests.",
     contextPlaceholder: "Error text, stack trace, file path, expected vs actual behavior",
     attemptPlaceholder: "What you already tried, hypotheses, and what changed",
+    defaultGoal: "Debug independently before asking for final code",
+    defaultConstraints: "None",
+    defaultAcceptance: "Confirm root cause, fix, and regression checks",
+    taskLabel: "Debugging goal",
     rules: [
       "Start with a diagnosis path and likely root causes.",
       "Ask one clarifying question if context is missing.",
@@ -11,24 +64,20 @@ const TEMPLATES = {
       "Explain why the fix works and what to test."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "You are my debugging mentor.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Debug independently before asking for final code"}`,
-        "",
-        `Debug task: ${task}`,
-        `Context: ${context}`,
-        `What I already tried: ${attempt}`,
-        `Constraints: ${constraints || "None"}`,
-        `Acceptance criteria: ${acceptance || "Confirm root cause, fix, and regression checks"}`,
-        "",
-        "Response rules:",
-        "1) Start with diagnosis and probable causes.",
-        "2) Suggest one minimal next check.",
-        "3) Provide patch guidance only after reasoning.",
-        "4) End with verification steps."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "You are my debugging mentor.",
+        profile,
+        taskLabel: "Debugging goal",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
   },
   code_review: {
@@ -36,6 +85,10 @@ const TEMPLATES = {
     hint: "Get structured review findings with impact and fix direction.",
     contextPlaceholder: "PR summary, changed files, risks, known constraints",
     attemptPlaceholder: "Your self-review findings so far",
+    defaultGoal: "Improve code quality and review judgment",
+    defaultConstraints: "None",
+    defaultAcceptance: "Clear prioritized findings with test suggestions",
+    taskLabel: "Review goal",
     rules: [
       "Prioritize bugs, regressions, security, and data integrity issues.",
       "Explain impact and confidence for each finding.",
@@ -43,24 +96,20 @@ const TEMPLATES = {
       "Keep advice specific to the given code context."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "Act as a pragmatic senior reviewer and coach.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Improve code quality and review judgment"}`,
-        "",
-        `Review goal: ${task}`,
-        `Code context: ${context}`,
-        `My self-review first pass: ${attempt}`,
-        `Constraints: ${constraints || "None"}`,
-        `Acceptance criteria: ${acceptance || "Clear prioritized findings with test suggestions"}`,
-        "",
-        "Response rules:",
-        "1) List findings by severity.",
-        "2) Explain impact and fix direction.",
-        "3) Include missing tests and edge cases.",
-        "4) End with one learning takeaway."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "Act as a pragmatic senior reviewer and coach.",
+        profile,
+        taskLabel: "Review goal",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
   },
   system_design: {
@@ -68,6 +117,10 @@ const TEMPLATES = {
     hint: "Design architecture with tradeoffs, reliability, and scale.",
     contextPlaceholder: "Users, traffic profile, constraints, current architecture",
     attemptPlaceholder: "Your proposed architecture and open questions",
+    defaultGoal: "Reason with tradeoffs before implementation",
+    defaultConstraints: "Latency, cost, reliability, and team bandwidth",
+    defaultAcceptance: "Architecture, tradeoffs, and rollout plan",
+    taskLabel: "Design problem",
     rules: [
       "Define requirements and constraints first.",
       "Present architecture with tradeoffs and failure modes.",
@@ -75,24 +128,20 @@ const TEMPLATES = {
       "Recommend phased implementation if needed."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "Act as a staff engineer helping with system design.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Reason with tradeoffs before implementation"}`,
-        "",
-        `Design problem: ${task}`,
-        `System context: ${context}`,
-        `My current design attempt: ${attempt}`,
-        `Constraints: ${constraints || "Latency, cost, reliability, and team bandwidth"}`,
-        `Acceptance criteria: ${acceptance || "Architecture, tradeoffs, and rollout plan"}`,
-        "",
-        "Response rules:",
-        "1) Clarify functional and non-functional requirements.",
-        "2) Propose architecture with tradeoffs.",
-        "3) Cover data model, scaling, failure handling.",
-        "4) Provide phased rollout and risk mitigations."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "Act as a staff engineer helping with system design.",
+        profile,
+        taskLabel: "Design problem",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
   },
   refactoring: {
@@ -100,6 +149,10 @@ const TEMPLATES = {
     hint: "Improve structure and maintainability without behavior changes.",
     contextPlaceholder: "Current module pain points, code smells, boundaries",
     attemptPlaceholder: "Refactor directions you considered and blockers",
+    defaultGoal: "Improve design while preserving behavior",
+    defaultConstraints: "No functional regressions, limited time",
+    defaultAcceptance: "Cleaner structure with tests proving unchanged behavior",
+    taskLabel: "Refactoring target",
     rules: [
       "Preserve behavior first.",
       "Prioritize readability and maintainability.",
@@ -107,24 +160,20 @@ const TEMPLATES = {
       "Include regression test strategy."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "Act as a refactoring coach.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Improve design while preserving behavior"}`,
-        "",
-        `Refactoring target: ${task}`,
-        `Current code context: ${context}`,
-        `My initial refactor attempt: ${attempt}`,
-        `Constraints: ${constraints || "No functional regressions, limited time"}`,
-        `Acceptance criteria: ${acceptance || "Cleaner structure with tests proving unchanged behavior"}`,
-        "",
-        "Response rules:",
-        "1) Identify core code smells first.",
-        "2) Provide low-risk refactor sequence.",
-        "3) Keep behavior stable and testable.",
-        "4) Explain before/after design rationale."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "Act as a refactoring coach.",
+        profile,
+        taskLabel: "Refactoring target",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
   },
   performance_optimization: {
@@ -132,6 +181,10 @@ const TEMPLATES = {
     hint: "Optimize bottlenecks with metrics and measurable impact.",
     contextPlaceholder: "Current latency/CPU/memory metrics and bottleneck hints",
     attemptPlaceholder: "What profiling or measurement you already ran",
+    defaultGoal: "Measure first, optimize second",
+    defaultConstraints: "Throughput, latency, memory, cost",
+    defaultAcceptance: "Measurable performance improvement with stable correctness",
+    taskLabel: "Performance goal",
     rules: [
       "Use measurements before optimization decisions.",
       "Focus highest-impact bottlenecks first.",
@@ -139,24 +192,20 @@ const TEMPLATES = {
       "Define benchmark and regression guardrails."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "Act as a performance optimization mentor.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Measure first, optimize second"}`,
-        "",
-        `Performance goal: ${task}`,
-        `Metrics and context: ${context}`,
-        `What I measured or tried: ${attempt}`,
-        `Constraints: ${constraints || "Throughput, latency, memory, cost"}`,
-        `Acceptance criteria: ${acceptance || "Measurable performance improvement with stable correctness"}`,
-        "",
-        "Response rules:",
-        "1) Validate baseline and bottleneck hypothesis.",
-        "2) Propose top optimizations by expected impact.",
-        "3) Explain tradeoffs and regression risks.",
-        "4) Provide benchmark and rollback strategy."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "Act as a performance optimization mentor.",
+        profile,
+        taskLabel: "Performance goal",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
   },
   learning: {
@@ -164,6 +213,10 @@ const TEMPLATES = {
     hint: "Learn concepts step-by-step without over-relying on final answers.",
     contextPlaceholder: "Topic background, confusion points, known concepts",
     attemptPlaceholder: "Your current understanding and where you get stuck",
+    defaultGoal: "Strengthen independent reasoning",
+    defaultConstraints: "Use concise examples and avoid jargon overload",
+    defaultAcceptance: "Clear understanding, practice task, and recap",
+    taskLabel: "Learning goal",
     rules: [
       "Guide with questions before giving final answer.",
       "Use progressive explanation from simple to advanced.",
@@ -171,78 +224,21 @@ const TEMPLATES = {
       "Call out common mistakes and anti-patterns."
     ],
     build({ profile, task, context, attempt, constraints, acceptance }) {
-      return [
-        "Teach me like a technical mentor.",
-        `Role: ${profile.role || "Not provided"}`,
-        `Level: ${profile.skill || "Not provided"}`,
-        `Habit goal: ${profile.habitGoals || "Strengthen independent reasoning"}`,
-        "",
-        `Learning goal: ${task}`,
-        `Current context: ${context}`,
-        `My current understanding: ${attempt}`,
-        `Constraints: ${constraints || "Use concise examples and avoid jargon overload"}`,
-        `Acceptance criteria: ${acceptance || "Clear understanding, practice task, and recap"}`,
-        "",
-        "Response rules:",
-        "1) Ask one guiding question first.",
-        "2) Explain in progressive steps.",
-        "3) Give one short exercise.",
-        "4) End with recap and common mistakes."
-      ].join("\n");
+      return buildPrettyPrompt({
+        intro: "Teach me like a technical mentor.",
+        profile,
+        taskLabel: "Learning goal",
+        task,
+        context,
+        attempt,
+        constraints,
+        acceptance,
+        rules: this.rules,
+        defaultGoal: this.defaultGoal,
+        defaultConstraints: this.defaultConstraints,
+        defaultAcceptance: this.defaultAcceptance
+      });
     }
-  }
-};
-
-const JOB_ROLE_OPTIONS = {
-  teacher: {
-    label: "Teacher",
-    builderHint: "Focus on pedagogy, learner outcomes, and assessment quality.",
-    contextHint: "Learner level, lesson objective, class constraints",
-    attemptHint: "What teaching approach you tried and observed outcome",
-    roleSignals: [/learning objective/i, /lesson plan/i, /assessment/i, /classroom/i, /pedagogy/i]
-  },
-  software_engineer: {
-    label: "Software Engineer",
-    builderHint: "Focus on reproducible technical context and verification.",
-    contextHint: "Error, stack trace, file path, expected vs actual",
-    attemptHint: "Debug steps, hypotheses, and blocker",
-    roleSignals: [/stack/i, /trace/i, /api/i, /repo/i, /commit/i, /test/i, /bug/i]
-  },
-  solution_architecture: {
-    label: "Solution Architecture",
-    builderHint: "Focus on constraints, tradeoffs, scalability, and risk.",
-    contextHint: "NFRs, integration points, compliance, cost and latency constraints",
-    attemptHint: "Architecture option explored and tradeoff concerns",
-    roleSignals: [/nfr/i, /latency/i, /throughput/i, /sla/i, /integration/i, /trade-?off/i]
-  },
-  manager: {
-    label: "Manager",
-    builderHint: "Focus on delivery risk, prioritization, and team execution clarity.",
-    contextHint: "Business impact, timeline, team capacity, and blockers",
-    attemptHint: "What has been tried, what is blocked, and decision options",
-    roleSignals: [/timeline/i, /milestone/i, /risk/i, /scope/i, /priority/i, /resource/i, /stakeholder/i]
-  },
-  director: {
-    label: "Director",
-    builderHint: "Focus on strategy, cross-team alignment, and measurable outcomes.",
-    contextHint: "Org constraints, KPI targets, dependencies, and governance",
-    attemptHint: "Options explored, tradeoffs, and escalation points",
-    roleSignals: [/strategy/i, /kpi/i, /roadmap/i, /governance/i, /portfolio/i, /budget/i, /alignment/i]
-  },
-  doctor: {
-    label: "Doctor",
-    builderHint: "Use AI as an educational support tool, not a diagnostic authority.",
-    contextHint: "Symptoms timeline, relevant history, red flags, tests already available",
-    attemptHint: "Clinical reasoning done, differential considered, current uncertainty",
-    safetyGuardrail: "For educational support only. Do not request final diagnosis, treatment, or dosage instructions.",
-    roleSignals: [/symptom/i, /history/i, /differential/i, /red flag/i, /clinical/i, /exam/i]
-  },
-  other: {
-    label: "Other",
-    builderHint: "Define your domain context clearly and ask for reasoning-first guidance.",
-    contextHint: "Domain constraints, available evidence, expected outcome",
-    attemptHint: "What you already tried and where you are blocked",
-    roleSignals: [/constraint/i, /evidence/i, /outcome/i, /risk/i]
   }
 };
 
@@ -269,16 +265,6 @@ const DEFAULT_STATS = {
 };
 
 const DEFAULT_TEMPLATE_KEY = "debugging";
-const ROLE_TEMPLATE_RECOMMENDATIONS = {
-  teacher: "learning",
-  software_engineer: "debugging",
-  solution_architecture: "system_design",
-  manager: "system_design",
-  director: "system_design",
-  doctor: "learning",
-  other: "debugging"
-};
-const LEVEL_OPTIONS = new Set(["Student", "Junior", "Middle", "Senior"]);
 const REQUIRED_KEYS = ["task", "context", "attempt"];
 
 const roleSelect = document.getElementById("roleSelect");
@@ -288,6 +274,9 @@ const habitInput = document.getElementById("habitInput");
 const templateSelect = document.getElementById("templateSelect");
 const templateHint = document.getElementById("templateHint");
 const rolePromptHint = document.getElementById("rolePromptHint");
+const roleCoachingLabel = document.getElementById("roleCoachingLabel");
+const roleCoachingFocus = document.getElementById("roleCoachingFocus");
+const roleCoachingList = document.getElementById("roleCoachingList");
 const taskInput = document.getElementById("taskInput");
 const contextInput = document.getElementById("contextInput");
 const attemptInput = document.getElementById("attemptInput");
@@ -355,6 +344,14 @@ function getPromptQualityEngine() {
   return engine;
 }
 
+function getRoleCoaching() {
+  const roleCoaching = window.AIDevCoachRoleCoaching;
+  if (!roleCoaching || typeof roleCoaching.getRoleProfile !== "function") {
+    throw new Error("Role coaching module is unavailable.");
+  }
+  return roleCoaching;
+}
+
 function getPromptLinter() {
   const linter = window.AIDevCoachPromptLinter;
   if (!linter || typeof linter.lintPrompt !== "function") {
@@ -376,100 +373,27 @@ function getLearningAnalytics() {
 }
 
 function normalizeLevel(value) {
-  const raw = clean(value);
-  if (!raw) {
-    return "";
-  }
-
-  if (/^student$/i.test(raw)) {
-    return "Student";
-  }
-  if (/^junior$/i.test(raw)) {
-    return "Junior";
-  }
-  if (/^(middle|mid)$/i.test(raw)) {
-    return "Middle";
-  }
-  if (/^senior$/i.test(raw)) {
-    return "Senior";
-  }
-
-  return LEVEL_OPTIONS.has(raw) ? raw : "";
+  return getRoleCoaching().normalizeLevel(value);
 }
 
 function isStudentLevel(value) {
-  return normalizeLevel(value) === "Student";
+  return getRoleCoaching().isStudentLevel(value);
 }
 
 function migrateLegacyStudentProfile(rawProfile = {}) {
-  const roleKey = normalizeRoleKey(rawProfile.roleKey);
-  const roleText = clean(rawProfile.role).toLowerCase();
-  const isLegacyStudent = roleKey === "student" || /student|sinh vien|hoc sinh/.test(roleText);
-
-  if (!isLegacyStudent) {
-    return {
-      profile: {
-        ...rawProfile,
-        skill: normalizeLevel(rawProfile.skill)
-      },
-      migrated: false
-    };
-  }
-
-  return {
-    profile: {
-      ...rawProfile,
-      roleKey: "other",
-      role: "Other",
-      skill: normalizeLevel(rawProfile.skill) || "Student"
-    },
-    migrated: true
-  };
+  return getRoleCoaching().migrateLegacyStudentProfile(rawProfile);
 }
 
 function normalizeRoleKey(value) {
-  return clean(value).toLowerCase().replace(/\s+/g, "_");
+  return getRoleCoaching().normalizeRoleKey(value);
 }
 
 function resolveRoleKey(rawProfile = {}) {
-  const fromKey = normalizeRoleKey(rawProfile.roleKey);
-  if (JOB_ROLE_OPTIONS[fromKey]) {
-    return fromKey;
-  }
-
-  const roleText = clean(rawProfile.role).toLowerCase();
-  if (!roleText) {
-    return "software_engineer";
-  }
-
-  if (/teacher|giang vien|giao vien/.test(roleText)) {
-    return "teacher";
-  }
-  if (/software|engineer|developer|frontend|backend|fullstack|devops/.test(roleText)) {
-    return "software_engineer";
-  }
-  if (/solution architect|architecture|kien truc/.test(roleText)) {
-    return "solution_architecture";
-  }
-  if (/manager|lead|quan ly/.test(roleText)) {
-    return "manager";
-  }
-  if (/director|giam doc/.test(roleText)) {
-    return "director";
-  }
-  if (/doctor|bac si|physician|medical/.test(roleText)) {
-    return "doctor";
-  }
-
-  return "other";
+  return getRoleCoaching().resolveRoleKey(rawProfile);
 }
 
 function getRoleProfile(rawProfile = {}) {
-  const key = resolveRoleKey(rawProfile);
-  const base = JOB_ROLE_OPTIONS[key] || JOB_ROLE_OPTIONS.other;
-  const customRole = clean(rawProfile.role);
-  const label = key === "other" ? customRole || base.label : base.label;
-  return { key, label, ...base };
+  return getRoleCoaching().getRoleProfile(rawProfile);
 }
 
 function setCustomRoleVisibility(roleKey) {
@@ -477,16 +401,7 @@ function setCustomRoleVisibility(roleKey) {
 }
 
 function buildRoleHeaderLines(roleProfile) {
-  const lines = [
-    `Primary job role: ${roleProfile.label}`,
-    `Role guidance: ${roleProfile.builderHint}`
-  ];
-
-  if (roleProfile.safetyGuardrail) {
-    lines.push(`Safety guardrail: ${roleProfile.safetyGuardrail}`);
-  }
-
-  return lines;
+  return getRoleCoaching().buildRoleHeaderLines(roleProfile);
 }
 
 function setStatus(target, message, ok) {
@@ -519,6 +434,9 @@ function applyTemplateUI(template) {
   const recommendedTemplate = TEMPLATES[recommendedTemplateKey];
   templateHint.textContent = template.hint;
   rolePromptHint.textContent = `Role mode: ${roleProfile.label}. ${roleProfile.builderHint}`;
+  if (roleProfile.specializationLabel) {
+    rolePromptHint.textContent += ` Specialization: ${roleProfile.specializationLabel}.`;
+  }
   if (isStudentLevel(currentProfile.skill)) {
     rolePromptHint.textContent += " Level mode: Student learning flow is active.";
   }
@@ -531,6 +449,7 @@ function applyTemplateUI(template) {
   }
   contextInput.placeholder = `${template.contextPlaceholder}. ${roleProfile.contextHint}.`;
   attemptInput.placeholder = `${template.attemptPlaceholder}. ${roleProfile.attemptHint}.`;
+  renderRoleCoaching(currentProfile);
 }
 
 function renderTemplates(selectedTemplate) {
@@ -549,7 +468,8 @@ function renderTemplates(selectedTemplate) {
 
 function readProfileForm() {
   const selectedRoleKey = roleSelect.value || "software_engineer";
-  const selectedRoleProfile = JOB_ROLE_OPTIONS[selectedRoleKey] || JOB_ROLE_OPTIONS.software_engineer;
+  const roleOptions = getRoleCoaching().JOB_ROLE_OPTIONS;
+  const selectedRoleProfile = roleOptions[selectedRoleKey] || roleOptions.software_engineer;
   const customRole = clean(customRoleInput.value);
   const resolvedRoleLabel = selectedRoleKey === "other" ? customRole || "Other" : selectedRoleProfile.label;
 
@@ -593,12 +513,34 @@ function fillProfile(profile) {
 }
 
 function getRecommendedTemplateForProfile(profile) {
-  if (isStudentLevel(profile.skill)) {
-    return "learning";
+  return getRoleCoaching().getRecommendedTemplateForProfile(profile, {
+    templates: TEMPLATES,
+    defaultTemplate: DEFAULT_TEMPLATE_KEY
+  });
+}
+
+function renderRoleCoaching(profile) {
+  const roleCoaching = getRoleCoaching();
+  const snapshot = roleCoaching.buildRoleCoachingSnapshot(profile);
+  roleCoachingLabel.textContent = snapshot.roleProfile.label;
+  roleCoachingFocus.textContent = snapshot.focusLine;
+
+  const coachingLines = [];
+  (snapshot.examples || []).slice(0, 2).forEach((example) => {
+    coachingLines.push(`Example ask: ${example}`);
+  });
+  if (snapshot.warningHint) {
+    coachingLines.push(`Watch for: ${snapshot.warningHint}`);
   }
-  const roleProfile = getRoleProfile(profile);
-  const templateKey = ROLE_TEMPLATE_RECOMMENDATIONS[roleProfile.key] || DEFAULT_TEMPLATE_KEY;
-  return TEMPLATES[templateKey] ? templateKey : DEFAULT_TEMPLATE_KEY;
+  if (snapshot.safetyGuardrail) {
+    coachingLines.push(`Guardrail: ${snapshot.safetyGuardrail}`);
+  }
+
+  renderList(
+    roleCoachingList,
+    coachingLines,
+    "Role-specific examples will appear after you choose a role."
+  );
 }
 
 function hasProfileData(profile) {

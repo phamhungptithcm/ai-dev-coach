@@ -83,62 +83,7 @@
     /\bmemory\b/i
   ];
 
-  const JOB_ROLE_OPTIONS = {
-    teacher: {
-      label: "Teacher",
-      builderHint: "Prioritize pedagogy, learner outcomes, and assessment clarity.",
-      contextHint: "Learner level, objective, class constraints",
-      attemptHint: "Teaching approach tried and observed result"
-    },
-    software_engineer: {
-      label: "Software Engineer",
-      builderHint: "Prioritize reproducible technical details and verification.",
-      contextHint: "Error, stack trace, file path, expected vs actual",
-      attemptHint: "Debug steps, hypotheses, and blocker"
-    },
-    solution_architecture: {
-      label: "Solution Architecture",
-      builderHint: "Prioritize constraints, tradeoffs, scale, and risk.",
-      contextHint: "NFRs, integration points, compliance and cost constraints",
-      attemptHint: "Option explored, tradeoffs considered, uncertainty"
-    },
-    manager: {
-      label: "Manager",
-      builderHint: "Prioritize delivery risk, scope decisions, and team unblock plans.",
-      contextHint: "Business impact, delivery timeline, capacity, and risks",
-      attemptHint: "Actions taken, current blockers, and decisions needed"
-    },
-    director: {
-      label: "Director",
-      builderHint: "Prioritize strategy, cross-team dependencies, and measurable outcomes.",
-      contextHint: "KPIs, org constraints, cross-functional dependencies, governance",
-      attemptHint: "Options considered, tradeoffs, and escalation points"
-    },
-    doctor: {
-      label: "Doctor",
-      builderHint: "Use AI for educational reasoning support only.",
-      contextHint: "Symptoms timeline, relevant history, red flags",
-      attemptHint: "Differential considered and current uncertainty",
-      safetyGuardrail: "Educational support only. Do not request direct diagnosis, treatment, or dosage."
-    },
-    other: {
-      label: "Other",
-      builderHint: "Clarify domain constraints and request reasoning-first guidance.",
-      contextHint: "Domain context, constraints, available evidence",
-      attemptHint: "What you tried and where you are blocked"
-    }
-  };
-
   const DEFAULT_TEMPLATE = "debugging";
-  const ROLE_TEMPLATE_RECOMMENDATIONS = {
-    teacher: "learning",
-    software_engineer: "debugging",
-    solution_architecture: "system_design",
-    manager: "system_design",
-    director: "system_design",
-    doctor: "learning",
-    other: "debugging"
-  };
   const REQUIRED_FIELDS = ["task", "context", "attempt"];
 
   const TEMPLATES = {
@@ -151,6 +96,7 @@
       defaultGoal: "Debug independently before asking for final code",
       defaultConstraints: "None",
       defaultAcceptance: "Confirm root cause, fix, and regression checks",
+      taskLabel: "Debugging goal",
       responseRules: [
         "1) Start with diagnosis and probable causes.",
         "2) Suggest one minimal next check.",
@@ -167,6 +113,7 @@
       defaultGoal: "Improve code quality and review judgment",
       defaultConstraints: "None",
       defaultAcceptance: "Clear prioritized findings with test suggestions",
+      taskLabel: "Review goal",
       responseRules: [
         "1) List findings by severity.",
         "2) Explain impact and fix direction.",
@@ -183,6 +130,7 @@
       defaultGoal: "Reason with tradeoffs before implementation",
       defaultConstraints: "Latency, cost, reliability, and team bandwidth",
       defaultAcceptance: "Architecture, tradeoffs, and rollout plan",
+      taskLabel: "Design problem",
       responseRules: [
         "1) Clarify functional and non-functional requirements.",
         "2) Propose architecture with tradeoffs.",
@@ -199,6 +147,7 @@
       defaultGoal: "Improve design while preserving behavior",
       defaultConstraints: "No functional regressions, limited time",
       defaultAcceptance: "Cleaner structure with tests proving unchanged behavior",
+      taskLabel: "Refactoring target",
       responseRules: [
         "1) Identify core code smells first.",
         "2) Provide low-risk refactor sequence.",
@@ -215,6 +164,7 @@
       defaultGoal: "Measure first, optimize second",
       defaultConstraints: "Throughput, latency, memory, cost",
       defaultAcceptance: "Measurable performance improvement with stable correctness",
+      taskLabel: "Performance goal",
       responseRules: [
         "1) Validate baseline and bottleneck hypothesis.",
         "2) Propose top optimizations by expected impact.",
@@ -231,6 +181,7 @@
       defaultGoal: "Strengthen independent reasoning",
       defaultConstraints: "Use concise examples and avoid jargon overload",
       defaultAcceptance: "Clear understanding, practice task, and recap",
+      taskLabel: "Learning goal",
       responseRules: [
         "1) Ask one guiding question first.",
         "2) Explain in progressive steps.",
@@ -261,104 +212,53 @@
     return (value || "").trim();
   }
 
+  function getRoleCoaching() {
+    const roleCoaching = window.AIDevCoachRoleCoaching;
+    if (!roleCoaching || typeof roleCoaching.getRoleProfile !== "function") {
+      throw new Error("Role coaching module is unavailable.");
+    }
+    return roleCoaching;
+  }
+
   function normalizeLevel(value) {
-    const raw = clean(value);
-    if (!raw) {
-      return "";
-    }
-
-    if (/^student$/i.test(raw)) {
-      return "Student";
-    }
-    if (/^junior$/i.test(raw)) {
-      return "Junior";
-    }
-    if (/^(middle|mid)$/i.test(raw)) {
-      return "Middle";
-    }
-    if (/^senior$/i.test(raw)) {
-      return "Senior";
-    }
-
-    return raw;
+    return getRoleCoaching().normalizeLevel(value);
   }
 
   function isStudentLevel(value) {
-    return normalizeLevel(value) === "Student";
+    return getRoleCoaching().isStudentLevel(value);
   }
 
   function hasLegacyStudentRole(profile = {}) {
-    const roleKey = normalizeRoleKey(profile.roleKey);
-    const roleText = clean(profile.role).toLowerCase();
-    return roleKey === "student" || /student|sinh vien|hoc sinh/.test(roleText);
+    return getRoleCoaching().hasLegacyStudentRole(profile);
   }
 
   function getRecommendedTemplateForProfile(profile, roleKey) {
-    if (isStudentLevel(profile?.skill)) {
-      return "learning";
-    }
-
-    const resolvedRoleKey = JOB_ROLE_OPTIONS[roleKey] ? roleKey : resolveRoleKey(profile || {});
-    const recommendedTemplate = ROLE_TEMPLATE_RECOMMENDATIONS[resolvedRoleKey] || DEFAULT_TEMPLATE;
-    return TEMPLATES[recommendedTemplate] ? recommendedTemplate : DEFAULT_TEMPLATE;
+    return getRoleCoaching().getRecommendedTemplateForProfile(
+      {
+        ...(profile || {}),
+        roleKey: roleKey || profile?.roleKey || ""
+      },
+      {
+        templates: TEMPLATES,
+        defaultTemplate: DEFAULT_TEMPLATE
+      }
+    );
   }
 
   function normalizeRoleKey(value) {
-    return clean(value).toLowerCase().replace(/\s+/g, "_");
+    return getRoleCoaching().normalizeRoleKey(value);
   }
 
   function resolveRoleKey(rawProfile = {}) {
-    const fromKey = normalizeRoleKey(rawProfile.roleKey);
-    if (JOB_ROLE_OPTIONS[fromKey]) {
-      return fromKey;
-    }
-
-    const roleText = clean(rawProfile.role).toLowerCase();
-    if (!roleText) {
-      return "software_engineer";
-    }
-
-    if (/teacher|giang vien|giao vien/.test(roleText)) {
-      return "teacher";
-    }
-    if (/software|engineer|developer|frontend|backend|fullstack|devops/.test(roleText)) {
-      return "software_engineer";
-    }
-    if (/solution architect|architecture|kien truc/.test(roleText)) {
-      return "solution_architecture";
-    }
-    if (/manager|lead|quan ly/.test(roleText)) {
-      return "manager";
-    }
-    if (/director|giam doc/.test(roleText)) {
-      return "director";
-    }
-    if (/doctor|bac si|physician|medical/.test(roleText)) {
-      return "doctor";
-    }
-
-    return "other";
+    return getRoleCoaching().resolveRoleKey(rawProfile);
   }
 
   function getRoleProfile(rawProfile = {}) {
-    const key = resolveRoleKey(rawProfile);
-    const base = JOB_ROLE_OPTIONS[key] || JOB_ROLE_OPTIONS.other;
-    const customRole = clean(rawProfile.role);
-    const label = key === "other" ? customRole || base.label : base.label;
-    return { key, label, ...base };
+    return getRoleCoaching().getRoleProfile(rawProfile);
   }
 
   function buildRoleHeaderLines(roleProfile) {
-    const lines = [
-      `Primary job role: ${roleProfile.label}`,
-      `Role guidance: ${roleProfile.builderHint}`
-    ];
-
-    if (roleProfile.safetyGuardrail) {
-      lines.push(`Safety guardrail: ${roleProfile.safetyGuardrail}`);
-    }
-
-    return lines;
+    return getRoleCoaching().buildRoleHeaderLines(roleProfile);
   }
 
   function isCoachOwnedElement(element) {
@@ -735,23 +635,70 @@
     );
   }
 
+  function normalizeResponseRule(rule, index) {
+    const normalized = clean(rule).replace(/^\d+[.)]\s*/, "");
+    return `${index + 1}. ${normalized}`;
+  }
+
+  function buildPrettyPrompt({
+    intro,
+    profile,
+    taskLabel,
+    task,
+    context,
+    attempt,
+    constraints,
+    acceptance,
+    rules,
+    defaultGoal,
+    defaultConstraints,
+    defaultAcceptance
+  }) {
+    return [
+      intro,
+      "",
+      "PROFILE",
+      `- Role: ${profile.role || "Not provided"}`,
+      `- Level: ${profile.skill || "Not provided"}`,
+      `- Habit goal: ${profile.habitGoals || defaultGoal}`,
+      "",
+      "TASK",
+      `${taskLabel}: ${task}`,
+      "",
+      "CONTEXT",
+      context,
+      "",
+      "WHAT I TRIED",
+      attempt,
+      "",
+      "CONSTRAINTS",
+      constraints || defaultConstraints,
+      "",
+      "ACCEPTANCE CRITERIA",
+      acceptance || defaultAcceptance,
+      "",
+      "HOW TO RESPOND",
+      ...rules.map((rule, index) => normalizeResponseRule(rule, index))
+    ].join("\n");
+  }
+
   function buildPrompt(templateKey, profile, fields, roleProfile) {
     const template = TEMPLATES[templateKey] || TEMPLATES[DEFAULT_TEMPLATE];
-    const basePrompt = [
-      template.intro,
-      `Role: ${profile.role || "Not provided"}`,
-      `Level: ${profile.skill || "Not provided"}`,
-      `Habit goal: ${profile.habitGoals || template.defaultGoal}`,
-      "",
-      `Task: ${fields.task}`,
-      `Context: ${fields.context}`,
-      `What I already tried: ${fields.attempt}`,
-      `Constraints: ${fields.constraints || template.defaultConstraints}`,
-      `Acceptance criteria: ${fields.acceptance || template.defaultAcceptance}`,
-      "",
-      "Response rules:",
-      ...template.responseRules
-    ].join("\n");
+    const taskLabel = template.taskLabel || "Task";
+    const basePrompt = buildPrettyPrompt({
+      intro: template.intro,
+      profile,
+      taskLabel,
+      task: fields.task,
+      context: fields.context,
+      attempt: fields.attempt,
+      constraints: fields.constraints,
+      acceptance: fields.acceptance,
+      rules: template.responseRules || [],
+      defaultGoal: template.defaultGoal,
+      defaultConstraints: template.defaultConstraints,
+      defaultAcceptance: template.defaultAcceptance
+    });
 
     return [...buildRoleHeaderLines(roleProfile), "", basePrompt].join("\n");
   }
@@ -796,7 +743,10 @@
     }
 
     const template = TEMPLATES[templateKey] || TEMPLATES[DEFAULT_TEMPLATE];
-    const roleOption = JOB_ROLE_OPTIONS[state.selectedRoleKey] || JOB_ROLE_OPTIONS.software_engineer;
+    const roleOption = getRoleProfile({
+      ...state.profile,
+      roleKey: state.selectedRoleKey
+    });
     const roleLabel = roleOption.label;
     const recommendedKey = getRecommendedTemplateForProfile(state.profile, state.selectedRoleKey);
     const recommendedTemplate = TEMPLATES[recommendedKey];
@@ -809,11 +759,23 @@
       state.refs.templateHint.textContent = `${template.hint} ${recommendationNote}`;
     }
     state.refs.roleHint.textContent = `Role mode: ${roleLabel}. ${roleOption.builderHint}`;
+    if (roleOption.specializationLabel) {
+      state.refs.roleHint.textContent += ` Specialization: ${roleOption.specializationLabel}.`;
+    }
     if (isStudentLevel(state.profile.skill)) {
       state.refs.roleHint.textContent += " Level mode: Student learning flow is active.";
     }
     state.refs.contextInput.placeholder = `${template.contextPlaceholder}. ${roleOption.contextHint}.`;
     state.refs.attemptInput.placeholder = `${template.attemptPlaceholder}. ${roleOption.attemptHint}.`;
+    const coachingSnapshot = getRoleCoaching().buildRoleCoachingSnapshot({
+      ...state.profile,
+      roleKey: state.selectedRoleKey,
+      role: roleLabel
+    });
+    const example = coachingSnapshot.examples[0];
+    state.refs.roleCoachHint.textContent = example
+      ? `Example ask: ${example}`
+      : coachingSnapshot.warningHint || "";
   }
 
   function readFields() {
@@ -832,20 +794,21 @@
 
   async function loadProfileAndTemplate() {
     const data = await storageGet(["profile", "selectedTemplate", "quickBuilderRoleKey"]);
-    state.profile = { ...DEFAULT_PROFILE, ...(data.profile || {}) };
-    state.profile.skill = normalizeLevel(state.profile.skill);
-    if (hasLegacyStudentRole(state.profile)) {
-      state.profile.roleKey = "other";
-      state.profile.role = "Other";
-      state.profile.skill = state.profile.skill || "Student";
+    const migratedProfile = getRoleCoaching().migrateLegacyStudentProfile({
+      ...DEFAULT_PROFILE,
+      ...(data.profile || {})
+    });
+    state.profile = migratedProfile.profile;
+    if (migratedProfile.migrated) {
       storageSet({ profile: state.profile }).catch(() => {
         console.warn("AI Dev Coach quick builder legacy profile migration skipped");
       });
     }
     const profileHasExplicitRole = !!(clean(state.profile.role) || clean(state.profile.roleKey));
+    const roleOptions = getRoleCoaching().JOB_ROLE_OPTIONS;
     state.selectedRoleKey = profileHasExplicitRole
       ? resolveRoleKey(state.profile)
-      : JOB_ROLE_OPTIONS[data.quickBuilderRoleKey]
+      : roleOptions[data.quickBuilderRoleKey]
         ? data.quickBuilderRoleKey
         : resolveRoleKey(state.profile);
     const recommendedTemplate = getRecommendedTemplateForProfile(state.profile, state.selectedRoleKey);
@@ -883,7 +846,10 @@
       return;
     }
 
-    const roleOption = JOB_ROLE_OPTIONS[state.selectedRoleKey] || JOB_ROLE_OPTIONS.software_engineer;
+    const roleOption = getRoleProfile({
+      ...state.profile,
+      roleKey: state.selectedRoleKey
+    });
     const profile = {
       ...state.profile,
       roleKey: state.selectedRoleKey,
@@ -1022,6 +988,7 @@
         <option value="other">Other</option>
       </select>
       <p id="aiCoachRoleHint" class="ai-coach-builder__hint"></p>
+      <p id="aiCoachRoleCoachHint" class="ai-coach-builder__hint"></p>
 
       <label class="ai-coach-builder__label" for="aiCoachTask">Task (Required)</label>
       <textarea id="aiCoachTask" class="ai-coach-builder__input" rows="2" placeholder="What do you need from AI?"></textarea>
@@ -1056,6 +1023,7 @@
       templateHint: panel.querySelector("#aiCoachTemplateHint"),
       roleSelect: panel.querySelector("#aiCoachRoleSelect"),
       roleHint: panel.querySelector("#aiCoachRoleHint"),
+      roleCoachHint: panel.querySelector("#aiCoachRoleCoachHint"),
       taskInput: panel.querySelector("#aiCoachTask"),
       contextInput: panel.querySelector("#aiCoachContext"),
       attemptInput: panel.querySelector("#aiCoachAttempt"),
@@ -1091,7 +1059,8 @@
         quickBuilderRoleKey: state.selectedRoleKey,
         selectedTemplate: state.selectedTemplate
       });
-      setStatus(`Role updated to ${JOB_ROLE_OPTIONS[state.selectedRoleKey]?.label || "Other"}.`, true);
+      const roleProfile = getRoleProfile({ ...state.profile, roleKey: state.selectedRoleKey });
+      setStatus(`Role updated to ${roleProfile.label || "Other"}.`, true);
     });
 
     state.refs.insertBtn.addEventListener("click", () => {

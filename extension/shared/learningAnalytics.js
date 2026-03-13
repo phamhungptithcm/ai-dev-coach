@@ -102,6 +102,26 @@
     return typeof value === "string" ? value.trim() : "";
   }
 
+  function getRoleCoachingModule() {
+    if (
+      typeof globalThis !== "undefined" &&
+      globalThis.AIDevCoachRoleCoaching &&
+      typeof globalThis.AIDevCoachRoleCoaching.buildRoleCoachingSnapshot === "function"
+    ) {
+      return globalThis.AIDevCoachRoleCoaching;
+    }
+
+    if (typeof require === "function") {
+      try {
+        return require("./roleCoaching.js");
+      } catch (error) {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
   function asNonNegativeInteger(value) {
     if (!Number.isFinite(value)) {
       return null;
@@ -360,6 +380,8 @@
       averagePromptLength: promptLengthCount > 0 ? Math.round(promptLengthTotal / promptLengthCount) : null,
       lastPromptAt: latestEvent ? latestEvent.timestamp : 0,
       lastPlatform: latestEvent ? latestEvent.platform : "",
+      lastRoleKey: latestEvent ? clean(latestEvent.roleKey) : "",
+      lastSkillLevel: latestEvent ? clean(latestEvent.skillLevel) : "",
       platformCounts,
       sourceCounts,
       categoryCounts,
@@ -440,6 +462,14 @@
 
   function buildSessionSuggestions(summary, topCategory) {
     const suggestions = [];
+    const roleCoaching = getRoleCoachingModule();
+    const roleSnapshot =
+      roleCoaching && (summary?.lastRoleKey || summary?.lastSkillLevel)
+        ? roleCoaching.buildRoleCoachingSnapshot({
+            roleKey: summary.lastRoleKey || "",
+            skill: summary.lastSkillLevel || ""
+          })
+        : null;
 
     if (!summary || summary.totalPrompts === 0) {
       pushUnique(suggestions, "Send a few prompts during a real task to unlock your first daily summary.");
@@ -468,6 +498,10 @@
 
     if (topCategory && topCategory.key === DEFAULT_CATEGORY && summary.totalPrompts >= 2) {
       pushUnique(suggestions, "Use clearer task framing so your sessions are easier to categorize and review over time.");
+    }
+
+    if (roleSnapshot && roleSnapshot.habitTip && suggestions.length < 3) {
+      pushUnique(suggestions, roleSnapshot.habitTip);
     }
 
     if (suggestions.length === 0) {

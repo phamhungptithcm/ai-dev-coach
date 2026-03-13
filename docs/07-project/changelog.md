@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- added a shared role-coaching module so popup builder, quick builder, live monitoring, and analytics can use the same role-aware hints and warnings
+- added role-specific coaching examples and warnings for Teacher, Software Engineer, Solution Architecture, Manager, Director, Doctor, and Other profiles
+- added software-engineering specialization guidance for frontend, backend, DevOps, and fullstack wording
+- improved generated prompt formatting with cleaner section breaks for easier reading and copy/paste
 - added a lightweight local trend dashboard with quality-over-time, warning-frequency, and prompt-category views
 - added daily session summaries to learning analytics with prompt category breakdowns and friendly coaching suggestions
 - added local learning analytics event tracking for prompt submissions with popup snapshot summary
