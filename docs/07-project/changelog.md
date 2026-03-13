@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- refreshed popup prompt output with a structured preview card, metadata badge, and clearer raw-text fallback
+- redesigned live coaching bubble into a smaller stats-first layout with readable prompt preview and coaching signals
+- polished in-page Quick Prompt Builder with grouped sections, better helper copy, and clearer action feedback
 - added a shared role-coaching module so popup builder, quick builder, live monitoring, and analytics can use the same role-aware hints and warnings
 - added role-specific coaching examples and warnings for Teacher, Software Engineer, Solution Architecture, Manager, Director, Doctor, and Other profiles
 - added software-engineering specialization guidance for frontend, backend, DevOps, and fullstack wording

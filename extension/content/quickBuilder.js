@@ -85,6 +85,7 @@
 
   const DEFAULT_TEMPLATE = "debugging";
   const REQUIRED_FIELDS = ["task", "context", "attempt"];
+  const DEFAULT_STATUS_MESSAGE = "Tip: press Ctrl/Cmd + O while focused in the AI chat to open this builder.";
 
   const TEMPLATES = {
     debugging: {
@@ -709,7 +710,7 @@
     }
 
     const status = state.refs.status;
-    status.textContent = message || "";
+    status.textContent = message || DEFAULT_STATUS_MESSAGE;
     status.classList.remove("ai-coach-builder__status--ok", "ai-coach-builder__status--error");
 
     if (!message) {
@@ -868,11 +869,14 @@
       if (sent) {
         emitQuickBuilderSendEvent(prompt);
       }
-      setStatus(sent ? "Prompt sent to AI." : "Prompt inserted. Send manually.", sent);
+      setStatus(
+        sent ? `Prompt built and sent to ${platform.name}.` : `Prompt built for ${platform.name}. Send it manually.`,
+        sent
+      );
       return;
     }
 
-    setStatus("Prompt inserted into chat box.", true);
+    setStatus(`Prompt built and inserted into ${platform.name}.`, true);
   }
 
   function updateLauncherPosition() {
@@ -970,46 +974,69 @@
     panel.dataset.aiCoachOwned = "true";
     panel.innerHTML = `
       <header class="ai-coach-builder__header">
-        <h3>Quick Prompt Builder</h3>
+        <div>
+          <h3>Quick Prompt Builder</h3>
+          <p class="ai-coach-builder__subhead">Build a clean prompt, place it in the active AI chat, and send it when you are ready.</p>
+        </div>
         <button type="button" class="ai-coach-builder__close" aria-label="Close">×</button>
       </header>
-      <label class="ai-coach-builder__label" for="aiCoachTemplateSelect">Template</label>
-      <select id="aiCoachTemplateSelect" class="ai-coach-builder__input"></select>
-      <p id="aiCoachTemplateHint" class="ai-coach-builder__hint"></p>
+      <section class="ai-coach-builder__section">
+        <div class="ai-coach-builder__section-head">
+          <span class="ai-coach-builder__section-kicker">Setup</span>
+          <p class="ai-coach-builder__hint">Choose a template and role that match the conversation you want to have.</p>
+        </div>
+        <label class="ai-coach-builder__label" for="aiCoachTemplateSelect">Template</label>
+        <select id="aiCoachTemplateSelect" class="ai-coach-builder__input"></select>
+        <p id="aiCoachTemplateHint" class="ai-coach-builder__hint"></p>
 
-      <label class="ai-coach-builder__label" for="aiCoachRoleSelect">Role</label>
-      <select id="aiCoachRoleSelect" class="ai-coach-builder__input">
-        <option value="teacher">Teacher</option>
-        <option value="software_engineer" selected>Software Engineer</option>
-        <option value="solution_architecture">Solution Architecture</option>
-        <option value="manager">Manager</option>
-        <option value="director">Director</option>
-        <option value="doctor">Doctor</option>
-        <option value="other">Other</option>
-      </select>
-      <p id="aiCoachRoleHint" class="ai-coach-builder__hint"></p>
-      <p id="aiCoachRoleCoachHint" class="ai-coach-builder__hint"></p>
+        <label class="ai-coach-builder__label" for="aiCoachRoleSelect">Role</label>
+        <select id="aiCoachRoleSelect" class="ai-coach-builder__input">
+          <option value="teacher">Teacher</option>
+          <option value="software_engineer" selected>Software Engineer</option>
+          <option value="solution_architecture">Solution Architecture</option>
+          <option value="manager">Manager</option>
+          <option value="director">Director</option>
+          <option value="doctor">Doctor</option>
+          <option value="other">Other</option>
+        </select>
+        <p id="aiCoachRoleHint" class="ai-coach-builder__hint"></p>
+        <p id="aiCoachRoleCoachHint" class="ai-coach-builder__hint"></p>
+      </section>
 
-      <label class="ai-coach-builder__label" for="aiCoachTask">Task (Required)</label>
-      <textarea id="aiCoachTask" class="ai-coach-builder__input" rows="2" placeholder="What do you need from AI?"></textarea>
+      <section class="ai-coach-builder__section">
+        <div class="ai-coach-builder__section-head">
+          <span class="ai-coach-builder__section-kicker">Required Context</span>
+          <p class="ai-coach-builder__hint">These fields help the AI reason from your evidence instead of guessing.</p>
+        </div>
+        <label class="ai-coach-builder__label" for="aiCoachTask">Task</label>
+        <textarea id="aiCoachTask" class="ai-coach-builder__input" rows="2" placeholder="What do you need from AI?"></textarea>
 
-      <label class="ai-coach-builder__label" for="aiCoachContext">Context (Required)</label>
-      <textarea id="aiCoachContext" class="ai-coach-builder__input" rows="3" placeholder="Error text, stack trace, file path, expected vs actual behavior"></textarea>
+        <label class="ai-coach-builder__label" for="aiCoachContext">Context</label>
+        <textarea id="aiCoachContext" class="ai-coach-builder__input" rows="3" placeholder="Error text, stack trace, file path, expected vs actual behavior"></textarea>
 
-      <label class="ai-coach-builder__label" for="aiCoachAttempt">What You Tried (Required)</label>
-      <textarea id="aiCoachAttempt" class="ai-coach-builder__input" rows="3" placeholder="What you already tried, hypotheses, and what changed"></textarea>
+        <label class="ai-coach-builder__label" for="aiCoachAttempt">What You Tried</label>
+        <textarea id="aiCoachAttempt" class="ai-coach-builder__input" rows="3" placeholder="What you already tried, hypotheses, and what changed"></textarea>
+      </section>
 
-      <label class="ai-coach-builder__label" for="aiCoachConstraints">Constraints (Optional)</label>
-      <textarea id="aiCoachConstraints" class="ai-coach-builder__input" rows="2" placeholder="Tech stack, style guide, performance limits, timeline"></textarea>
+      <section class="ai-coach-builder__section">
+        <div class="ai-coach-builder__section-head">
+          <span class="ai-coach-builder__section-kicker">Optional Details</span>
+          <p class="ai-coach-builder__hint">Add constraints or success criteria when you want tighter answers.</p>
+        </div>
+        <label class="ai-coach-builder__label" for="aiCoachConstraints">Constraints</label>
+        <textarea id="aiCoachConstraints" class="ai-coach-builder__input" rows="2" placeholder="Tech stack, style guide, performance limits, timeline"></textarea>
 
-      <label class="ai-coach-builder__label" for="aiCoachAcceptance">Acceptance Criteria (Optional)</label>
-      <textarea id="aiCoachAcceptance" class="ai-coach-builder__input" rows="2" placeholder="How should we know the solution is complete and correct?"></textarea>
+        <label class="ai-coach-builder__label" for="aiCoachAcceptance">Acceptance Criteria</label>
+        <textarea id="aiCoachAcceptance" class="ai-coach-builder__input" rows="2" placeholder="How should we know the solution is complete and correct?"></textarea>
+      </section>
 
-      <div class="ai-coach-builder__actions">
-        <button type="button" id="aiCoachInsertBtn" class="ai-coach-builder__btn ai-coach-builder__btn--secondary">Build + Insert</button>
-        <button type="button" id="aiCoachSendBtn" class="ai-coach-builder__btn ai-coach-builder__btn--primary">Build + Send</button>
+      <div class="ai-coach-builder__footer">
+        <div class="ai-coach-builder__actions">
+          <button type="button" id="aiCoachInsertBtn" class="ai-coach-builder__btn ai-coach-builder__btn--secondary">Build + Insert</button>
+          <button type="button" id="aiCoachSendBtn" class="ai-coach-builder__btn ai-coach-builder__btn--primary">Build + Send</button>
+        </div>
+        <p id="aiCoachBuilderStatus" class="ai-coach-builder__status">Tip: press Ctrl/Cmd + O while focused in the AI chat to open this builder.</p>
       </div>
-      <p id="aiCoachBuilderStatus" class="ai-coach-builder__status"></p>
     `;
 
     document.body.appendChild(launcher);
