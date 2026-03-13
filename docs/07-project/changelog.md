@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- refactored `docs/prompts.md` into a richer prompt library with structured multi-line templates and reusable placeholders
+- updated prompt parsing, previews, and marketplace rendering so longer prompts stay readable in popup cards and inline suggestions
 - added inline prompt suggestions inside supported AI chat inputs, using local prompt-library matching, role-aware ranking, and popularity boosts
 - added a dedicated prompt suggestion engine and smoke coverage for inline suggestion ranking
 - added Prompt Marketplace with local markdown-backed prompt browsing, search, filtering, and trending

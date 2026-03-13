@@ -8,6 +8,11 @@ The library is stored in [Prompt Library Source](../prompts.md).
 
 That markdown file is imported into the extension bundle and parsed locally at runtime.
 
+The source now favors richer multi-line prompt templates with placeholders,
+checklists, and output instructions. The extension keeps the full prompt text
+for copy/insert/send actions, while popup cards and inline suggestions use
+compact previews for readability.
+
 ## Core capabilities
 
 - browse prompts by category
