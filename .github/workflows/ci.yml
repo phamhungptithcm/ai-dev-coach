@@ -58,6 +58,9 @@ jobs:
       - name: Validate prompt marketplace smoke checks
         run: node scripts/test-prompt-marketplace.mjs
 
+      - name: Validate prompt suggestion engine smoke checks
+        run: node scripts/test-prompt-suggestion-engine.mjs
+
       - name: Validate extension JavaScript syntax
         run: |
           set -euo pipefail

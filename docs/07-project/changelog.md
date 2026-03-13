@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added inline prompt suggestions inside supported AI chat inputs, using local prompt-library matching, role-aware ranking, and popularity boosts
+- added a dedicated prompt suggestion engine and smoke coverage for inline suggestion ranking
 - added Prompt Marketplace with local markdown-backed prompt browsing, search, filtering, and trending
 - added marketplace prompt actions to copy, insert, or send prompts into supported AI chat pages
 - added prompt-library sync tooling so `docs/prompts.md` can drive the extension bundle
