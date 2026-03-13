@@ -5,6 +5,7 @@
   const DEFAULT_PLATFORM = "Unknown";
   const DEFAULT_SOURCE = "composer_submit";
   const DEFAULT_CATEGORY = "unclassified";
+  const DEFAULT_TREND_WINDOW_DAYS = 7;
   const CATEGORY_LABELS = {
     debugging: "Debugging",
     code_review: "Code Review",
@@ -128,6 +129,33 @@
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+  }
+
+  function shiftDay(timestamp, offsetDays) {
+    const date = new Date(normalizeTimestamp(timestamp));
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + offsetDays);
+    return date.getTime();
+  }
+
+  function buildDayKeys(endTimestamp, days) {
+    const safeDays = Math.max(1, Math.min(30, asNonNegativeInteger(days) || DEFAULT_TREND_WINDOW_DAYS));
+    const keys = [];
+    for (let index = safeDays - 1; index >= 0; index -= 1) {
+      keys.push(buildDayKey(shiftDay(endTimestamp, -index)));
+    }
+    return keys;
+  }
+
+  function formatDayLabel(dayKey) {
+    const parsed = new Date(`${dayKey}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) {
+      return dayKey;
+    }
+    return parsed.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric"
+    });
   }
 
   function makeCountMap(rawMap, normalizeKey = (key) => clean(key)) {
@@ -510,6 +538,149 @@
     };
   }
 
+  function buildTrendDirection(firstValue, lastValue, options = {}) {
+    const threshold = Math.max(1, asNonNegativeInteger(options.threshold) || 5);
+    if (!Number.isFinite(firstValue) || !Number.isFinite(lastValue)) {
+      return "steady";
+    }
+
+    const delta = Math.round(lastValue - firstValue);
+    if (delta >= threshold) {
+      return "up";
+    }
+    if (delta <= -threshold) {
+      return "down";
+    }
+    return "steady";
+  }
+
+  function buildTrendSummaryLabel(metricLabel, direction, delta, options = {}) {
+    const preferLower = !!options.preferLower;
+    const unit = clean(options.unit) || "point";
+    const pluralUnit = clean(options.pluralUnit) || `${unit}s`;
+    if (!Number.isFinite(delta)) {
+      return `${metricLabel} trend needs more activity before it can be compared.`;
+    }
+    const absoluteDelta = Math.abs(delta);
+    const unitLabel = absoluteDelta === 1 ? unit : pluralUnit;
+
+    if (direction === "up") {
+      return preferLower
+        ? `${metricLabel} increased by ${absoluteDelta} ${unitLabel} across the visible window.`
+        : `${metricLabel} is improving by ${absoluteDelta} ${unitLabel} across the visible window.`;
+    }
+    if (direction === "down") {
+      return preferLower
+        ? `${metricLabel} improved by dropping ${absoluteDelta} ${unitLabel} across the visible window.`
+        : `${metricLabel} dropped by ${absoluteDelta} ${unitLabel} across the visible window.`;
+    }
+    return `${metricLabel} stayed roughly stable across the visible window.`;
+  }
+
+  function buildTrendDashboard(rawState, options = {}) {
+    const state = coerceState(rawState);
+    const endTimestamp = normalizeTimestamp(options.timestamp || options.now);
+    const days = Math.max(1, Math.min(30, asNonNegativeInteger(options.days) || DEFAULT_TREND_WINDOW_DAYS));
+    const dayKeys = buildDayKeys(endTimestamp, days);
+    const windowDaySet = new Set(dayKeys);
+    const filteredEvents = state.promptEvents.filter((event) => windowDaySet.has(event.dayKey));
+    const bucketByDay = dayKeys.reduce((accumulator, dayKey) => {
+      accumulator[dayKey] = [];
+      return accumulator;
+    }, {});
+
+    filteredEvents.forEach((event) => {
+      if (bucketByDay[event.dayKey]) {
+        bucketByDay[event.dayKey].push(event);
+      }
+    });
+
+    const qualitySeries = dayKeys.map((dayKey) => {
+      const events = bucketByDay[dayKey];
+      const scoredEvents = events.filter((event) => Number.isFinite(event.score));
+      const averageScore = scoredEvents.length > 0
+        ? Math.round(scoredEvents.reduce((sum, event) => sum + event.score, 0) / scoredEvents.length)
+        : null;
+
+      return {
+        dayKey,
+        label: formatDayLabel(dayKey),
+        totalPrompts: events.length,
+        averageScore
+      };
+    });
+
+    const warningSeries = dayKeys.map((dayKey) => {
+      const events = bucketByDay[dayKey];
+      const warningEventCount = events.filter((event) => event.warningCount > 0).length;
+      return {
+        dayKey,
+        label: formatDayLabel(dayKey),
+        totalPrompts: events.length,
+        warningEventCount,
+        warningRate: events.length > 0 ? Math.round((warningEventCount / events.length) * 100) : 0
+      };
+    });
+
+    const categorySummary = summarizePromptEvents(filteredEvents);
+    const categoryBreakdown = rankCountMap(
+      categorySummary.categoryCounts,
+      categorySummary.totalPrompts,
+      getCategoryLabel
+    );
+
+    const scoredTrendPoints = qualitySeries.filter((entry) => Number.isFinite(entry.averageScore));
+    const qualityFirst = scoredTrendPoints.length > 0 ? scoredTrendPoints[0].averageScore : null;
+    const qualityLast = scoredTrendPoints.length > 0 ? scoredTrendPoints[scoredTrendPoints.length - 1].averageScore : null;
+    const qualityDelta =
+      Number.isFinite(qualityFirst) && Number.isFinite(qualityLast)
+        ? Math.round(qualityLast - qualityFirst)
+        : null;
+    const qualityDirection = buildTrendDirection(qualityFirst, qualityLast, {
+      threshold: 5
+    });
+
+    const warningFirst = warningSeries.length > 0 ? warningSeries[0].warningEventCount : null;
+    const warningLast = warningSeries.length > 0 ? warningSeries[warningSeries.length - 1].warningEventCount : null;
+    const warningDelta =
+      Number.isFinite(warningFirst) && Number.isFinite(warningLast)
+        ? Math.round(warningLast - warningFirst)
+        : null;
+    const warningDirection = buildTrendDirection(warningFirst, warningLast, {
+      threshold: 1
+    });
+
+    return {
+      days,
+      totalPrompts: filteredEvents.length,
+      activeDays: qualitySeries.filter((entry) => entry.totalPrompts > 0).length,
+      qualitySeries,
+      warningSeries,
+      categoryBreakdown,
+      topCategory: categoryBreakdown[0] || null,
+      qualityTrend: {
+        direction: qualityDirection,
+        delta: qualityDelta,
+        summary: buildTrendSummaryLabel("Prompt quality", qualityDirection, qualityDelta, {
+          unit: "point"
+        })
+      },
+      warningTrend: {
+        direction: warningDirection,
+        delta: warningDelta,
+        summary: buildTrendSummaryLabel("Warning frequency", warningDirection, warningDelta, {
+          preferLower: true,
+          unit: "event"
+        })
+      },
+      rules: {
+        qualityOverTime: "Average prompt score per day across scored prompt events.",
+        warningFrequency: "Count of prompt events per day that triggered one or more warnings.",
+        categoryBreakdown: "Prompt category mix across the visible local history window."
+      }
+    };
+  }
+
   function buildFutureSyncPayload(rawState, options = {}) {
     const state = coerceState(rawState);
     return {
@@ -606,6 +777,7 @@
     STORAGE_KEY,
     SCHEMA_VERSION,
     MAX_PROMPT_EVENTS,
+    DEFAULT_TREND_WINDOW_DAYS,
     DEFAULT_CATEGORY,
     CATEGORY_LABELS,
     createEmptyState,
@@ -614,6 +786,7 @@
     coerceState,
     appendPromptEvent,
     buildDailySessionSummary,
+    buildTrendDashboard,
     buildFutureSyncPayload,
     readState,
     writeState,

@@ -323,6 +323,17 @@ const sessionSummaryHeadline = document.getElementById("sessionSummaryHeadline")
 const sessionSummaryStats = document.getElementById("sessionSummaryStats");
 const sessionCategoryList = document.getElementById("sessionCategoryList");
 const sessionSuggestionList = document.getElementById("sessionSuggestionList");
+const trendWindowLabel = document.getElementById("trendWindowLabel");
+const trendActiveDays = document.getElementById("trendActiveDays");
+const qualityTrendDelta = document.getElementById("qualityTrendDelta");
+const qualityTrendChart = document.getElementById("qualityTrendChart");
+const qualityTrendSummary = document.getElementById("qualityTrendSummary");
+const warningTrendDelta = document.getElementById("warningTrendDelta");
+const warningTrendChart = document.getElementById("warningTrendChart");
+const warningTrendSummary = document.getElementById("warningTrendSummary");
+const trendTopCategory = document.getElementById("trendTopCategory");
+const categoryTrendBars = document.getElementById("categoryTrendBars");
+const trendRulesSummary = document.getElementById("trendRulesSummary");
 
 function storageGet(keys) {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
@@ -354,7 +365,11 @@ function getPromptLinter() {
 
 function getLearningAnalytics() {
   const analytics = window.AIDevCoachLearningAnalytics;
-  if (!analytics || typeof analytics.getSnapshot !== "function") {
+  if (
+    !analytics ||
+    typeof analytics.getSnapshot !== "function" ||
+    typeof analytics.buildTrendDashboard !== "function"
+  ) {
     throw new Error("Learning analytics engine is unavailable.");
   }
   return analytics;
@@ -673,14 +688,228 @@ function pickTopEntry(countMap) {
   return { label, count };
 }
 
+function renderEmptyTrendChart(target, message) {
+  target.innerHTML = `<text x="110" y="46" text-anchor="middle" font-size="11" fill="#6b8597">${message}</text>`;
+}
+
+function buildLineChartMarkup(series, getValue, options = {}) {
+  const width = 220;
+  const height = 84;
+  const paddingX = 14;
+  const paddingTop = 10;
+  const paddingBottom = 20;
+  const chartHeight = height - paddingTop - paddingBottom;
+  const maxValue = Number.isFinite(options.maxValue) ? options.maxValue : 100;
+  const validSeries = series.filter((entry) => Number.isFinite(getValue(entry)));
+
+  if (validSeries.length === 0) {
+    return null;
+  }
+
+  const xForIndex = (index) =>
+    series.length === 1 ? width / 2 : paddingX + (index * (width - paddingX * 2)) / (series.length - 1);
+  const yForValue = (value) =>
+    height - paddingBottom - (Math.max(0, Math.min(maxValue, value)) / maxValue) * chartHeight;
+
+  const guides = [0.25, 0.5, 0.75]
+    .map((ratio) => {
+      const y = paddingTop + chartHeight * ratio;
+      return `<line x1="${paddingX}" y1="${y}" x2="${width - paddingX}" y2="${y}" stroke="rgba(123, 170, 204, 0.18)" stroke-width="1" />`;
+    })
+    .join("");
+
+  const segments = [];
+  let currentSegment = [];
+
+  series.forEach((entry, index) => {
+    const value = getValue(entry);
+    if (!Number.isFinite(value)) {
+      if (currentSegment.length > 0) {
+        segments.push(currentSegment);
+        currentSegment = [];
+      }
+      return;
+    }
+    currentSegment.push(`${xForIndex(index)},${yForValue(value)}`);
+  });
+
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment);
+  }
+
+  const polylines = segments
+    .map(
+      (segment) =>
+        `<polyline fill="none" stroke="${options.stroke || "#4b8fbe"}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${segment.join(" ")}" />`
+    )
+    .join("");
+
+  const dots = series
+    .map((entry, index) => {
+      const value = getValue(entry);
+      if (!Number.isFinite(value)) {
+        return "";
+      }
+      return `<circle cx="${xForIndex(index)}" cy="${yForValue(value)}" r="3.2" fill="${options.dotFill || "#2a648f"}" />`;
+    })
+    .join("");
+
+  const labels = series
+    .map((entry, index) => {
+      const dayLabel = entry.dayKey ? entry.dayKey.slice(8) : String(index + 1);
+      return `<text x="${xForIndex(index)}" y="${height - 5}" text-anchor="middle" font-size="9" fill="#6b8597">${dayLabel}</text>`;
+    })
+    .join("");
+
+  return `${guides}${polylines}${dots}${labels}`;
+}
+
+function buildBarChartMarkup(series, getValue, options = {}) {
+  const width = 220;
+  const height = 84;
+  const paddingX = 14;
+  const paddingTop = 10;
+  const paddingBottom = 20;
+  const chartHeight = height - paddingTop - paddingBottom;
+  const values = series.map((entry) => getValue(entry)).filter((value) => Number.isFinite(value));
+  const maxValue = Math.max(Number.isFinite(options.maxValue) ? options.maxValue : 0, ...values, 1);
+
+  if (values.length === 0) {
+    return null;
+  }
+
+  const gap = 6;
+  const barWidth = Math.max(10, (width - paddingX * 2 - gap * Math.max(0, series.length - 1)) / Math.max(1, series.length));
+
+  const guides = [0.25, 0.5, 0.75]
+    .map((ratio) => {
+      const y = paddingTop + chartHeight * ratio;
+      return `<line x1="${paddingX}" y1="${y}" x2="${width - paddingX}" y2="${y}" stroke="rgba(123, 170, 204, 0.18)" stroke-width="1" />`;
+    })
+    .join("");
+
+  const bars = series
+    .map((entry, index) => {
+      const value = getValue(entry);
+      const x = paddingX + index * (barWidth + gap);
+      const normalized = Number.isFinite(value) ? Math.max(0, value) : 0;
+      const barHeight = maxValue > 0 ? (normalized / maxValue) * chartHeight : 0;
+      const y = height - paddingBottom - barHeight;
+      const dayLabel = entry.dayKey ? entry.dayKey.slice(8) : String(index + 1);
+      return [
+        `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="4" fill="${options.fill || "rgba(125, 183, 227, 0.88)"}" />`,
+        `<text x="${x + barWidth / 2}" y="${height - 5}" text-anchor="middle" font-size="9" fill="#6b8597">${dayLabel}</text>`
+      ].join("");
+    })
+    .join("");
+
+  return `${guides}${bars}`;
+}
+
+function setTrendDelta(node, direction, delta, options = {}) {
+  node.className = "trend-delta";
+  if (!Number.isFinite(delta)) {
+    node.textContent = "--";
+    node.classList.add("trend-delta--steady");
+    return;
+  }
+
+  const preferLower = !!options.preferLower;
+  let visualDirection = direction;
+  if (preferLower && direction === "up") {
+    visualDirection = "down";
+  } else if (preferLower && direction === "down") {
+    visualDirection = "up";
+  }
+
+  node.classList.add(`trend-delta--${visualDirection}`);
+  const unit = clean(options.unit) || "";
+  const sign = delta > 0 ? "+" : delta < 0 ? "" : "±";
+  node.textContent = `${sign}${delta}${unit ? ` ${unit}` : ""}`;
+}
+
+function renderCategoryTrendBars(categories) {
+  categoryTrendBars.innerHTML = "";
+
+  if (!Array.isArray(categories) || categories.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Category mix will appear after more prompts are tracked.";
+    categoryTrendBars.appendChild(empty);
+    return;
+  }
+
+  categories.slice(0, 4).forEach((category) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "category-bar";
+    wrapper.innerHTML = `
+      <div class="category-bar__meta">
+        <span>${category.label}</span>
+        <span>${category.count} • ${category.percentage}%</span>
+      </div>
+      <div class="category-bar__track">
+        <div class="category-bar__fill" style="width: ${category.percentage}%"></div>
+      </div>
+    `;
+    categoryTrendBars.appendChild(wrapper);
+  });
+}
+
+function renderTrendDashboard(dashboard) {
+  trendWindowLabel.textContent = `${dashboard.days} days`;
+  trendActiveDays.textContent = `${dashboard.activeDays} active`;
+  trendActiveDays.className = `grade ${dashboard.activeDays > 0 ? "grade--b" : "grade--na"}`;
+
+  setTrendDelta(qualityTrendDelta, dashboard.qualityTrend.direction, dashboard.qualityTrend.delta, {
+    unit: "pts"
+  });
+  qualityTrendSummary.textContent = dashboard.qualityTrend.summary;
+
+  const qualityMarkup = buildLineChartMarkup(dashboard.qualitySeries, (entry) => entry.averageScore, {
+    maxValue: 100,
+    stroke: "#4b8fbe",
+    dotFill: "#215d8b"
+  });
+  if (qualityMarkup) {
+    qualityTrendChart.innerHTML = qualityMarkup;
+  } else {
+    renderEmptyTrendChart(qualityTrendChart, "Need more scored prompts");
+  }
+
+  setTrendDelta(warningTrendDelta, dashboard.warningTrend.direction, dashboard.warningTrend.delta, {
+    unit: "events",
+    preferLower: true
+  });
+  warningTrendSummary.textContent = dashboard.warningTrend.summary;
+
+  const warningMarkup = buildBarChartMarkup(
+    dashboard.warningSeries,
+    (entry) => entry.warningEventCount,
+    {
+      fill: "rgba(186, 47, 38, 0.68)"
+    }
+  );
+  if (warningMarkup) {
+    warningTrendChart.innerHTML = warningMarkup;
+  } else {
+    renderEmptyTrendChart(warningTrendChart, "No warning history yet");
+  }
+
+  trendTopCategory.textContent = dashboard.topCategory ? dashboard.topCategory.label : "--";
+  renderCategoryTrendBars(dashboard.categoryBreakdown);
+  trendRulesSummary.textContent = `Quality: ${dashboard.rules.qualityOverTime} Warnings: ${dashboard.rules.warningFrequency}`;
+}
+
 function renderAnalyticsSnapshot(rawState) {
   let snapshot = null;
   let dailySummary = null;
+  let trendDashboard = null;
 
   try {
     const analytics = getLearningAnalytics();
     snapshot = analytics.getSnapshot(rawState);
     dailySummary = analytics.buildDailySessionSummary(rawState);
+    trendDashboard = analytics.buildTrendDashboard(rawState);
   } catch (error) {
     analyticsPromptCount.textContent = "--";
     analyticsAverageScore.textContent = "--";
@@ -694,6 +923,20 @@ function renderAnalyticsSnapshot(rawState) {
     sessionSummaryStats.textContent = "";
     sessionCategoryList.innerHTML = "";
     sessionSuggestionList.innerHTML = "";
+    trendWindowLabel.textContent = "--";
+    trendActiveDays.textContent = "0 active";
+    trendActiveDays.className = "grade grade--na";
+    qualityTrendDelta.textContent = "--";
+    qualityTrendDelta.className = "trend-delta trend-delta--steady";
+    qualityTrendChart.innerHTML = "";
+    qualityTrendSummary.textContent = "";
+    warningTrendDelta.textContent = "--";
+    warningTrendDelta.className = "trend-delta trend-delta--steady";
+    warningTrendChart.innerHTML = "";
+    warningTrendSummary.textContent = "";
+    trendTopCategory.textContent = "--";
+    categoryTrendBars.innerHTML = "";
+    trendRulesSummary.textContent = "";
     return;
   }
 
@@ -724,6 +967,7 @@ function renderAnalyticsSnapshot(rawState) {
   analyticsMeta.textContent = metaParts.join(" | ") || "Stored locally for now. Future sync will build from this event history.";
 
   renderDailySessionSummary(dailySummary);
+  renderTrendDashboard(trendDashboard);
 }
 
 function renderList(target, items, emptyText) {

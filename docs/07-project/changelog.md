@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added a lightweight local trend dashboard with quality-over-time, warning-frequency, and prompt-category views
 - added daily session summaries to learning analytics with prompt category breakdowns and friendly coaching suggestions
 - added local learning analytics event tracking for prompt submissions with popup snapshot summary
 - added future backend sync payload contract for prompt-session analytics rollout

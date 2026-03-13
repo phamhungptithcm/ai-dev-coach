@@ -54,6 +54,24 @@ Each daily summary includes:
 
 This keeps the analytics useful for day-to-day reflection before the later trend-chart stories arrive.
 
+## Trend dashboard
+
+The popup now includes a lightweight local trend dashboard for the recent activity window.
+
+Current trend views:
+
+- quality over time: daily average prompt score
+- warning frequency trend: number of prompt events per day that triggered warnings
+- prompt type breakdown: category mix across the visible window
+
+Trend rules stay explicit and local-first:
+
+- quality trend uses the average score of scored prompt events for each day
+- warning trend counts prompt events that emitted one or more warnings
+- category bars group events into Debugging, Code Review, System Design, Refactoring, Performance, Learning, or Unclassified
+
+The first release keeps the dashboard lightweight and fully local in the popup.
+
 ## Storage model
 
 The local analytics state is stored under the `learningAnalytics` key.

@@ -178,6 +178,38 @@
         <ul id="sessionCategoryList" class="score-list"></ul>
         <ul id="sessionSuggestionList" class="score-list score-list--tips"></ul>
       </section>
+
+      <section class="score-card" aria-label="Trend dashboard">
+        <div class="score-card__header">
+          <span>Trend Dashboard</span>
+          <strong id="trendWindowLabel">7 days</strong>
+          <span id="trendActiveDays" class="grade grade--na">0 active</span>
+        </div>
+        <div class="trend-panel">
+          <div class="trend-panel__head">
+            <span>Quality over time</span>
+            <span id="qualityTrendDelta" class="trend-delta">--</span>
+          </div>
+          <svg id="qualityTrendChart" class="trend-chart" viewBox="0 0 220 84" role="img" aria-label="Prompt quality trend"></svg>
+          <p id="qualityTrendSummary" class="muted"></p>
+        </div>
+        <div class="trend-panel">
+          <div class="trend-panel__head">
+            <span>Warning frequency</span>
+            <span id="warningTrendDelta" class="trend-delta">--</span>
+          </div>
+          <svg id="warningTrendChart" class="trend-chart" viewBox="0 0 220 84" role="img" aria-label="Warning frequency trend"></svg>
+          <p id="warningTrendSummary" class="muted"></p>
+        </div>
+        <div class="trend-panel">
+          <div class="trend-panel__head">
+            <span>Prompt types</span>
+            <span id="trendTopCategory" class="trend-delta">--</span>
+          </div>
+          <div id="categoryTrendBars" class="category-bars"></div>
+          <p id="trendRulesSummary" class="muted"></p>
+        </div>
+      </section>
     </section>
   </main>
 
