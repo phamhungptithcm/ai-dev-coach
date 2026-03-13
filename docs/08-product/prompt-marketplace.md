@@ -13,6 +13,7 @@ That markdown file is imported into the extension bundle and parsed locally at r
 - browse prompts by category
 - search prompt text locally
 - filter by category
+- show inline prompt suggestions while the user types in supported AI chat inputs
 - copy prompts to clipboard
 - insert prompts into supported AI chat inputs
 - insert and send prompts on supported AI chat pages
@@ -49,6 +50,7 @@ Tracked actions:
 - copy
 - insert
 - send
+- inline suggestion insert
 
 Trending prompts are ranked from:
 
@@ -71,3 +73,16 @@ Supported targets:
 - DeepSeek
 
 If the active tab is not a supported AI chat page, the marketplace shows a friendly failure message instead of silently doing nothing.
+
+## Inline prompt suggestions
+
+AI Dev Coach can surface a lightweight suggestion dropdown directly in the AI chat composer.
+
+The inline suggestions are ranked from:
+
+- typed query relevance
+- lightweight intent detection
+- role-aware weighting
+- local prompt popularity
+
+The first release stays local-first and reuses the same prompt library stored in `docs/prompts.md`.
