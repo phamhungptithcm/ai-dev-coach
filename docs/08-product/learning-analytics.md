@@ -1,6 +1,6 @@
 # Learning Analytics
 
-AI Dev Coach now includes the first V2 analytics foundation for prompt-session tracking.
+AI Dev Coach now includes the first V2 analytics foundation for prompt-session tracking and daily session summaries.
 
 This release is intentionally privacy-first:
 
@@ -17,6 +17,7 @@ Current event fields:
 - `type`: `prompt_submitted`
 - `source`: for example `composer_submit`, `composer_send_only`, `quick_builder`, `quick_builder_send_only`
 - `platform`: ChatGPT, Claude, Gemini, Grok, DeepSeek, or `Unknown`
+- `category`: Debugging, Code Review, System Design, Refactoring, Performance, Learning, or `Unclassified`
 - `timestamp`
 - `promptLength`
 - `score`
@@ -39,7 +40,19 @@ The popup now reads the local analytics store and shows a compact snapshot:
 - last platform used
 - top source / top platform
 
-This is the first step toward daily summaries and trend views in later V2 stories.
+## Daily session summary
+
+The popup now also builds a local daily session summary from tracked prompt events.
+
+Each daily summary includes:
+
+- total prompts for the day
+- average quality score
+- prompt category breakdown
+- independent-attempt rate
+- key improvement suggestions in friendly language
+
+This keeps the analytics useful for day-to-day reflection before the later trend-chart stories arrive.
 
 ## Storage model
 
@@ -47,7 +60,7 @@ The local analytics state is stored under the `learningAnalytics` key.
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "promptEvents": [],
   "summary": {
     "totalPrompts": 0,
@@ -58,6 +71,7 @@ The local analytics state is stored under the `learningAnalytics` key.
     "lastPlatform": "",
     "platformCounts": {},
     "sourceCounts": {},
+    "categoryCounts": {},
     "dayCounts": {}
   },
   "updatedAt": 0
@@ -74,7 +88,7 @@ Example payload:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "exportedAt": 1760000000000,
   "cursor": null,
   "promptEvents": [
@@ -83,6 +97,7 @@ Example payload:
       "type": "prompt_submitted",
       "source": "composer_submit",
       "platform": "ChatGPT",
+      "category": "debugging",
       "timestamp": 1760000000000,
       "dayKey": "2026-03-13",
       "promptLength": 312,

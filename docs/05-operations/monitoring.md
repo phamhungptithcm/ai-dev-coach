@@ -20,6 +20,7 @@ It tracks:
 
 - prompt source
 - AI platform
+- prompt category
 - timestamp
 - prompt length
 - prompt score / grade
@@ -28,6 +29,20 @@ It tracks:
 - lint failed count
 
 The event log does not store full prompt bodies. This keeps analytics useful for learning trends while preserving a conservative privacy boundary.
+
+## Daily session summary
+
+The popup derives a local daily session summary from the tracked prompt events.
+
+Current summary fields include:
+
+- total prompts for the selected day
+- average quality score
+- average prompt length
+- prompt category mix
+- independent-attempt rate
+- shortcut and lint-issue counts
+- up to three improvement suggestions
 
 ## Prompt Monitoring Modes
 

@@ -317,6 +317,12 @@ const analyticsAverageScore = document.getElementById("analyticsAverageScore");
 const analyticsAverageLength = document.getElementById("analyticsAverageLength");
 const analyticsSummary = document.getElementById("analyticsSummary");
 const analyticsMeta = document.getElementById("analyticsMeta");
+const sessionSummaryScore = document.getElementById("sessionSummaryScore");
+const sessionSummaryDay = document.getElementById("sessionSummaryDay");
+const sessionSummaryHeadline = document.getElementById("sessionSummaryHeadline");
+const sessionSummaryStats = document.getElementById("sessionSummaryStats");
+const sessionCategoryList = document.getElementById("sessionCategoryList");
+const sessionSuggestionList = document.getElementById("sessionSuggestionList");
 
 function storageGet(keys) {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
@@ -669,15 +675,25 @@ function pickTopEntry(countMap) {
 
 function renderAnalyticsSnapshot(rawState) {
   let snapshot = null;
+  let dailySummary = null;
 
   try {
-    snapshot = getLearningAnalytics().getSnapshot(rawState);
+    const analytics = getLearningAnalytics();
+    snapshot = analytics.getSnapshot(rawState);
+    dailySummary = analytics.buildDailySessionSummary(rawState);
   } catch (error) {
     analyticsPromptCount.textContent = "--";
     analyticsAverageScore.textContent = "--";
     analyticsAverageLength.textContent = "--";
     analyticsSummary.textContent = "Learning analytics is unavailable in this popup build.";
     analyticsMeta.textContent = "";
+    sessionSummaryScore.textContent = "--/100";
+    sessionSummaryDay.textContent = "Today";
+    sessionSummaryDay.className = "grade grade--na";
+    sessionSummaryHeadline.textContent = "";
+    sessionSummaryStats.textContent = "";
+    sessionCategoryList.innerHTML = "";
+    sessionSuggestionList.innerHTML = "";
     return;
   }
 
@@ -706,6 +722,67 @@ function renderAnalyticsSnapshot(rawState) {
   }
 
   analyticsMeta.textContent = metaParts.join(" | ") || "Stored locally for now. Future sync will build from this event history.";
+
+  renderDailySessionSummary(dailySummary);
+}
+
+function renderList(target, items, emptyText) {
+  target.innerHTML = "";
+
+  if (!Array.isArray(items) || items.length === 0) {
+    const item = document.createElement("li");
+    item.textContent = emptyText;
+    target.appendChild(item);
+    return;
+  }
+
+  items.forEach((entry) => {
+    const item = document.createElement("li");
+    item.textContent = entry;
+    target.appendChild(item);
+  });
+}
+
+function renderDailySessionSummary(summary) {
+  sessionSummaryDay.textContent = "Today";
+
+  if (!summary || summary.isEmpty) {
+    sessionSummaryScore.textContent = "--/100";
+    sessionSummaryDay.className = "grade grade--na";
+    sessionSummaryHeadline.textContent = "No prompts tracked today yet.";
+    sessionSummaryStats.textContent = "Send a prompt on a supported AI page to build your first daily summary.";
+    renderList(sessionCategoryList, [], "Prompt categories will appear here once today has activity.");
+    renderList(sessionSuggestionList, [], "Your next coaching suggestions will appear after the first prompt.");
+    return;
+  }
+
+  sessionSummaryScore.textContent = formatAnalyticsValue(summary.averageScore, "/100");
+  const summaryGrade = Number.isFinite(summary.averageScore)
+    ? summary.averageScore >= 85
+      ? "A"
+      : summary.averageScore >= 75
+        ? "B"
+        : summary.averageScore >= 60
+          ? "C"
+          : "D"
+    : "N/A";
+  sessionSummaryDay.className = `grade ${gradeClass(summaryGrade)}`;
+  sessionSummaryDay.textContent = summaryGrade;
+  sessionSummaryHeadline.textContent = summary.headline || "";
+  sessionSummaryStats.textContent = summary.statsLine || "";
+
+  renderList(
+    sessionCategoryList,
+    (summary.categories || []).slice(0, 3).map(
+      (category) => `${category.label}: ${category.count} prompt${category.count === 1 ? "" : "s"} (${category.percentage}%)`
+    ),
+    "Prompt categories will appear here once enough signals are available."
+  );
+  renderList(
+    sessionSuggestionList,
+    summary.suggestions || [],
+    "Great session. Keep using structured prompts with clear context and attempts."
+  );
 }
 
 function gradeClass(grade) {
