@@ -89,6 +89,7 @@ This docs pipeline does not change extension version, tags, or releases.
 
 - Release preparation now lives in `.github/workflows/prepare-release.yml`.
 - When extension code lands on `main`, it opens or updates a release PR like `chore(release): cut vX.Y.Z` instead of pushing directly to protected `main`.
+- The repository should allow GitHub Actions to create pull requests. If that setting is ever disabled, the workflow can use `REPO_ADMIN_TOKEN` so release preparation still runs without manual rescue.
 - After that release PR is approved and merged, `.github/workflows/release.yml` publishes the release:
   - reads the manifest version from `main`
   - creates the release tag `vX.Y.Z` if missing
@@ -96,6 +97,7 @@ This docs pipeline does not change extension version, tags, or releases.
   - packages the extension zip
   - creates or updates the GitHub Release
   - uploads and publishes the package to Chrome Web Store
+- If Chrome Web Store reports that the item is already in review, the workflow keeps the GitHub release successful and marks the store publish as deferred instead of failing the whole run.
 - Version bump is release-only on `main`. PRs into `staging` are guarded from release-version edits.
 
 ### Chrome Web Store Secrets
@@ -111,7 +113,7 @@ Configure these repository secrets before a `main` release run:
 Optional:
 
 - `CWS_PUBLISH_TARGET` (`default` or `trustedTesters`)
-- `REPO_ADMIN_TOKEN` (admin token for branch-protection automation and weekly sync admin merge fallback)
+- `REPO_ADMIN_TOKEN` (recommended for release PR creation, branch-protection automation, and weekly sync admin merge fallback)
 
 The release workflow exchanges the refresh token for an access token using OAuth, then calls the Chrome Web Store API upload and publish endpoints.
 

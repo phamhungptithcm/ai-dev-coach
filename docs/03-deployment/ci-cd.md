@@ -15,7 +15,7 @@ This workflow is docs-only and never bumps extension version.
 
 - `prepare-release.yml`
 Runs on `main` when extension code changes land. It calculates the next version and opens or updates a release PR against protected `main` instead of pushing directly.
-It also dispatches CI for the release PR branch so required checks are available before merge.
+It pushes the release branch directly. The repository should allow GitHub Actions to create pull requests, and `REPO_ADMIN_TOKEN` remains a fallback if that setting is disabled later.
 
 - `release.yml`
 Runs on `main` when a release PR merges and `extension/manifest.json` changes, or by manual dispatch, to:
@@ -25,6 +25,8 @@ Runs on `main` when a release PR merges and `extension/manifest.json` changes, o
 4. package extension zip
 5. create or update the GitHub release
 6. upload + publish to Chrome Web Store API
+
+If the Chrome Web Store item is already under review, the workflow keeps the GitHub release successful and records the store publish as deferred instead of failing the whole release.
 
 - `weekly-staging-to-main.yml`
 Runs weekly (and on manual dispatch) to create/reuse a sync PR from `staging` to `main` when `staging` is ahead.
@@ -63,4 +65,4 @@ Manual workflow to apply branch protection policies for `main` and `staging` usi
 - `CWS_PUBLISHER_ID`
 - `CWS_EXTENSION_ID`
 - optional `CWS_PUBLISH_TARGET`
-- optional `REPO_ADMIN_TOKEN` (for branch-protection apply + weekly admin merge fallback)
+- optional `REPO_ADMIN_TOKEN` (recommended for release PR creation, branch-protection apply, and weekly admin merge fallback)
