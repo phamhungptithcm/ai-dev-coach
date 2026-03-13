@@ -25,6 +25,7 @@
 - changed Chrome Web Store "item in review" handling so GitHub release workflows finish successfully and report store publish as deferred
 - aligned branch protection automation with merge-commit release flow and required `Staging Version Guard / guard` on `staging`
 - updated GitHub Actions dependencies to `actions/setup-python@v6` and `actions/upload-pages-artifact@v4` to stay ahead of the Node 20 deprecation path
+- enabled GitHub's `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` opt-in across workflows so future Node 24 runner changes are exercised now
 
 ## v1.2.15
 
