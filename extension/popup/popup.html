@@ -143,9 +143,34 @@
         <button id="openOptionsBtn" class="button">Open Settings</button>
       </div>
     </section>
+
+    <section class="card">
+      <div class="profile-card__head">
+        <h2>Learning Analytics</h2>
+        <span class="profile-badge">Local only</span>
+      </div>
+      <p class="muted">Prompt text is not stored. This view tracks prompt metadata only.</p>
+      <div class="analytics-grid">
+        <article class="analytics-pill">
+          <span class="analytics-pill__label">Tracked prompts</span>
+          <strong id="analyticsPromptCount">0</strong>
+        </article>
+        <article class="analytics-pill">
+          <span class="analytics-pill__label">Average score</span>
+          <strong id="analyticsAverageScore">--</strong>
+        </article>
+        <article class="analytics-pill">
+          <span class="analytics-pill__label">Average length</span>
+          <strong id="analyticsAverageLength">--</strong>
+        </article>
+      </div>
+      <p id="analyticsSummary" class="stats"></p>
+      <p id="analyticsMeta" class="muted"></p>
+    </section>
   </main>
 
   <script src="../shared/promptQualityEngine.js"></script>
+  <script src="../shared/learningAnalytics.js"></script>
   <script src="../content/secretDetection.js"></script>
   <script src="../shared/promptLinter.js"></script>
   <script src="popup.js"></script>

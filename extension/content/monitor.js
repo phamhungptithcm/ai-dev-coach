@@ -61,6 +61,7 @@
   };
 
   const DEFAULT_PROFILE = {
+    roleKey: "",
     role: "",
     skill: "",
     habitGoals: ""
@@ -335,6 +336,17 @@
       typeof window.AIDevCoachPromptLinter.lintPrompt === "function"
     ) {
       return window.AIDevCoachPromptLinter;
+    }
+
+    return null;
+  }
+
+  function getLearningAnalytics() {
+    if (
+      window.AIDevCoachLearningAnalytics &&
+      typeof window.AIDevCoachLearningAnalytics.trackPromptEvent === "function"
+    ) {
+      return window.AIDevCoachLearningAnalytics;
     }
 
     return null;
@@ -1004,17 +1016,64 @@
     await storageSet({ lastRuntimePromptEvaluation: runtimeEvaluation });
   }
 
-  async function handleSendOnly() {
+  function countFailedLintChecks(analysis) {
+    if (!analysis || !analysis.lintSummary) {
+      return 0;
+    }
+
+    return Number.isFinite(analysis.lintSummary.failed)
+      ? Math.max(0, Math.round(analysis.lintSummary.failed))
+      : 0;
+  }
+
+  async function trackPromptAnalyticsEvent(prompt, analysis, dependency, profile, options = {}) {
+    const learningAnalytics = getLearningAnalytics();
+    if (!learningAnalytics) {
+      return null;
+    }
+
+    const platform = detectPlatform();
+
+    try {
+      const nextState = await learningAnalytics.trackPromptEvent(chrome.storage.local, {
+        source: clean(options.source) || "composer_submit",
+        platform: clean(options.platform) || clean(platform?.name) || "Unknown",
+        timestamp: Date.now(),
+        promptLength: typeof prompt === "string" ? prompt.length : null,
+        score: analysis && Number.isFinite(analysis.score) ? analysis.score : null,
+        grade: clean(analysis?.grade || ""),
+        dependency,
+        hasIndependentAttempt: !!analysis?.hasIndependentAttempt,
+        hasShortcutIntent: !!analysis?.hasShortcutIntent,
+        warningCount: Array.isArray(analysis?.warnings) ? analysis.warnings.length : 0,
+        lintFailedCount: countFailedLintChecks(analysis),
+        roleKey: clean(profile?.roleKey || ""),
+        skillLevel: clean(profile?.skill || "")
+      });
+
+      return nextState && nextState.summary ? nextState.summary : null;
+    } catch (error) {
+      console.error("AI Dev Coach analytics tracking error", error);
+      return null;
+    }
+  }
+
+  async function handleSendOnly(options = {}) {
     if (shouldSkipSendPulse()) {
       return;
     }
 
     const { stats, dependency } = await updateSendOnlyStats();
+    const analyticsSummary = await trackPromptAnalyticsEvent("", null, dependency, cachedProfile, {
+      source: clean(options.source) || "composer_send_only"
+    });
+
     emitPromptAnalyzed({
       at: Date.now(),
       sendOnly: true,
       stats,
-      dependency
+      dependency,
+      analyticsSummary
     });
   }
 
@@ -1087,7 +1146,7 @@
     });
   }
 
-  async function handlePrompt(prompt) {
+  async function handlePrompt(prompt, options = {}) {
     if (!prompt || !prompt.trim()) {
       return;
     }
@@ -1108,12 +1167,16 @@
     if (!settings.enableCoach || !settings.promptListenerEnabled || !settings.readPromptContentEnabled) {
       const { stats, dependency } = await statsPromise;
       await runtimePromise;
+      const analyticsSummary = await trackPromptAnalyticsEvent(prompt, analysis, dependency, profile, {
+        source: clean(options.source) || "composer_submit"
+      });
       emitPromptAnalyzed({
         at: runtimeEvaluation.at,
         promptPreview: runtimeEvaluation.promptPreview,
         analysis: runtimeEvaluation,
         stats,
-        dependency
+        dependency,
+        analyticsSummary
       });
       return;
     }
@@ -1138,13 +1201,17 @@
 
     const { stats, dependency } = await statsPromise;
     await runtimePromise;
+    const analyticsSummary = await trackPromptAnalyticsEvent(prompt, analysis, dependency, profile, {
+      source: clean(options.source) || "composer_submit"
+    });
 
     emitPromptAnalyzed({
       at: runtimeEvaluation.at,
       promptPreview: runtimeEvaluation.promptPreview,
       analysis: runtimeEvaluation,
       stats,
-      dependency
+      dependency,
+      analyticsSummary
     });
 
     if (dependency >= settings.dependencyWarningThreshold) {
@@ -1663,7 +1730,7 @@
         }
 
         if (!settings.readPromptContentEnabled) {
-          await handleSendOnly();
+          await handleSendOnly({ source: "quick_builder_send_only" });
           return;
         }
 
@@ -1675,7 +1742,7 @@
           return;
         }
 
-        await handlePrompt(prompt);
+        await handlePrompt(prompt, { source: "quick_builder" });
       };
 
       analyzeFromBuilder().catch((error) => {
