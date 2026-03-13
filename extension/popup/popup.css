@@ -124,6 +124,10 @@ body {
   gap: 10px;
 }
 
+.profile-card__head .profile-badge {
+  margin: 0;
+}
+
 h2 {
   margin: 0;
   font-size: 15px;
@@ -359,6 +363,34 @@ textarea {
   font-size: 12px;
   line-height: 1.45;
   color: #284d66;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.analytics-pill {
+  border: 1px solid rgba(176, 213, 236, 0.94);
+  border-radius: 12px;
+  padding: 9px 10px;
+  background: rgba(243, 250, 255, 0.92);
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.analytics-pill__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #577389;
+}
+
+.analytics-pill strong {
+  font-size: 15px;
+  color: #214a67;
+  letter-spacing: 0.01em;
 }
 
 .score-card {

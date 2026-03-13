@@ -51,6 +51,7 @@ nav:
       - IntelliJ Plugin (Planned): 01-extensions/intellij-plugin.md
   - Product:
       - Feature Specification: 08-product/feature-spec.md
+      - Learning Analytics: 08-product/learning-analytics.md
       - Prompt Builder System: 08-product/prompt-builder-system.md
       - User Flow: 08-product/user-flow.md
   - Architecture:

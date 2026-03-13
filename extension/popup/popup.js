@@ -312,6 +312,11 @@ const scoreBreakdown = document.getElementById("scoreBreakdown");
 const scoreTips = document.getElementById("scoreTips");
 const promptLintSummary = document.getElementById("promptLintSummary");
 const lintResults = document.getElementById("lintResults");
+const analyticsPromptCount = document.getElementById("analyticsPromptCount");
+const analyticsAverageScore = document.getElementById("analyticsAverageScore");
+const analyticsAverageLength = document.getElementById("analyticsAverageLength");
+const analyticsSummary = document.getElementById("analyticsSummary");
+const analyticsMeta = document.getElementById("analyticsMeta");
 
 function storageGet(keys) {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
@@ -339,6 +344,14 @@ function getPromptLinter() {
     throw new Error("Prompt linter is unavailable.");
   }
   return linter;
+}
+
+function getLearningAnalytics() {
+  const analytics = window.AIDevCoachLearningAnalytics;
+  if (!analytics || typeof analytics.getSnapshot !== "function") {
+    throw new Error("Learning analytics engine is unavailable.");
+  }
+  return analytics;
 }
 
 function normalizeLevel(value) {
@@ -620,6 +633,81 @@ function renderStats(stats) {
   habitStats.textContent = `AI requests: ${stats.aiRequests} | Manual attempts: ${stats.manualAttempts} | Dependency: ${dependency}% | Bad prompts: ${stats.badPrompts} | Shortcut prompts: ${stats.shortcutPrompts} | Large pastes: ${stats.largePastes} | AI copies: ${stats.aiCopies} | Fast copies: ${stats.fastAiCopies}`;
 }
 
+function formatAnalyticsValue(value, suffix = "") {
+  return Number.isFinite(value) ? `${value}${suffix}` : "--";
+}
+
+function formatAnalyticsTime(timestamp) {
+  if (!Number.isFinite(timestamp) || timestamp <= 0) {
+    return "No prompt tracked yet";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(timestamp));
+}
+
+function pickTopEntry(countMap) {
+  const entries = Object.entries(countMap || {});
+  if (entries.length === 0) {
+    return null;
+  }
+
+  entries.sort((left, right) => {
+    if (right[1] !== left[1]) {
+      return right[1] - left[1];
+    }
+    return left[0].localeCompare(right[0]);
+  });
+
+  const [label, count] = entries[0];
+  return { label, count };
+}
+
+function renderAnalyticsSnapshot(rawState) {
+  let snapshot = null;
+
+  try {
+    snapshot = getLearningAnalytics().getSnapshot(rawState);
+  } catch (error) {
+    analyticsPromptCount.textContent = "--";
+    analyticsAverageScore.textContent = "--";
+    analyticsAverageLength.textContent = "--";
+    analyticsSummary.textContent = "Learning analytics is unavailable in this popup build.";
+    analyticsMeta.textContent = "";
+    return;
+  }
+
+  analyticsPromptCount.textContent = String(snapshot.totalPrompts || 0);
+  analyticsAverageScore.textContent = formatAnalyticsValue(snapshot.averageScore, "/100");
+  analyticsAverageLength.textContent = formatAnalyticsValue(snapshot.averagePromptLength, " chars");
+
+  const topPlatform = pickTopEntry(snapshot.platformCounts);
+  const topSource = pickTopEntry(snapshot.sourceCounts);
+  const lastSeen = formatAnalyticsTime(snapshot.lastPromptAt);
+
+  analyticsSummary.textContent =
+    snapshot.totalPrompts > 0
+      ? `Last tracked prompt: ${snapshot.lastPlatform || "Unknown"} on ${lastSeen}.`
+      : "No prompt events tracked yet. Send a prompt from ChatGPT, Claude, Gemini, Grok, or DeepSeek to start analytics.";
+
+  const metaParts = [];
+  if (snapshot.scoredPrompts > 0) {
+    metaParts.push(`${snapshot.scoredPrompts} scored prompt${snapshot.scoredPrompts === 1 ? "" : "s"}`);
+  }
+  if (topPlatform) {
+    metaParts.push(`Top platform: ${topPlatform.label} (${topPlatform.count})`);
+  }
+  if (topSource) {
+    metaParts.push(`Top source: ${topSource.label.replace(/_/g, " ")} (${topSource.count})`);
+  }
+
+  analyticsMeta.textContent = metaParts.join(" | ") || "Stored locally for now. Future sync will build from this event history.";
+}
+
 function gradeClass(grade) {
   if (grade === "A") {
     return "grade--a";
@@ -865,6 +953,7 @@ async function loadState() {
     "settings",
     "profile",
     "stats",
+    "learningAnalytics",
     "selectedTemplate",
     "lastGeneratedPrompt",
     "lastPromptAnalysis",
@@ -890,6 +979,7 @@ async function loadState() {
   renderProfileView(profile, false);
   renderTemplates(selectedTemplate);
   renderStats(stats);
+  renderAnalyticsSnapshot(data.learningAnalytics);
   renderChecklist(readPromptForm());
 
   if (data.lastGeneratedPrompt) {

@@ -100,6 +100,30 @@ Live bubble behavior:
 - bubble stays visible on supported AI pages and auto-remounts if site UI rerenders
 - bubble updates from both draft typing analysis and send-time analysis
 
+## 4.1 Learning Analytics (V2 Foundation)
+
+The first V2 analytics slice tracks prompt-session metadata locally.
+
+Tracked prompt-event fields currently include:
+
+- prompt source (`composer_submit`, `quick_builder`, send-only variants)
+- platform
+- timestamp
+- prompt length
+- prompt score and grade
+- dependency percentage at send time
+- independent-attempt flag
+- shortcut-intent flag
+- warning count
+- lint failed count
+- role and level metadata
+
+Privacy defaults:
+
+- analytics history is stored locally in `chrome.storage.local`
+- prompt text is not stored in the analytics event log
+- future backend sync is documented but not enabled yet
+
 ## 5. Sensitive Data Guardrail
 
 Before a prompt is sent, the extension can scan for likely secrets such as:
