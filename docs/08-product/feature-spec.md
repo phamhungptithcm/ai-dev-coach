@@ -51,12 +51,14 @@ See also: [Prompt Builder System](prompt-builder-system.md)
 
 Analyzes each submitted prompt for:
 
+- task clarity and vague-language detection
 - context evidence completeness (error/failure + expected/actual + artifact)
+- framework or stack context
 - independent attempt quality (action + result + blocker)
 - negative attempt phrases (for example, \"I didn't try\", \"chua thu\") as penalties
 - shortcut intent signals
 
-Outputs a quality score and targeted feedback.
+Outputs a shared quality score and targeted feedback across both popup prompt builder and live monitoring.
 
 Trigger behavior:
 

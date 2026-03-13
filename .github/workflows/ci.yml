@@ -35,6 +35,9 @@ jobs:
       - name: Validate extension package structure
         run: node scripts/validate-extension.mjs
 
+      - name: Validate prompt quality engine smoke checks
+        run: node scripts/test-prompt-quality-engine.mjs
+
       - name: Validate extension JavaScript syntax
         run: |
           set -euo pipefail
