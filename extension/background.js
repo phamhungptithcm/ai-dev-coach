@@ -123,3 +123,42 @@ chrome.commands.onCommand.addListener((command) => {
     });
   });
 });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || message.type !== "ai-dev-coach:run-marketplace-prompt") {
+    return undefined;
+  }
+
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const [activeTab] = tabs || [];
+    if (!activeTab || typeof activeTab.id !== "number") {
+      sendResponse({
+        ok: false,
+        error: "No active tab is available."
+      });
+      return;
+    }
+
+    chrome.tabs.sendMessage(
+      activeTab.id,
+      {
+        type: "ai-dev-coach:prompt-marketplace-run",
+        prompt: message.prompt || "",
+        action: message.action || "insert"
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          sendResponse({
+            ok: false,
+            error: chrome.runtime.lastError.message || "Unable to reach the current tab."
+          });
+          return;
+        }
+
+        sendResponse(response || { ok: false, error: "No response from the active tab." });
+      }
+    );
+  });
+
+  return true;
+});
