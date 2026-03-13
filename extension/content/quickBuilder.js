@@ -1622,17 +1622,23 @@
     document.addEventListener("focusin", scheduleLayoutUpdate, true);
     document.addEventListener("pointerdown", (event) => {
       const target = event.target instanceof HTMLElement ? event.target : null;
-      if (target && isCoachOwnedElement(target)) {
-        return;
-      }
-      if (
+      const clickedCoachUi = target && isCoachOwnedElement(target);
+      const clickedActiveInput =
         target &&
         state.inlineSuggestions.activeInput instanceof HTMLElement &&
-        state.inlineSuggestions.activeInput.contains(target)
-      ) {
+        state.inlineSuggestions.activeInput.contains(target);
+
+      if (clickedCoachUi) {
         return;
       }
-      hideInlineSuggestions();
+
+      if (!clickedActiveInput) {
+        hideInlineSuggestions();
+      }
+
+      if (state.panelOpen) {
+        togglePanel(false);
+      }
     });
     document.addEventListener("visibilitychange", scheduleLayoutUpdate, true);
   }
