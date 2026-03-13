@@ -58,6 +58,7 @@
         "shared/promptQualityEngine.js",
         "content/quickBuilder.js",
         "content/secretDetection.js",
+        "shared/promptLinter.js",
         "content/monitor.js",
         "content/interactionTracker.js"
       ],

@@ -112,6 +112,9 @@ Grade mapping:
 | - Specificity: 25/30                              |
 | - Risk Guardrails: 14/15                          |
 | Tips: Add framework version and one regression test|
+| Prompt Lint: 1 warning | 3 passed                 |
+| - ⚠ Missing technical context                     |
+| - ✓ No sensitive data detected                    |
 +---------------------------------------------------+
 | Habit Snapshot                                    |
 | AI requests | Manual attempts | Dependency | Paste |
@@ -160,6 +163,7 @@ Grade mapping:
 - Shortcut requests (copy-paste intent) reduce score and increase warnings.
 - Dictionaries support English and Vietnamese phrasing.
 - Popup scoring and live monitoring now use the same shared prompt-quality engine to keep results consistent.
+- Popup also shows prompt lint results with pass/fail output for short prompts, missing technical context, missing failure signals, and sensitive data.
 
 ## Current Implementation Files
 
@@ -170,3 +174,4 @@ Grade mapping:
 - `extension/content/quickBuilder.js`
 - `extension/content/monitor.js`
 - `extension/shared/promptQualityEngine.js`
+- `extension/shared/promptLinter.js`

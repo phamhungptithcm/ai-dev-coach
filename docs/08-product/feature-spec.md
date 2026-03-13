@@ -60,6 +60,23 @@ Analyzes each submitted prompt for:
 
 Outputs a shared quality score and targeted feedback across both popup prompt builder and live monitoring.
 
+## 3.1 Prompt Linter
+
+The extension also runs a lint-style ruleset to make feedback easier to scan before sending.
+
+Initial lint rules:
+
+- prompt too short
+- missing technical context
+- missing concrete error message for failure-oriented prompts
+- possible sensitive data
+
+Lint output:
+
+- shows pass and fail states in popup prompt builder
+- reuses the same rules in live monitoring
+- only blocks normal prompting when a severe rule is triggered, such as sensitive data detection
+
 Trigger behavior:
 
 - run in draft mode while typing with 500ms debounce (live bubble updates)

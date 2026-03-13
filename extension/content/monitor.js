@@ -81,6 +81,8 @@
     grade: "N/A",
     warnings: [],
     suggestions: [],
+    lintResults: [],
+    lintSummary: null,
     secretFindings: [],
     hasShortcutIntent: false,
     hasIndependentAttempt: false,
@@ -322,6 +324,17 @@
       typeof window.AIDevCoachPromptQualityEngine.calculatePromptScore === "function"
     ) {
       return window.AIDevCoachPromptQualityEngine;
+    }
+
+    return null;
+  }
+
+  function getPromptLinter() {
+    if (
+      window.AIDevCoachPromptLinter &&
+      typeof window.AIDevCoachPromptLinter.lintPrompt === "function"
+    ) {
+      return window.AIDevCoachPromptLinter;
     }
 
     return null;
@@ -821,6 +834,8 @@
       grade: analysis.grade,
       warnings: analysis.warnings.slice(0, 4),
       suggestions: analysis.suggestions.slice(0, 4),
+      lintResults: Array.isArray(analysis.lintResults) ? analysis.lintResults.slice(0, 4) : [],
+      lintSummary: analysis.lintSummary || null,
       secretFindings: Array.isArray(analysis.secretFindings) ? analysis.secretFindings.slice(0, 4) : [],
       hasShortcutIntent: analysis.hasShortcutIntent,
       hasIndependentAttempt: analysis.hasIndependentAttempt,
@@ -855,7 +870,61 @@
 
     return {
       ...analysis,
+      lintResults: [],
+      lintSummary: null,
       secretFindings: []
+    };
+  }
+
+  function appendUniqueMessages(target, messages) {
+    messages.forEach((message) => {
+      if (!message || target.includes(message)) {
+        return;
+      }
+      target.push(message);
+    });
+  }
+
+  function applyLintResultsToAnalysis(prompt, analysis, profile = DEFAULT_PROFILE, templateKey = "") {
+    const linter = getPromptLinter();
+    if (!linter || !analysis || !prompt) {
+      return analysis;
+    }
+
+    const report = linter.lintPrompt({
+      prompt,
+      analysis,
+      templateKey,
+      profile: {
+        roleKey: clean(profile.roleKey || ""),
+        role: clean(profile.role || ""),
+        skill: clean(profile.skill || "")
+      }
+    });
+
+    const warnings = analysis.warnings.slice();
+    const suggestions = analysis.suggestions.slice();
+
+    appendUniqueMessages(
+      warnings,
+      report.failingResults
+        .filter((result) => result.severity === "error" || result.severity === "warning")
+        .map((result) => result.message)
+    );
+
+    appendUniqueMessages(
+      suggestions,
+      report.failingResults
+        .filter((result) => result.severity !== "error")
+        .map((result) => result.description)
+    );
+
+    return {
+      ...analysis,
+      warnings,
+      suggestions,
+      lintResults: report.results,
+      lintSummary: report.summary
     };
   }
 
@@ -1024,9 +1093,13 @@
     }
 
     const { settings, profile } = await getState();
-    const analysis = applySecretFindingsToAnalysis(
+    const analysis = applyLintResultsToAnalysis(
       prompt,
-      analyzePrompt(prompt, settings.strictMode, profile)
+      applySecretFindingsToAnalysis(
+        prompt,
+        analyzePrompt(prompt, settings.strictMode, profile)
+      ),
+      profile
     );
     const runtimeEvaluation = buildRuntimeEvaluation(prompt, analysis);
     const statsPromise = updatePromptStats(analysis);
@@ -1274,9 +1347,13 @@
     rememberDraftPrompt(redactedPrompt);
     rememberSecretBlock(prompt);
 
-    const analysis = applySecretFindingsToAnalysis(
+    const analysis = applyLintResultsToAnalysis(
       redactedPrompt,
-      analyzePrompt(redactedPrompt, settings.strictMode, cachedProfile)
+      applySecretFindingsToAnalysis(
+        redactedPrompt,
+        analyzePrompt(redactedPrompt, settings.strictMode, cachedProfile)
+      ),
+      cachedProfile
     );
     const runtimeEvaluation = buildRuntimeEvaluation(redactedPrompt, analysis);
 
@@ -1316,9 +1393,13 @@
       return;
     }
 
-    const analysis = applySecretFindingsToAnalysis(
+    const analysis = applyLintResultsToAnalysis(
       prompt,
-      analyzePrompt(prompt, settings.strictMode, profile)
+      applySecretFindingsToAnalysis(
+        prompt,
+        analyzePrompt(prompt, settings.strictMode, profile)
+      ),
+      profile
     );
     const runtimeEvaluation = buildRuntimeEvaluation(prompt, analysis);
 

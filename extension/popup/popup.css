@@ -394,6 +394,45 @@ textarea {
   color: var(--warning);
 }
 
+.lint-list {
+  list-style: none;
+  padding-left: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.lint-list li {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(176, 213, 236, 0.94);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.lint-result--pass {
+  border-color: rgba(144, 219, 185, 0.9);
+  background: rgba(236, 252, 244, 0.92);
+  color: #116443;
+}
+
+.lint-result--warning {
+  border-color: rgba(248, 213, 166, 0.92);
+  background: rgba(255, 247, 234, 0.95);
+  color: #9f5703;
+}
+
+.lint-result--error {
+  border-color: rgba(243, 200, 196, 0.92);
+  background: rgba(254, 240, 239, 0.94);
+  color: #a62a22;
+}
+
+.lint-result--info {
+  border-color: rgba(195, 238, 250, 0.96);
+  background: rgba(241, 250, 255, 0.94);
+  color: #28567a;
+}
+
 .grade {
   border-radius: 999px;
   padding: 2px 8px;
