@@ -310,6 +310,8 @@ const promptScoreGrade = document.getElementById("promptGrade");
 const promptScoreSummary = document.getElementById("promptScoreSummary");
 const scoreBreakdown = document.getElementById("scoreBreakdown");
 const scoreTips = document.getElementById("scoreTips");
+const promptLintSummary = document.getElementById("promptLintSummary");
+const lintResults = document.getElementById("lintResults");
 
 function storageGet(keys) {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
@@ -329,6 +331,14 @@ function getPromptQualityEngine() {
     throw new Error("Prompt quality engine is unavailable.");
   }
   return engine;
+}
+
+function getPromptLinter() {
+  const linter = window.AIDevCoachPromptLinter;
+  if (!linter || typeof linter.lintPrompt !== "function") {
+    throw new Error("Prompt linter is unavailable.");
+  }
+  return linter;
 }
 
 function normalizeLevel(value) {
@@ -677,6 +687,42 @@ function renderScore(analysis) {
   });
 }
 
+function lintClassForResult(result) {
+  if (result.passed) {
+    return result.severity === "info" ? "lint-result--info" : "lint-result--pass";
+  }
+  return result.severity === "error" ? "lint-result--error" : "lint-result--warning";
+}
+
+function renderLintResults(report) {
+  if (!report || !Array.isArray(report.results)) {
+    promptLintSummary.textContent = "--";
+    lintResults.innerHTML = "";
+    return;
+  }
+
+  const summaryParts = [];
+  if (report.summary.errors > 0) {
+    summaryParts.push(`${report.summary.errors} error`);
+  }
+  if (report.summary.warnings > 0) {
+    summaryParts.push(`${report.summary.warnings} warning`);
+  }
+  if (report.summary.passed > 0) {
+    summaryParts.push(`${report.summary.passed} passed`);
+  }
+  promptLintSummary.textContent = summaryParts.join(" | ") || "Clear";
+
+  lintResults.innerHTML = "";
+  report.results.forEach((result) => {
+    const item = document.createElement("li");
+    item.className = lintClassForResult(result);
+    const prefix = result.passed ? "✓" : result.severity === "error" ? "⛔" : "⚠";
+    item.textContent = `${prefix} ${result.message}`;
+    lintResults.appendChild(item);
+  });
+}
+
 function renderChecklist(fields) {
   const checks = REQUIRED_KEYS.map((key) => {
     const ok = fields[key] && fields[key].length > 0;
@@ -756,18 +802,35 @@ async function generatePrompt() {
   const prompt = [...buildRoleHeaderLines(roleProfile), "", basePrompt].join("\n");
 
   const analysis = scorePrompt({ templateKey, profile, fields, prompt, roleProfile });
+  const lintReport = getPromptLinter().lintPrompt({
+    prompt,
+    analysis,
+    fields,
+    templateKey,
+    profile: {
+      roleKey: resolvedRoleKey(profile),
+      role: profile.role || "",
+      skill: profile.skill || ""
+    }
+  });
 
   generatedPrompt.value = prompt;
   renderScore(analysis);
+  renderLintResults(lintReport);
 
   await storageSet({
     selectedTemplate: templateKey,
     profile,
     lastGeneratedPrompt: prompt,
-    lastPromptAnalysis: analysis
+    lastPromptAnalysis: analysis,
+    lastPromptLintReport: lintReport
   });
 
-  setStatus(promptStatus, `Prompt generated (${analysis.score}/100, grade ${analysis.grade}).`, true);
+  setStatus(
+    promptStatus,
+    `Prompt generated (${analysis.score}/100, grade ${analysis.grade}, ${lintReport.summary.failed} lint issue(s)).`,
+    true
+  );
 }
 
 async function copyGeneratedPrompt() {
@@ -793,6 +856,8 @@ function resetScoreCard() {
   promptScoreSummary.textContent = "Generate a prompt to calculate quality score.";
   scoreBreakdown.innerHTML = "";
   scoreTips.innerHTML = "";
+  promptLintSummary.textContent = "--";
+  lintResults.innerHTML = "";
 }
 
 async function loadState() {
@@ -802,7 +867,8 @@ async function loadState() {
     "stats",
     "selectedTemplate",
     "lastGeneratedPrompt",
-    "lastPromptAnalysis"
+    "lastPromptAnalysis",
+    "lastPromptLintReport"
   ]);
 
   const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
@@ -834,6 +900,10 @@ async function loadState() {
     renderScore(data.lastPromptAnalysis);
   } else {
     resetScoreCard();
+  }
+
+  if (data.lastPromptLintReport) {
+    renderLintResults(data.lastPromptLintReport);
   }
 }
 

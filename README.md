@@ -27,6 +27,7 @@ AI Dev Coach is designed to protect the learning loop:
 - In-page Live Coach bubble with realtime prompt score and habit snapshot
 - 6 prompt templates: debugging, code review, system design, refactoring, performance optimization, learning
 - Prompt quality engine v2 with shared scoring across popup and live monitor (`clarity`, `context`, `specificity`, `risk guardrails`)
+- Prompt Linter with rule-based feedback for prompt length, technical context, failure signals, and sensitive data
 - Real-time prompt quality scoring on AI chat websites (draft + submit paths)
 - Sensitive data detection and local redaction for likely secrets before prompt submission
 - Warning overlays in top-right for shortcut prompts and risky copy-paste behavior
@@ -56,6 +57,7 @@ AI Dev Coach is designed to protect the learning loop:
 ```bash
 node scripts/validate-extension.mjs
 node scripts/test-prompt-quality-engine.mjs
+node scripts/test-prompt-linter.mjs
 find extension -type f -name '*.js' -print0 | xargs -0 -n1 node --check
 python3 -m mkdocs build --strict
 ```
