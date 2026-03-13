@@ -284,6 +284,9 @@ const constraintsInput = document.getElementById("constraintsInput");
 const acceptanceInput = document.getElementById("acceptanceInput");
 const requiredChecklist = document.getElementById("requiredChecklist");
 const generatedPrompt = document.getElementById("generatedPrompt");
+const generatedPromptPreview = document.getElementById("generatedPromptPreview");
+const generatedPromptMeta = document.getElementById("generatedPromptMeta");
+const rawPromptDetails = document.getElementById("rawPromptDetails");
 const profileStatus = document.getElementById("profileStatus");
 const promptStatus = document.getElementById("promptStatus");
 const monitorStatus = document.getElementById("monitorStatus");
@@ -334,6 +337,158 @@ function storageSet(payload) {
 
 function clean(value) {
   return (value || "").trim();
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatInlineCode(value) {
+  return escapeHtml(value).replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function countWords(value) {
+  const text = clean(value);
+  return text ? text.split(/\s+/).filter(Boolean).length : 0;
+}
+
+function isStructuredHeading(line) {
+  const text = clean(line);
+  return /^[A-Z][A-Z ]+$/.test(text);
+}
+
+function humanizeHeading(line) {
+  return clean(line)
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function buildPromptPreviewBody(lines) {
+  const blocks = [];
+  let listType = "";
+  let listItems = [];
+
+  function flushList() {
+    if (!listType || listItems.length === 0) {
+      listType = "";
+      listItems = [];
+      return;
+    }
+
+    blocks.push(`<${listType}>${listItems.join("")}</${listType}>`);
+    listType = "";
+    listItems = [];
+  }
+
+  lines.forEach((rawLine) => {
+    const line = clean(rawLine);
+    if (!line) {
+      flushList();
+      return;
+    }
+
+    if (/^-\s+/.test(line)) {
+      if (listType && listType !== "ul") {
+        flushList();
+      }
+      listType = "ul";
+      listItems.push(`<li>${formatInlineCode(line.replace(/^-\s+/, ""))}</li>`);
+      return;
+    }
+
+    if (/^\d+\.\s+/.test(line)) {
+      if (listType && listType !== "ol") {
+        flushList();
+      }
+      listType = "ol";
+      listItems.push(`<li>${formatInlineCode(line.replace(/^\d+\.\s+/, ""))}</li>`);
+      return;
+    }
+
+    flushList();
+    blocks.push(`<p>${formatInlineCode(line)}</p>`);
+  });
+
+  flushList();
+
+  return blocks.join("") || "<p>None provided.</p>";
+}
+
+function buildPromptPreviewMarkup(prompt) {
+  const lines = String(prompt || "").split(/\r?\n/);
+  const sections = [];
+  let currentSection = null;
+
+  lines.forEach((rawLine) => {
+    const trimmed = clean(rawLine);
+    if (!trimmed) {
+      if (currentSection) {
+        currentSection.lines.push("");
+      }
+      return;
+    }
+
+    if (isStructuredHeading(trimmed)) {
+      currentSection = {
+        title: humanizeHeading(trimmed),
+        lines: []
+      };
+      sections.push(currentSection);
+      return;
+    }
+
+    if (!currentSection) {
+      currentSection = {
+        title: "Overview",
+        lines: []
+      };
+      sections.push(currentSection);
+    }
+
+    currentSection.lines.push(trimmed);
+  });
+
+  return sections
+    .map(
+      (section, index) => `
+        <section class="prompt-preview__section${index === 0 ? " prompt-preview__section--first" : ""}">
+          <h4 class="prompt-preview__title">${escapeHtml(section.title)}</h4>
+          <div class="prompt-preview__body">
+            ${buildPromptPreviewBody(section.lines)}
+          </div>
+        </section>
+      `
+    )
+    .join("");
+}
+
+function updateGeneratedPromptOutput(prompt) {
+  const rawPrompt = typeof prompt === "string" ? prompt : "";
+  const hasPrompt = !!clean(rawPrompt);
+
+  generatedPrompt.value = rawPrompt;
+
+  generatedPromptPreview.classList.toggle("prompt-preview--empty", !hasPrompt);
+  generatedPromptMeta.classList.toggle("profile-badge--empty", !hasPrompt);
+
+  if (!hasPrompt) {
+    generatedPromptMeta.textContent = "No prompt yet";
+    generatedPromptPreview.textContent = "Your coaching prompt will appear here.";
+    rawPromptDetails.open = false;
+    return;
+  }
+
+  const sectionCount = rawPrompt
+    .split(/\r?\n/)
+    .filter((line) => isStructuredHeading(line)).length;
+  const wordCount = countWords(rawPrompt);
+  generatedPromptMeta.textContent = `${sectionCount} sections · ${wordCount} words`;
+  generatedPromptPreview.innerHTML = buildPromptPreviewMarkup(rawPrompt);
 }
 
 function getPromptQualityEngine() {
@@ -1017,7 +1172,12 @@ function renderScore(analysis) {
   scoreBreakdown.innerHTML = "";
   analysis.breakdown.forEach((part) => {
     const item = document.createElement("li");
-    item.textContent = `${part.label}: ${part.score}/${part.max}`;
+    item.innerHTML = `
+      <span class="score-list__row">
+        <span class="score-list__label">${escapeHtml(part.label)}</span>
+        <span class="score-list__value">${part.score}/${part.max}</span>
+      </span>
+    `;
     scoreBreakdown.appendChild(item);
   });
 
@@ -1069,7 +1229,10 @@ function renderLintResults(report) {
     const item = document.createElement("li");
     item.className = lintClassForResult(result);
     const prefix = result.passed ? "✓" : result.severity === "error" ? "⛔" : "⚠";
-    item.textContent = `${prefix} ${result.message}`;
+    item.innerHTML = `
+      <span class="score-list__icon">${prefix}</span>
+      <span>${escapeHtml(result.message)}</span>
+    `;
     lintResults.appendChild(item);
   });
 }
@@ -1078,10 +1241,19 @@ function renderChecklist(fields) {
   const checks = REQUIRED_KEYS.map((key) => {
     const ok = fields[key] && fields[key].length > 0;
     const label = key === "task" ? "Task" : key === "context" ? "Context" : "What You Tried";
-    return `${ok ? "[x]" : "[ ]"} ${label}`;
+    return { ok, label };
   });
 
-  requiredChecklist.textContent = `Required info: ${checks.join(" | ")}`;
+  requiredChecklist.innerHTML = checks
+    .map(
+      (check) => `
+        <span class="required-checklist__item ${check.ok ? "required-checklist__item--ok" : "required-checklist__item--missing"}">
+          <span class="required-checklist__icon">${check.ok ? "✓" : "!"}</span>
+          <span>${escapeHtml(check.label)}</span>
+        </span>
+      `
+    )
+    .join("");
 }
 
 async function saveProfile() {
@@ -1165,7 +1337,8 @@ async function generatePrompt() {
     }
   });
 
-  generatedPrompt.value = prompt;
+  updateGeneratedPromptOutput(prompt);
+  rawPromptDetails.open = false;
   renderScore(analysis);
   renderLintResults(lintReport);
 
@@ -1196,7 +1369,8 @@ async function copyGeneratedPrompt() {
     await navigator.clipboard.writeText(prompt);
     setStatus(promptStatus, "Prompt copied to clipboard.", true);
   } catch (error) {
-    setStatus(promptStatus, "Clipboard blocked. Copy manually from the text area.", false);
+    rawPromptDetails.open = true;
+    setStatus(promptStatus, "Clipboard blocked. Open the raw prompt section and copy it manually.", false);
   }
 }
 
@@ -1244,10 +1418,7 @@ async function loadState() {
   renderStats(stats);
   renderAnalyticsSnapshot(data.learningAnalytics);
   renderChecklist(readPromptForm());
-
-  if (data.lastGeneratedPrompt) {
-    generatedPrompt.value = data.lastGeneratedPrompt;
-  }
+  updateGeneratedPromptOutput(data.lastGeneratedPrompt || "");
 
   if (data.lastPromptAnalysis) {
     renderScore(data.lastPromptAnalysis);

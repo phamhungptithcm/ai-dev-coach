@@ -111,15 +111,24 @@
       <label for="acceptanceInput">Acceptance Criteria (Optional)</label>
       <textarea id="acceptanceInput" rows="2" placeholder="How should we know the solution is complete and correct?"></textarea>
 
-      <p id="requiredChecklist" class="required-checklist"></p>
+      <div id="requiredChecklist" class="required-checklist" role="status" aria-live="polite"></div>
 
       <div class="button-row">
         <button id="generatePromptBtn" class="button button--primary">Generate Prompt</button>
         <button id="copyPromptBtn" class="button">Copy Prompt</button>
       </div>
 
-      <label for="generatedPrompt">Generated Prompt</label>
-      <textarea id="generatedPrompt" rows="11" readonly placeholder="Your coaching prompt will appear here"></textarea>
+      <section class="output-card" aria-label="Generated prompt">
+        <div class="output-card__header">
+          <label for="generatedPrompt">Generated Prompt</label>
+          <span id="generatedPromptMeta" class="profile-badge profile-badge--empty output-card__badge">No prompt yet</span>
+        </div>
+        <div id="generatedPromptPreview" class="prompt-preview prompt-preview--empty">Your coaching prompt will appear here.</div>
+        <details id="rawPromptDetails" class="raw-prompt">
+          <summary>View raw prompt text</summary>
+          <textarea id="generatedPrompt" rows="11" readonly placeholder="Your coaching prompt will appear here"></textarea>
+        </details>
+      </section>
 
       <section class="score-card" aria-label="Prompt score breakdown">
         <div class="score-card__header">

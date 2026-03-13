@@ -73,7 +73,7 @@
   position: fixed;
   top: 16px;
   right: 16px;
-  width: min(364px, calc(100vw - 22px));
+  width: min(338px, calc(100vw - 22px));
   z-index: 2147483647;
   border: 1px solid var(--ai-coach-border-strong);
   border-radius: 14px;
@@ -129,7 +129,7 @@
 .ai-coach-live-bubble__body {
   padding: 10px 12px 12px;
   display: grid;
-  gap: 7px;
+  gap: 8px;
 }
 
 .ai-coach-live-bubble__score-line {
@@ -206,12 +206,69 @@
   font-weight: 700;
 }
 
+.ai-coach-live-bubble__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ai-coach-live-bubble__metric {
+  border: 1px solid rgba(182, 214, 234, 0.88);
+  border-radius: 12px;
+  padding: 8px 9px;
+  background: rgba(247, 252, 255, 0.92);
+  display: grid;
+  gap: 3px;
+}
+
+.ai-coach-live-bubble__metric-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #668095;
+}
+
+.ai-coach-live-bubble__metric-value {
+  font-size: 15px;
+  font-weight: 900;
+  color: #19384d;
+}
+
+.ai-coach-live-bubble__signals {
+  display: grid;
+  gap: 6px;
+}
+
 .ai-coach-live-bubble__habit,
 .ai-coach-live-bubble__behavior {
+  margin: 0;
+  padding: 7px 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(205, 227, 242, 0.88);
+  background: rgba(255, 255, 255, 0.82);
   color: #325772;
 }
 
+.ai-coach-live-bubble__preview-card {
+  border: 1px solid rgba(205, 227, 242, 0.88);
+  border-radius: 12px;
+  background: rgba(247, 252, 255, 0.92);
+  padding: 8px 9px;
+  display: grid;
+  gap: 5px;
+}
+
+.ai-coach-live-bubble__preview-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #668095;
+}
+
 .ai-coach-live-bubble__preview {
+  margin: 0;
   color: #446882;
 }
 
@@ -279,14 +336,15 @@
   box-shadow: var(--ai-coach-shadow-lift);
   padding: 12px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   animation: ai-coach-slide-in 220ms ease both;
 }
 
 .ai-coach-builder__header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 10px;
   margin-bottom: 2px;
 }
 
@@ -296,6 +354,14 @@
   font-size: 15px;
   color: var(--ai-coach-text);
   letter-spacing: 0.01em;
+}
+
+.ai-coach-builder__subhead {
+  margin: 4px 0 0;
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ai-coach-muted);
 }
 
 .ai-coach-builder__close {
@@ -321,6 +387,29 @@
   font-size: 12px;
   font-weight: 800;
   color: #264c64;
+}
+
+.ai-coach-builder__section {
+  border: 1px solid rgba(184, 216, 235, 0.84);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.84);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.ai-coach-builder__section-head {
+  display: grid;
+  gap: 3px;
+}
+
+.ai-coach-builder__section-kicker {
+  font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #648095;
 }
 
 .ai-coach-builder__hint {
@@ -355,6 +444,11 @@
   gap: 8px;
 }
 
+.ai-coach-builder__footer {
+  display: grid;
+  gap: 8px;
+}
+
 .ai-coach-builder__btn {
   border: 1px solid var(--ai-coach-border);
   border-radius: 10px;
@@ -385,17 +479,26 @@
 .ai-coach-builder__status {
   min-height: 16px;
   margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(205, 227, 242, 0.88);
+  background: rgba(255, 255, 255, 0.82);
   font-family: "Avenir Next", "Nunito Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   font-size: 12px;
   font-weight: 700;
+  color: #567285;
 }
 
 .ai-coach-builder__status--ok {
   color: #138a5b;
+  border-color: rgba(144, 219, 185, 0.9);
+  background: rgba(236, 252, 244, 0.92);
 }
 
 .ai-coach-builder__status--error {
   color: #ba2f26;
+  border-color: rgba(243, 200, 196, 0.92);
+  background: rgba(254, 240, 239, 0.94);
 }
 
 @keyframes ai-coach-fade-in {
@@ -424,7 +527,7 @@
   .ai-coach-live-bubble {
     top: 8px;
     right: 8px;
-    width: min(360px, calc(100vw - 16px));
+    width: min(340px, calc(100vw - 16px));
   }
 
   .ai-coach-builder-panel {
