@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Dev Coach",
-  "version": "1.2.15",
+  "version": "1.2.17",
   "description": "Coach developers to use AI with better reasoning, prompting, and coding habits.",
   "minimum_chrome_version": "114",
   "homepage_url": "https://github.com/phamhungptithcm/ai-dev-coach",
@@ -56,7 +56,6 @@
         "content/aiOverlay.js",
         "content/liveCoachBubble.js",
         "shared/promptQualityEngine.js",
-        "shared/learningAnalytics.js",
         "content/quickBuilder.js",
         "content/secretDetection.js",
         "shared/promptLinter.js",
