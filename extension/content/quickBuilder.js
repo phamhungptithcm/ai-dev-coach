@@ -1062,6 +1062,7 @@
     }
 
     items.forEach((prompt, index) => {
+      const previewText = prompt.previewText || prompt.text || "";
       const button = document.createElement("button");
       button.type = "button";
       button.className = `ai-coach-inline-suggestion${index === activeIndex ? " ai-coach-inline-suggestion--active" : ""}`;
@@ -1073,7 +1074,7 @@
           <strong>${escapeHtml(prompt.title)}</strong>
           <span class="ai-coach-inline-suggestion__badge">${escapeHtml(prompt.categoryLabel)}</span>
         </div>
-        <p class="ai-coach-inline-suggestion__text">${escapeHtml(prompt.text)}</p>
+        <p class="ai-coach-inline-suggestion__text">${escapeHtml(previewText)}</p>
         ${
           Array.isArray(prompt.reasons) && prompt.reasons.length > 0
             ? `<div class="ai-coach-inline-suggestion__reasons">${prompt.reasons
