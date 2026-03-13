@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added prompt quality engine v2 with shared scoring between popup prompt builder and live monitoring
+- added prompt-quality smoke checks in CI to guard scoring regressions
 - added local secret detection and redaction guardrail before prompt submission
 - added sprint planning documentation with prioritized backlog estimates
 - split CI/CD so docs deploy and extension release run independently
@@ -114,13 +116,3 @@
 
 - switched docs to MkDocs Material workflow
 - aligned docs/nav for extension-focused scope
-- CI/CD and release pipeline improvements
-
-## v1.2.1
-
-- prompt builder and scoring enhancements
-- docs deployment improvements
-
-## v1.2.0
-
-- initial extension MVP release

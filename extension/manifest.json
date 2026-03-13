@@ -55,6 +55,7 @@
       "js": [
         "content/aiOverlay.js",
         "content/liveCoachBubble.js",
+        "shared/promptQualityEngine.js",
         "content/quickBuilder.js",
         "content/secretDetection.js",
         "content/monitor.js",

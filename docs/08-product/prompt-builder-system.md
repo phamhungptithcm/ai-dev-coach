@@ -41,28 +41,28 @@ Level modes:
 
 The extension computes a score from 0 to 100 with these weighted dimensions:
 
-1. Completeness (0-40)
-- task quality and length
-- context quality and length
-- attempt details and blockers
-- profile context (role + skill)
+1. Clarity (0-25)
+- prompt length and task clarity
+- structured sections (`Task`, `Context`, `What You Tried`)
+- penalty for vague asks such as `fix this` or `help me`
 
-2. Specificity (0-25)
-- technical signals (error/trace/file/metric keywords)
+2. Context (0-30)
+- concrete error or failure signals
+- expected vs actual behavior
+- artifacts such as file paths, snippets, logs, endpoints, or stack traces
+- framework or stack context
+
+3. Specificity (0-30)
+- action + result + blocker evidence
 - constraints provided
 - acceptance criteria quality
-- overall prompt depth
+- measurable or role-specific signals
 
-3. Reasoning Evidence (0-20)
-- hypothesis/debug/test/analysis language
-- tradeoff and validation framing
-
-4. Learning Safety (0-15)
-- penalty for shortcut language ("give full code", "just answer")
-- bonus for coach-style language ("explain", "step-by-step")
-
-5. Template Fit (0-5)
-- checks if content vocabulary matches selected template intent
+4. Risk Guardrails (0-15)
+- penalties for shortcut language (`give me full code`, `no explanation`)
+- penalties for explicit no-attempt phrases
+- stricter deductions in strict mode
+- small bonus for coaching-oriented language (`explain`, `step-by-step`)
 
 Grade mapping:
 
@@ -107,12 +107,11 @@ Grade mapping:
 | [______________________________________________]  |
 |                                                   |
 | Prompt Score: 84/100   Grade: B                   |
-| - Completeness: 33/40                             |
-| - Specificity: 20/25                              |
-| - Reasoning Evidence: 16/20                       |
-| - Learning Safety: 11/15                          |
-| - Template Fit: 4/5                               |
-| Tips: Add benchmark and acceptance criteria        |
+| - Clarity: 21/25                                  |
+| - Context: 24/30                                  |
+| - Specificity: 25/30                              |
+| - Risk Guardrails: 14/15                          |
+| Tips: Add framework version and one regression test|
 +---------------------------------------------------+
 | Habit Snapshot                                    |
 | AI requests | Manual attempts | Dependency | Paste |
@@ -160,6 +159,7 @@ Grade mapping:
 - Negative no-attempt phrases reduce score.
 - Shortcut requests (copy-paste intent) reduce score and increase warnings.
 - Dictionaries support English and Vietnamese phrasing.
+- Popup scoring and live monitoring now use the same shared prompt-quality engine to keep results consistent.
 
 ## Current Implementation Files
 
@@ -169,3 +169,4 @@ Grade mapping:
 - `extension/content/liveCoachBubble.js`
 - `extension/content/quickBuilder.js`
 - `extension/content/monitor.js`
+- `extension/shared/promptQualityEngine.js`

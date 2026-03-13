@@ -288,6 +288,7 @@
   let lastDraftPrompt = "";
   let lastDraftPromptAt = 0;
   let cachedSettings = { ...DEFAULT_SETTINGS };
+  let cachedProfile = { ...DEFAULT_PROFILE };
   let lastSecretBlockSignature = "";
   let lastSecretBlockAt = 0;
   let scanQueued = false;
@@ -310,6 +311,17 @@
       typeof window.AIDevCoachSecretGuard.inspectPromptForSecrets === "function"
     ) {
       return window.AIDevCoachSecretGuard;
+    }
+
+    return null;
+  }
+
+  function getPromptQualityEngine() {
+    if (
+      window.AIDevCoachPromptQualityEngine &&
+      typeof window.AIDevCoachPromptQualityEngine.calculatePromptScore === "function"
+    ) {
+      return window.AIDevCoachPromptQualityEngine;
     }
 
     return null;
@@ -349,6 +361,10 @@
     cachedSettings = mergeSettings(nextSettings);
   }
 
+  function syncCachedProfile(nextProfile) {
+    cachedProfile = { ...DEFAULT_PROFILE, ...(nextProfile || {}) };
+  }
+
   async function getCurrentSettings() {
     const data = await storageGet(["settings"]);
     const settings = mergeSettings(data.settings);
@@ -358,6 +374,8 @@
 
   async function getState() {
     const data = await storageGet(["settings", "profile", "stats"]);
+    syncCachedSettings(data.settings);
+    syncCachedProfile(data.profile);
     return {
       settings: mergeSettings(data.settings),
       profile: { ...DEFAULT_PROFILE, ...(data.profile || {}) },
@@ -756,6 +774,11 @@
   }
 
   function scoreGrade(score) {
+    const engine = getPromptQualityEngine();
+    if (engine && typeof engine.gradeFromScore === "function") {
+      return engine.gradeFromScore(score);
+    }
+
     if (score >= 90) {
       return "A";
     }
@@ -806,110 +829,33 @@
     };
   }
 
-  function analyzePrompt(prompt, strictMode) {
-    let score = 0;
-    const warnings = [];
-    const suggestions = [];
+  function analyzePrompt(prompt, strictMode, profile = DEFAULT_PROFILE) {
+    const engine = getPromptQualityEngine();
+    if (!engine) {
+      return {
+        score: 0,
+        grade: "D",
+        warnings: ["Prompt quality engine is unavailable."],
+        suggestions: [],
+        secretFindings: [],
+        hasShortcutIntent: false,
+        hasIndependentAttempt: false
+      };
+    }
 
-    if (prompt.length >= 25) {
-      score += 10;
-      if (prompt.length >= 80) {
-        score += 6;
+    const analysis = engine.calculatePromptScore({
+      prompt,
+      strictMode,
+      profile: {
+        roleKey: clean(profile.roleKey || ""),
+        role: clean(profile.role || ""),
+        skill: clean(profile.skill || "")
       }
-    } else if (prompt.length >= 12) {
-      score += 4;
-      suggestions.push("Prompt is brief. Add more specifics before sending.");
-    } else {
-      warnings.push("Prompt is too short. Add context before asking AI.");
-    }
-
-    const contextEvidence = evaluateContextEvidence(prompt);
-    const hasStrongContext =
-      contextEvidence.hasErrorSignal &&
-      contextEvidence.hasExpectedActualPair &&
-      contextEvidence.hasArtifactSignal;
-
-    if (hasStrongContext) {
-      score += 28;
-    } else {
-      const evidenceCount =
-        Number(contextEvidence.hasErrorSignal) +
-        Number(contextEvidence.hasExpectedActualPair) +
-        Number(contextEvidence.hasArtifactSignal);
-
-      if (evidenceCount === 2) {
-        score += 12;
-      } else if (evidenceCount === 1) {
-        score += 5;
-      }
-
-      if (!contextEvidence.hasErrorSignal) {
-        suggestions.push("Add the concrete error/failure signal you see.");
-      }
-      if (!contextEvidence.hasExpectedActualPair) {
-        suggestions.push("Add both expected result and actual result.");
-      }
-      if (!contextEvidence.hasArtifactSignal) {
-        suggestions.push("Add artifacts: file path, line, snippet, log, or endpoint.");
-      }
-    }
-
-    const attemptQuality = evaluateAttemptQuality(prompt);
-    if (attemptQuality.hasNegativeAttemptSignal) {
-      score -= 16;
-      warnings.push("Prompt says no attempt was made. Try one step first, then ask AI.");
-    }
-
-    if (
-      attemptQuality.hasActionSignal &&
-      attemptQuality.hasResultSignal &&
-      attemptQuality.hasBlockerSignal &&
-      !attemptQuality.hasNegativeAttemptSignal
-    ) {
-      score += 26;
-    } else if (
-      attemptQuality.hasActionSignal &&
-      attemptQuality.hasResultSignal &&
-      !attemptQuality.hasNegativeAttemptSignal
-    ) {
-      score += 16;
-      suggestions.push("Good progress. Add your current blocker to improve coaching quality.");
-    } else if (attemptQuality.hasActionSignal && !attemptQuality.hasNegativeAttemptSignal) {
-      score += 8;
-      suggestions.push("Add result of your attempt and where you are blocked.");
-    } else if (!attemptQuality.hasNegativeAttemptSignal) {
-      suggestions.push("Add what you tried, what happened, and where you got stuck.");
-    }
-
-    const shortcutIntent = hasShortcutIntent(prompt);
-    if (shortcutIntent) {
-      warnings.push("Prompt asks for shortcuts. Ask for guidance first, not full copy-paste code.");
-      score -= 20;
-    } else {
-      score += 8;
-    }
-
-    if (hasStructuredSections(prompt)) {
-      score += 18;
-    } else {
-      suggestions.push("Use structured sections: Task/Context/Attempt (or Nhiem vu/Boi canh/Da thu).");
-    }
-
-    if (strictMode && shortcutIntent && !attemptQuality.hasIndependentAttempt) {
-      score -= 14;
-      warnings.push("Strict mode: include your attempt and blocker before asking for final code.");
-    }
-
-    score = Math.max(0, Math.min(100, score));
+    });
 
     return {
-      score,
-      grade: scoreGrade(score),
-      warnings,
-      suggestions,
-      secretFindings: [],
-      hasShortcutIntent: shortcutIntent,
-      hasIndependentAttempt: attemptQuality.hasIndependentAttempt
+      ...analysis,
+      secretFindings: []
     };
   }
 
@@ -932,13 +878,24 @@
 
     const riskPenalty = Math.min(24, secretScan.findings.length * 8);
     const score = Math.max(0, analysis.score - riskPenalty);
+    const nextRisk = Math.max(0, (analysis.risk || 0) - Math.min(riskPenalty, analysis.risk || 0));
+    const nextBreakdown = Array.isArray(analysis.breakdown)
+      ? analysis.breakdown.map((part) =>
+          part.label === "Risk Guardrails"
+            ? { ...part, score: nextRisk }
+            : part
+        )
+      : analysis.breakdown;
 
     return {
       ...analysis,
+      risk: nextRisk,
+      total: score,
       score,
       grade: scoreGrade(score),
       warnings,
       suggestions,
+      breakdown: nextBreakdown,
       secretFindings: secretScan.findings.map((finding) => ({
         name: finding.name,
         severity: finding.severity
@@ -1069,7 +1026,7 @@
     const { settings, profile } = await getState();
     const analysis = applySecretFindingsToAnalysis(
       prompt,
-      analyzePrompt(prompt, settings.strictMode)
+      analyzePrompt(prompt, settings.strictMode, profile)
     );
     const runtimeEvaluation = buildRuntimeEvaluation(prompt, analysis);
     const statsPromise = updatePromptStats(analysis);
@@ -1319,7 +1276,7 @@
 
     const analysis = applySecretFindingsToAnalysis(
       redactedPrompt,
-      analyzePrompt(redactedPrompt, settings.strictMode)
+      analyzePrompt(redactedPrompt, settings.strictMode, cachedProfile)
     );
     const runtimeEvaluation = buildRuntimeEvaluation(redactedPrompt, analysis);
 
@@ -1354,14 +1311,14 @@
       return;
     }
 
-    const settings = await getCurrentSettings();
+    const { settings, profile } = await getState();
     if (!settings.promptListenerEnabled || !settings.readPromptContentEnabled) {
       return;
     }
 
     const analysis = applySecretFindingsToAnalysis(
       prompt,
-      analyzePrompt(prompt, settings.strictMode)
+      analyzePrompt(prompt, settings.strictMode, profile)
     );
     const runtimeEvaluation = buildRuntimeEvaluation(prompt, analysis);
 
