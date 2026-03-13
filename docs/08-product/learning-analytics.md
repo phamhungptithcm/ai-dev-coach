@@ -52,6 +52,8 @@ Each daily summary includes:
 - independent-attempt rate
 - key improvement suggestions in friendly language
 
+Daily suggestions now also respect the most recent tracked role and level metadata so a manager, teacher, student, or software engineer does not get the same generic follow-up advice.
+
 This keeps the analytics useful for day-to-day reflection before the later trend-chart stories arrive.
 
 ## Trend dashboard
@@ -71,6 +73,17 @@ Trend rules stay explicit and local-first:
 - category bars group events into Debugging, Code Review, System Design, Refactoring, Performance, Learning, or Unclassified
 
 The first release keeps the dashboard lightweight and fully local in the popup.
+
+## Role-based coaching
+
+Role-based coaching is now shared across popup scoring, quick-builder hints, live monitoring, and analytics summaries.
+
+Current behavior:
+
+- builder hints and examples change by role
+- low-quality prompt warnings include role-aware advice
+- daily summary suggestions can include role-aware habit tips from the latest tracked role/level
+- student and junior levels bias the coaching toward explanation-first and exercise-oriented learning
 
 ## Storage model
 

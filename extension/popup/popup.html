@@ -87,6 +87,14 @@
       <label for="templateSelect">Template</label>
       <select id="templateSelect"></select>
       <p id="templateHint" class="muted"></p>
+      <section class="score-card role-coaching-card" aria-label="Role coaching guide">
+        <div class="score-card__header">
+          <span>Role Coaching</span>
+          <strong id="roleCoachingLabel">Software Engineer</strong>
+        </div>
+        <p id="roleCoachingFocus" class="muted"></p>
+        <ul id="roleCoachingList" class="score-list score-list--tips"></ul>
+      </section>
 
       <label for="taskInput">Task (Required)</label>
       <textarea id="taskInput" rows="2" placeholder="What do you need from AI?"></textarea>
@@ -213,6 +221,7 @@
     </section>
   </main>
 
+  <script src="../shared/roleCoaching.js"></script>
   <script src="../shared/promptQualityEngine.js"></script>
   <script src="../shared/learningAnalytics.js"></script>
   <script src="../content/secretDetection.js"></script>

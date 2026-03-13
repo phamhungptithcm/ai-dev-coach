@@ -491,6 +491,10 @@ textarea {
   gap: 7px;
 }
 
+.role-coaching-card {
+  margin-top: 4px;
+}
+
 .score-card__header {
   display: grid;
   grid-template-columns: 1fr auto auto;

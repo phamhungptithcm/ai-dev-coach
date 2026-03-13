@@ -44,6 +44,9 @@ jobs:
       - name: Validate prompt linter smoke checks
         run: node scripts/test-prompt-linter.mjs
 
+      - name: Validate role coaching smoke checks
+        run: node scripts/test-role-coaching.mjs
+
       - name: Validate learning analytics smoke checks
         run: node scripts/test-learning-analytics.mjs
 

@@ -47,6 +47,12 @@ In-page access:
 
 See also: [Prompt Builder System](prompt-builder-system.md)
 
+Role-specific builder behavior:
+
+- role and level change the recommended template
+- role-aware examples are shown in the popup and in-page quick builder
+- role guardrails stay visible for sensitive modes such as `Doctor`
+
 ## 3. Prompt Quality Analyzer
 
 Analyzes each submitted prompt for:
@@ -59,6 +65,13 @@ Analyzes each submitted prompt for:
 - shortcut intent signals
 
 Outputs a shared quality score and targeted feedback across both popup prompt builder and live monitoring.
+
+Role-aware prompt feedback now adds:
+
+- role-specific warning copy
+- role-specific evidence suggestions
+- software-engineering specialization hints for frontend, backend, DevOps, and fullstack wording
+- level-aware nudges for `Student` and `Junior`
 
 ## 3.1 Prompt Linter
 
@@ -131,6 +144,8 @@ Daily summary output includes:
 - average quality score
 - top prompt categories
 - readable coaching suggestions
+
+Those coaching suggestions can now reflect the latest tracked role and level metadata.
 
 Trend dashboard output includes:
 

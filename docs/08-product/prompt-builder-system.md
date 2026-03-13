@@ -37,6 +37,25 @@ Level modes:
 - Middle
 - Senior
 
+Role coaching is now driven by a shared module so the popup builder, in-page quick builder, and live monitor stay aligned.
+
+Current role-aware behavior includes:
+
+- shared recommended template selection by role and level
+- role-specific context and attempt hints
+- role-specific example asks shown in the popup and quick builder
+- role-specific warning copy during prompt scoring and send-time coaching
+- software engineer specialization hints for frontend, backend, DevOps, and fullstack wording
+
+Examples:
+
+- Teacher: learner level, objective, misconception, assessment
+- Software Engineer: failing command, file path, exact error, expected vs actual
+- Solution Architecture: scale assumptions, NFRs, tradeoffs, rollout risk
+- Manager: business impact, timeline, capacity, blockers, decision needed
+- Director: KPI targets, dependencies, budget or portfolio constraints
+- Doctor: symptoms timeline, history, red flags, tests already available, education-only guardrails
+
 ## Prompt Scoring Algorithm
 
 The extension computes a score from 0 to 100 with these weighted dimensions:
@@ -173,5 +192,6 @@ Grade mapping:
 - `extension/content/liveCoachBubble.js`
 - `extension/content/quickBuilder.js`
 - `extension/content/monitor.js`
+- `extension/shared/roleCoaching.js`
 - `extension/shared/promptQualityEngine.js`
 - `extension/shared/promptLinter.js`

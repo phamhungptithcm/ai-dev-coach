@@ -63,6 +63,8 @@ These rules are derived in shared analytics code so popup visuals and future ana
 
 Draft analysis updates the live bubble but does not increment send-based counters.
 
+Role-based coaching is applied in both draft and submit analysis paths, so role-specific examples and warnings stay consistent between popup scoring and in-page monitoring.
+
 ## Product Quality Signals
 
 - warning precision (low false positives)

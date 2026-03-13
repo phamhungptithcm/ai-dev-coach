@@ -193,59 +193,6 @@ const TEMPLATES = {
   }
 };
 
-const JOB_ROLE_OPTIONS = {
-  teacher: {
-    label: "Teacher",
-    builderHint: "Focus on pedagogy, learner outcomes, and assessment quality.",
-    contextHint: "Learner level, lesson objective, class constraints",
-    attemptHint: "What teaching approach you tried and observed outcome",
-    roleSignals: [/learning objective/i, /lesson plan/i, /assessment/i, /classroom/i, /pedagogy/i]
-  },
-  software_engineer: {
-    label: "Software Engineer",
-    builderHint: "Focus on reproducible technical context and verification.",
-    contextHint: "Error, stack trace, file path, expected vs actual",
-    attemptHint: "Debug steps, hypotheses, and blocker",
-    roleSignals: [/stack/i, /trace/i, /api/i, /repo/i, /commit/i, /test/i, /bug/i]
-  },
-  solution_architecture: {
-    label: "Solution Architecture",
-    builderHint: "Focus on constraints, tradeoffs, scalability, and risk.",
-    contextHint: "NFRs, integration points, compliance, cost and latency constraints",
-    attemptHint: "Architecture option explored and tradeoff concerns",
-    roleSignals: [/nfr/i, /latency/i, /throughput/i, /sla/i, /integration/i, /trade-?off/i]
-  },
-  manager: {
-    label: "Manager",
-    builderHint: "Focus on delivery risk, prioritization, and team execution clarity.",
-    contextHint: "Business impact, timeline, team capacity, and blockers",
-    attemptHint: "What has been tried, what is blocked, and decision options",
-    roleSignals: [/timeline/i, /milestone/i, /risk/i, /scope/i, /priority/i, /resource/i, /stakeholder/i]
-  },
-  director: {
-    label: "Director",
-    builderHint: "Focus on strategy, cross-team alignment, and measurable outcomes.",
-    contextHint: "Org constraints, KPI targets, dependencies, and governance",
-    attemptHint: "Options explored, tradeoffs, and escalation points",
-    roleSignals: [/strategy/i, /kpi/i, /roadmap/i, /governance/i, /portfolio/i, /budget/i, /alignment/i]
-  },
-  doctor: {
-    label: "Doctor",
-    builderHint: "Use AI as an educational support tool, not a diagnostic authority.",
-    contextHint: "Symptoms timeline, relevant history, red flags, tests already available",
-    attemptHint: "Clinical reasoning done, differential considered, current uncertainty",
-    safetyGuardrail: "For educational support only. Do not request final diagnosis, treatment, or dosage instructions.",
-    roleSignals: [/symptom/i, /history/i, /differential/i, /red flag/i, /clinical/i, /exam/i]
-  },
-  other: {
-    label: "Other",
-    builderHint: "Define your domain context clearly and ask for reasoning-first guidance.",
-    contextHint: "Domain constraints, available evidence, expected outcome",
-    attemptHint: "What you already tried and where you are blocked",
-    roleSignals: [/constraint/i, /evidence/i, /outcome/i, /risk/i]
-  }
-};
-
 const DEFAULT_PROFILE = {
   role: "",
   roleKey: "",
@@ -269,16 +216,6 @@ const DEFAULT_STATS = {
 };
 
 const DEFAULT_TEMPLATE_KEY = "debugging";
-const ROLE_TEMPLATE_RECOMMENDATIONS = {
-  teacher: "learning",
-  software_engineer: "debugging",
-  solution_architecture: "system_design",
-  manager: "system_design",
-  director: "system_design",
-  doctor: "learning",
-  other: "debugging"
-};
-const LEVEL_OPTIONS = new Set(["Student", "Junior", "Middle", "Senior"]);
 const REQUIRED_KEYS = ["task", "context", "attempt"];
 
 const roleSelect = document.getElementById("roleSelect");
@@ -288,6 +225,9 @@ const habitInput = document.getElementById("habitInput");
 const templateSelect = document.getElementById("templateSelect");
 const templateHint = document.getElementById("templateHint");
 const rolePromptHint = document.getElementById("rolePromptHint");
+const roleCoachingLabel = document.getElementById("roleCoachingLabel");
+const roleCoachingFocus = document.getElementById("roleCoachingFocus");
+const roleCoachingList = document.getElementById("roleCoachingList");
 const taskInput = document.getElementById("taskInput");
 const contextInput = document.getElementById("contextInput");
 const attemptInput = document.getElementById("attemptInput");
@@ -355,6 +295,14 @@ function getPromptQualityEngine() {
   return engine;
 }
 
+function getRoleCoaching() {
+  const roleCoaching = window.AIDevCoachRoleCoaching;
+  if (!roleCoaching || typeof roleCoaching.getRoleProfile !== "function") {
+    throw new Error("Role coaching module is unavailable.");
+  }
+  return roleCoaching;
+}
+
 function getPromptLinter() {
   const linter = window.AIDevCoachPromptLinter;
   if (!linter || typeof linter.lintPrompt !== "function") {
@@ -376,100 +324,27 @@ function getLearningAnalytics() {
 }
 
 function normalizeLevel(value) {
-  const raw = clean(value);
-  if (!raw) {
-    return "";
-  }
-
-  if (/^student$/i.test(raw)) {
-    return "Student";
-  }
-  if (/^junior$/i.test(raw)) {
-    return "Junior";
-  }
-  if (/^(middle|mid)$/i.test(raw)) {
-    return "Middle";
-  }
-  if (/^senior$/i.test(raw)) {
-    return "Senior";
-  }
-
-  return LEVEL_OPTIONS.has(raw) ? raw : "";
+  return getRoleCoaching().normalizeLevel(value);
 }
 
 function isStudentLevel(value) {
-  return normalizeLevel(value) === "Student";
+  return getRoleCoaching().isStudentLevel(value);
 }
 
 function migrateLegacyStudentProfile(rawProfile = {}) {
-  const roleKey = normalizeRoleKey(rawProfile.roleKey);
-  const roleText = clean(rawProfile.role).toLowerCase();
-  const isLegacyStudent = roleKey === "student" || /student|sinh vien|hoc sinh/.test(roleText);
-
-  if (!isLegacyStudent) {
-    return {
-      profile: {
-        ...rawProfile,
-        skill: normalizeLevel(rawProfile.skill)
-      },
-      migrated: false
-    };
-  }
-
-  return {
-    profile: {
-      ...rawProfile,
-      roleKey: "other",
-      role: "Other",
-      skill: normalizeLevel(rawProfile.skill) || "Student"
-    },
-    migrated: true
-  };
+  return getRoleCoaching().migrateLegacyStudentProfile(rawProfile);
 }
 
 function normalizeRoleKey(value) {
-  return clean(value).toLowerCase().replace(/\s+/g, "_");
+  return getRoleCoaching().normalizeRoleKey(value);
 }
 
 function resolveRoleKey(rawProfile = {}) {
-  const fromKey = normalizeRoleKey(rawProfile.roleKey);
-  if (JOB_ROLE_OPTIONS[fromKey]) {
-    return fromKey;
-  }
-
-  const roleText = clean(rawProfile.role).toLowerCase();
-  if (!roleText) {
-    return "software_engineer";
-  }
-
-  if (/teacher|giang vien|giao vien/.test(roleText)) {
-    return "teacher";
-  }
-  if (/software|engineer|developer|frontend|backend|fullstack|devops/.test(roleText)) {
-    return "software_engineer";
-  }
-  if (/solution architect|architecture|kien truc/.test(roleText)) {
-    return "solution_architecture";
-  }
-  if (/manager|lead|quan ly/.test(roleText)) {
-    return "manager";
-  }
-  if (/director|giam doc/.test(roleText)) {
-    return "director";
-  }
-  if (/doctor|bac si|physician|medical/.test(roleText)) {
-    return "doctor";
-  }
-
-  return "other";
+  return getRoleCoaching().resolveRoleKey(rawProfile);
 }
 
 function getRoleProfile(rawProfile = {}) {
-  const key = resolveRoleKey(rawProfile);
-  const base = JOB_ROLE_OPTIONS[key] || JOB_ROLE_OPTIONS.other;
-  const customRole = clean(rawProfile.role);
-  const label = key === "other" ? customRole || base.label : base.label;
-  return { key, label, ...base };
+  return getRoleCoaching().getRoleProfile(rawProfile);
 }
 
 function setCustomRoleVisibility(roleKey) {
@@ -477,16 +352,7 @@ function setCustomRoleVisibility(roleKey) {
 }
 
 function buildRoleHeaderLines(roleProfile) {
-  const lines = [
-    `Primary job role: ${roleProfile.label}`,
-    `Role guidance: ${roleProfile.builderHint}`
-  ];
-
-  if (roleProfile.safetyGuardrail) {
-    lines.push(`Safety guardrail: ${roleProfile.safetyGuardrail}`);
-  }
-
-  return lines;
+  return getRoleCoaching().buildRoleHeaderLines(roleProfile);
 }
 
 function setStatus(target, message, ok) {
@@ -519,6 +385,9 @@ function applyTemplateUI(template) {
   const recommendedTemplate = TEMPLATES[recommendedTemplateKey];
   templateHint.textContent = template.hint;
   rolePromptHint.textContent = `Role mode: ${roleProfile.label}. ${roleProfile.builderHint}`;
+  if (roleProfile.specializationLabel) {
+    rolePromptHint.textContent += ` Specialization: ${roleProfile.specializationLabel}.`;
+  }
   if (isStudentLevel(currentProfile.skill)) {
     rolePromptHint.textContent += " Level mode: Student learning flow is active.";
   }
@@ -531,6 +400,7 @@ function applyTemplateUI(template) {
   }
   contextInput.placeholder = `${template.contextPlaceholder}. ${roleProfile.contextHint}.`;
   attemptInput.placeholder = `${template.attemptPlaceholder}. ${roleProfile.attemptHint}.`;
+  renderRoleCoaching(currentProfile);
 }
 
 function renderTemplates(selectedTemplate) {
@@ -549,7 +419,8 @@ function renderTemplates(selectedTemplate) {
 
 function readProfileForm() {
   const selectedRoleKey = roleSelect.value || "software_engineer";
-  const selectedRoleProfile = JOB_ROLE_OPTIONS[selectedRoleKey] || JOB_ROLE_OPTIONS.software_engineer;
+  const roleOptions = getRoleCoaching().JOB_ROLE_OPTIONS;
+  const selectedRoleProfile = roleOptions[selectedRoleKey] || roleOptions.software_engineer;
   const customRole = clean(customRoleInput.value);
   const resolvedRoleLabel = selectedRoleKey === "other" ? customRole || "Other" : selectedRoleProfile.label;
 
@@ -593,12 +464,34 @@ function fillProfile(profile) {
 }
 
 function getRecommendedTemplateForProfile(profile) {
-  if (isStudentLevel(profile.skill)) {
-    return "learning";
+  return getRoleCoaching().getRecommendedTemplateForProfile(profile, {
+    templates: TEMPLATES,
+    defaultTemplate: DEFAULT_TEMPLATE_KEY
+  });
+}
+
+function renderRoleCoaching(profile) {
+  const roleCoaching = getRoleCoaching();
+  const snapshot = roleCoaching.buildRoleCoachingSnapshot(profile);
+  roleCoachingLabel.textContent = snapshot.roleProfile.label;
+  roleCoachingFocus.textContent = snapshot.focusLine;
+
+  const coachingLines = [];
+  (snapshot.examples || []).slice(0, 2).forEach((example) => {
+    coachingLines.push(`Example ask: ${example}`);
+  });
+  if (snapshot.warningHint) {
+    coachingLines.push(`Watch for: ${snapshot.warningHint}`);
   }
-  const roleProfile = getRoleProfile(profile);
-  const templateKey = ROLE_TEMPLATE_RECOMMENDATIONS[roleProfile.key] || DEFAULT_TEMPLATE_KEY;
-  return TEMPLATES[templateKey] ? templateKey : DEFAULT_TEMPLATE_KEY;
+  if (snapshot.safetyGuardrail) {
+    coachingLines.push(`Guardrail: ${snapshot.safetyGuardrail}`);
+  }
+
+  renderList(
+    roleCoachingList,
+    coachingLines,
+    "Role-specific examples will appear after you choose a role."
+  );
 }
 
 function hasProfileData(profile) {

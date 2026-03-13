@@ -330,6 +330,17 @@
     return null;
   }
 
+  function getRoleCoaching() {
+    if (
+      window.AIDevCoachRoleCoaching &&
+      typeof window.AIDevCoachRoleCoaching.getRoleProfile === "function"
+    ) {
+      return window.AIDevCoachRoleCoaching;
+    }
+
+    return null;
+  }
+
   function getPromptLinter() {
     if (
       window.AIDevCoachPromptLinter &&
@@ -858,6 +869,7 @@
 
   function analyzePrompt(prompt, strictMode, profile = DEFAULT_PROFILE) {
     const engine = getPromptQualityEngine();
+    const roleCoaching = getRoleCoaching();
     if (!engine) {
       return {
         score: 0,
@@ -870,9 +882,11 @@
       };
     }
 
+    const roleProfile = roleCoaching ? roleCoaching.getRoleProfile(profile || {}) : null;
     const analysis = engine.calculatePromptScore({
       prompt,
       strictMode,
+      roleSignals: roleProfile && Array.isArray(roleProfile.roleSignals) ? roleProfile.roleSignals : [],
       profile: {
         roleKey: clean(profile.roleKey || ""),
         role: clean(profile.role || ""),
@@ -1078,12 +1092,14 @@
   }
 
   function buildHabitTip(profile, analysis) {
+    const roleCoaching = getRoleCoaching();
+    const coachingSnapshot = roleCoaching ? roleCoaching.buildRoleCoachingSnapshot(profile || {}) : null;
     const normalizedRole = (profile.role || "").toLowerCase();
     const normalizedSkill = (profile.skill || "").toLowerCase();
     const normalizedGoals = (profile.habitGoals || "").toLowerCase();
 
     if (analysis.hasShortcutIntent) {
-      return "Ask AI for a hint path or checklist first, then write the code yourself.";
+      return coachingSnapshot?.warningHint || "Ask AI for a hint path or checklist first, then write the code yourself.";
     }
 
     if (normalizedGoals.includes("debug")) {
@@ -1116,6 +1132,10 @@
 
     if (normalizedSkill.includes("junior") || normalizedSkill.includes("beginner")) {
       return "Learning mode: request a step-by-step explanation before any full solution.";
+    }
+
+    if (coachingSnapshot?.habitTip) {
+      return coachingSnapshot.habitTip;
     }
 
     return "State your goal, your attempt, and your blocker in every prompt for faster learning.";
