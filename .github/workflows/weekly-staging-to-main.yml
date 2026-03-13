@@ -16,7 +16,7 @@ jobs:
       REPO_ADMIN_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -37,7 +37,7 @@ jobs:
         if: steps.diff.outputs.ahead != '0'
         id: pr
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN || github.token }}
         run: |
           set -euo pipefail
           pr_number=$(gh pr list --base main --head staging --state open --json number --jq '.[0].number' || true)
@@ -59,7 +59,7 @@ jobs:
       - name: Enable auto-merge (respect branch protections)
         if: steps.diff.outputs.ahead != '0'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN || github.token }}
         run: |
           set -euo pipefail
           gh pr merge "${{ steps.pr.outputs.number }}" --auto --merge || \

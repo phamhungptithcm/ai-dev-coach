@@ -6,6 +6,10 @@
 - added prompt-linter smoke checks in CI and popup lint results UI
 - added prompt quality engine v2 with shared scoring between popup prompt builder and live monitoring
 - added prompt-quality smoke checks in CI to guard scoring regressions
+- replaced direct-to-main release bumping with protected-branch-safe release PR automation
+- split release CI into `prepare-release.yml` and publish-only `release.yml`
+- added manual CI dispatch support so release PR branches receive required checks
+- updated workflow actions to current major versions for checkout and setup-node
 - added local secret detection and redaction guardrail before prompt submission
 - added sprint planning documentation with prioritized backlog estimates
 - split CI/CD so docs deploy and extension release run independently
@@ -16,6 +20,11 @@
 - enforced release-only version policy by adding `staging-version-guard.yml` for PRs into `staging`
 - added weekly `staging` to `main` sync automation workflow with auto-merge request and admin fallback
 - added `apply-branch-protection.yml` to manage branch protection policy as code
+- fixed release tagging in GitHub Actions by configuring bot git identity before annotated tags are created
+- hardened release preparation and weekly sync to use `REPO_ADMIN_TOKEN` when repository policy blocks PR creation from the default Actions token
+- changed Chrome Web Store "item in review" handling so GitHub release workflows finish successfully and report store publish as deferred
+- aligned branch protection automation with merge-commit release flow and required `Staging Version Guard / guard` on `staging`
+- updated GitHub Actions dependencies to `actions/setup-python@v6` and `actions/upload-pages-artifact@v4` to stay ahead of the Node 20 deprecation path
 
 ## v1.2.15
 
