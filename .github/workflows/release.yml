@@ -1,21 +1,12 @@
-name: Release Extension
+name: Publish Extension Release
 
 on:
   push:
     branches: ["main"]
     paths:
-      - "extension/**"
+      - "extension/manifest.json"
   workflow_dispatch:
     inputs:
-      bump:
-        description: "Semver bump type"
-        required: true
-        default: patch
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
       publish_to_cws:
         description: "Publish release to Chrome Web Store"
         required: true
@@ -26,64 +17,39 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-extension-main
+  group: publish-extension-release-main
   cancel-in-progress: false
 
 jobs:
   release:
-    if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     env:
-      BUMP_TYPE: ${{ github.event_name == 'workflow_dispatch' && inputs.bump || 'patch' }}
-      PUBLISH_TO_CWS: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to_cws || 'true' }}
+      PUBLISH_TO_CWS: ${{ github.event_name != 'workflow_dispatch' || inputs.publish_to_cws }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "20"
 
       - name: Validate extension package structure
         run: node scripts/validate-extension.mjs
 
-      - name: Resolve next release version
+      - name: Resolve release version
         id: version
         run: |
           set -euo pipefail
-          git fetch --tags --force
-
-          latest_tag=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
-          if [ -z "${latest_tag}" ]; then
-            major=1
-            minor=2
-            patch=0
-          else
-            version="${latest_tag#v}"
-            IFS='.' read -r major minor patch <<<"${version}"
+          VERSION=$(node -p "require('./extension/manifest.json').version")
+          if ! printf '%s' "${VERSION}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Manifest version must be semantic version format (x.y.z)."
+            exit 1
           fi
-
-          case "${BUMP_TYPE}" in
-            major)
-              major=$((major + 1))
-              minor=0
-              patch=0
-              ;;
-            minor)
-              minor=$((minor + 1))
-              patch=0
-              ;;
-            patch|*)
-              patch=$((patch + 1))
-              ;;
-          esac
-
-          NEXT_VERSION="${major}.${minor}.${patch}"
-          echo "version=${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "tag=v${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Validate Chrome Web Store secrets
         if: env.PUBLISH_TO_CWS == 'true'
@@ -107,45 +73,21 @@ jobs:
             exit 1
           fi
 
-      - name: Bump extension version
+      - name: Create and push release tag if missing
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          NEXT_VERSION="${{ steps.version.outputs.version }}"
-          node -e "
-            const fs = require('fs');
-            const manifestPath = 'extension/manifest.json';
-            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-            manifest.version = process.argv[1];
-            fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
-          " "${NEXT_VERSION}"
-
-      - name: Commit and push release bump
-        id: release_commit
-        run: |
-          set -euo pipefail
-          NEXT_VERSION="${{ steps.version.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add extension/manifest.json
-          if git diff --cached --quiet; then
-            echo "No version changes detected; skipping release."
-            echo "skip_release=true" >> "$GITHUB_OUTPUT"
+          git fetch --tags --force
+          TAG="${{ steps.version.outputs.tag }}"
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists."
             exit 0
           fi
-          git commit -m "chore(release): cut v${NEXT_VERSION}"
-          git push origin HEAD:main
-          echo "skip_release=false" >> "$GITHUB_OUTPUT"
-
-      - name: Create and push release tag
-        if: steps.release_commit.outputs.skip_release == 'false'
-        run: |
-          set -euo pipefail
-          TAG="${{ steps.version.outputs.tag }}"
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin "$TAG"
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "${TAG}"
 
       - name: Package extension
-        if: steps.release_commit.outputs.skip_release == 'false'
         run: |
           set -euo pipefail
           VERSION="${{ steps.version.outputs.version }}"
@@ -156,24 +98,29 @@ jobs:
           unzip -l "dist/ai-dev-coach-${VERSION}.zip" | grep -q "manifest.json"
 
       - name: Generate friendly release notes
-        if: steps.release_commit.outputs.skip_release == 'false'
         env:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
           RELEASE_NOTES_PATH: dist/release-notes.md
         run: node scripts/generate-friendly-release-notes.mjs
 
-      - name: Create GitHub release with friendly notes
-        if: steps.release_commit.outputs.skip_release == 'false'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: AI Dev Coach ${{ steps.version.outputs.tag }}
-          body_path: dist/release-notes.md
-          files: dist/ai-dev-coach-${{ steps.version.outputs.version }}.zip
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          ZIP_FILE="dist/ai-dev-coach-${VERSION}.zip"
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "${ZIP_FILE}" --clobber
+            gh release edit "${TAG}" --title "AI Dev Coach ${TAG}" --notes-file dist/release-notes.md
+          else
+            gh release create "${TAG}" "${ZIP_FILE}" --title "AI Dev Coach ${TAG}" --notes-file dist/release-notes.md
+          fi
 
       - name: Upload and publish to Chrome Web Store
-        if: steps.release_commit.outputs.skip_release == 'false' && env.PUBLISH_TO_CWS == 'true'
+        if: env.PUBLISH_TO_CWS == 'true'
         env:
           CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
@@ -202,43 +149,63 @@ jobs:
           STATUS_URL="https://chromewebstore.googleapis.com/v2/publishers/${CWS_PUBLISHER_ID}/items/${CWS_EXTENSION_ID}:fetchStatus"
           PUBLISH_URL="https://chromewebstore.googleapis.com/v2/publishers/${CWS_PUBLISHER_ID}/items/${CWS_EXTENSION_ID}:publish?publishTarget=${PUBLISH_TARGET}"
 
-          UPLOAD_RESPONSE=$(curl --fail-with-body -sS -X POST \
+          upload_raw=$(curl --silent --show-error --write-out '\nHTTP_STATUS:%{http_code}\n' -X POST \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -T "${ZIP_FILE}" \
             "${UPLOAD_URL}")
-          echo "Upload response: ${UPLOAD_RESPONSE}"
 
-          FINAL_UPLOAD_STATE=$(echo "$UPLOAD_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("uploadState",""))')
-          if [ -z "$FINAL_UPLOAD_STATE" ]; then
+          upload_status=$(printf '%s\n' "${upload_raw}" | sed -n 's/^HTTP_STATUS://p' | tail -n1)
+          upload_body=$(printf '%s\n' "${upload_raw}" | sed '$d')
+
+          if [ "${upload_status}" -ge 400 ]; then
+            if printf '%s' "${upload_body}" | grep -qi "in review"; then
+              echo "::error::Chrome Web Store item is currently in review. GitHub release is ready, but store publish must wait until review completes."
+            else
+              echo "::error::Chrome Web Store upload failed: ${upload_body}"
+            fi
+            exit 1
+          fi
+
+          final_upload_state=$(printf '%s' "${upload_body}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("uploadState",""))')
+          if [ -z "${final_upload_state}" ]; then
             echo "::error::Upload response missing uploadState"
             exit 1
           fi
 
-          if [ "$FINAL_UPLOAD_STATE" = "UPLOAD_IN_PROGRESS" ]; then
+          if [ "${final_upload_state}" = "UPLOAD_IN_PROGRESS" ]; then
             for attempt in $(seq 1 18); do
-              STATUS_RESPONSE=$(curl --fail-with-body -sS \
+              status_response=$(curl --fail-with-body -sS \
                 -H "Authorization: Bearer ${ACCESS_TOKEN}" \
                 "${STATUS_URL}")
-              FINAL_UPLOAD_STATE=$(echo "$STATUS_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("uploadState",""))')
-              echo "Upload polling attempt ${attempt}: ${FINAL_UPLOAD_STATE}"
-              if [ "$FINAL_UPLOAD_STATE" = "SUCCESS" ]; then
+              final_upload_state=$(printf '%s' "${status_response}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("uploadState",""))')
+              echo "Upload polling attempt ${attempt}: ${final_upload_state}"
+              if [ "${final_upload_state}" = "SUCCESS" ]; then
                 break
               fi
-              if [ "$FINAL_UPLOAD_STATE" != "UPLOAD_IN_PROGRESS" ]; then
-                echo "::error::Unexpected uploadState while polling: ${FINAL_UPLOAD_STATE}"
-                echo "${STATUS_RESPONSE}"
+              if [ "${final_upload_state}" != "UPLOAD_IN_PROGRESS" ]; then
+                echo "::error::Unexpected uploadState while polling: ${final_upload_state}"
+                echo "${status_response}"
                 exit 1
               fi
               sleep 10
             done
           fi
 
-          if [ "$FINAL_UPLOAD_STATE" != "SUCCESS" ]; then
-            echo "::error::Upload did not reach SUCCESS. Final uploadState=${FINAL_UPLOAD_STATE}"
+          if [ "${final_upload_state}" != "SUCCESS" ]; then
+            echo "::error::Upload did not reach SUCCESS. Final uploadState=${final_upload_state}"
             exit 1
           fi
 
-          PUBLISH_RESPONSE=$(curl --fail-with-body -sS -X POST \
+          publish_raw=$(curl --silent --show-error --write-out '\nHTTP_STATUS:%{http_code}\n' -X POST \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             "${PUBLISH_URL}")
-          echo "Publish response: ${PUBLISH_RESPONSE}"
+
+          publish_status=$(printf '%s\n' "${publish_raw}" | sed -n 's/^HTTP_STATUS://p' | tail -n1)
+          publish_body=$(printf '%s\n' "${publish_raw}" | sed '$d')
+
+          if [ "${publish_status}" -ge 400 ]; then
+            echo "::error::Chrome Web Store publish failed: ${publish_body}"
+            exit 1
+          fi
+
+          echo "Publish response: ${publish_body}"

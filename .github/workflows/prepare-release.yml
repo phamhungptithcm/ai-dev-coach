@@ -1,0 +1,146 @@
+name: Prepare Extension Release
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "extension/**"
+      - "!extension/manifest.json"
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver bump type"
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: prepare-extension-release-main
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    env:
+      BUMP_TYPE: ${{ github.event_name == 'workflow_dispatch' && inputs.bump || 'patch' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+
+      - name: Validate extension package structure
+        run: node scripts/validate-extension.mjs
+
+      - name: Resolve next release version
+        id: version
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          latest_tag=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+          if [ -z "${latest_tag}" ]; then
+            major=1
+            minor=2
+            patch=0
+          else
+            version="${latest_tag#v}"
+            IFS='.' read -r major minor patch <<<"${version}"
+          fi
+
+          case "${BUMP_TYPE}" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch|*)
+              patch=$((patch + 1))
+              ;;
+          esac
+
+          echo "version=${major}.${minor}.${patch}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${major}.${minor}.${patch}" >> "$GITHUB_OUTPUT"
+          echo "latest_tag=${latest_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Detect releasable extension changes
+        id: changes
+        run: |
+          set -euo pipefail
+          latest_tag="${{ steps.version.outputs.latest_tag }}"
+
+          if [ -z "${latest_tag}" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed_files=$(git diff --name-only "${latest_tag}..HEAD" -- . ':(exclude)extension/manifest.json')
+          if printf '%s' "${changed_files}" | grep -q '^extension/'; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No unreleased extension changes found since ${latest_tag}."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump extension version in workspace
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          set -euo pipefail
+          NEXT_VERSION="${{ steps.version.outputs.version }}"
+          node -e "
+            const fs = require('fs');
+            const manifestPath = 'extension/manifest.json';
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            manifest.version = process.argv[1];
+            fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+          " "${NEXT_VERSION}"
+
+      - name: Create or update release PR
+        if: steps.changes.outputs.has_changes == 'true'
+        id: cpr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ github.token }}
+          commit-message: "chore(release): cut v${{ steps.version.outputs.version }}"
+          title: "chore(release): cut v${{ steps.version.outputs.version }}"
+          body: |
+            ## Summary
+            - bump extension manifest version to `${{ steps.version.outputs.version }}`
+            - prepare GitHub release tag `${{ steps.version.outputs.tag }}`
+            - keep release publish step on post-merge automation
+
+            ## Next
+            - review and approve this PR
+            - merge into `main`
+            - `Publish Extension Release` will tag, package, write release notes, and publish to Chrome Web Store
+          branch: release/v${{ steps.version.outputs.version }}
+          base: main
+          delete-branch: true
+
+      - name: Trigger CI for release PR branch
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run CI --ref "${{ steps.cpr.outputs.pull-request-branch }}"
+
