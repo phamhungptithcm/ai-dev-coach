@@ -62,6 +62,7 @@ Capabilities:
 - browse prompt cards by category
 - search prompt text locally
 - filter by category
+- show inline suggestions in the active AI chat composer while the user types
 - copy a prompt
 - insert a prompt into the active supported AI chat
 - insert and auto-send a prompt into the active supported AI chat
@@ -72,6 +73,7 @@ Marketplace data flow:
 - a sync script exports that markdown into the extension bundle
 - the extension parses markdown into structured prompt objects locally
 - local usage counts drive trending prompts
+- inline suggestion ranking reuses local prompt usage, role weighting, and query intent matching
 
 Prompt categories:
 

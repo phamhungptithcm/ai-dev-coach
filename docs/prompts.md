@@ -1,298 +1,524 @@
-# AI Dev Coach -- Static Prompt Library (200 Prompts)
+# AI Prompt Library
 
-This file contains **200 curated prompts** categorized for easy use in a
-browser extension.
-
-## Developer
-
-1.  Debug the following code and explain the root cause of the bug.
-
-2.  Review this code and suggest improvements for readability and maintainability.
-
-3.  Analyze this stack trace and explain what caused the error.
-
-4.  Optimize the following SQL query for better performance.
-
-5.  Generate unit tests for the following function.
-
-6.  Refactor this code using clean architecture principles.
-
-7.  Explain this code step‑by‑step as if teaching a junior developer.
-
-8.  Suggest security improvements for this API implementation.
-
-9.  Identify potential performance bottlenecks in this code.
-
-10. Design a scalable architecture for this application.
-
-11. Debug the following code and explain the root cause of the bug.
-
-12. Review this code and suggest improvements for readability and maintainability.
-
-13. Analyze this stack trace and explain what caused the error.
-
-14. Optimize the following SQL query for better performance.
-
-15. Generate unit tests for the following function.
-
-16. Refactor this code using clean architecture principles.
-
-17. Explain this code step‑by‑step as if teaching a junior developer.
-
-18. Suggest security improvements for this API implementation.
-
-19. Identify potential performance bottlenecks in this code.
-
-20. Design a scalable architecture for this application.
-
-## Learning
-
-21. Explain this concept in simple terms for beginners.
-
-22. Create a learning roadmap for mastering this topic.
-
-23. Teach me this concept with examples and analogies.
-
-24. Generate quiz questions about this topic.
-
-25. Summarize this article into key learning points.
-
-26. Explain this topic step‑by‑step with practical examples.
-
-27. Create flashcards for learning this subject.
-
-28. Compare these two concepts and explain the differences.
-
-29. Give me exercises to practice this skill.
-
-30. Explain this topic like I am 10 years old.
-
-31. Explain this concept in simple terms for beginners.
-
-32. Create a learning roadmap for mastering this topic.
-
-33. Teach me this concept with examples and analogies.
-
-34. Generate quiz questions about this topic.
-
-35. Summarize this article into key learning points.
-
-36. Explain this topic step‑by‑step with practical examples.
-
-37. Create flashcards for learning this subject.
-
-38. Compare these two concepts and explain the differences.
-
-39. Give me exercises to practice this skill.
-
-40. Explain this topic like I am 10 years old.
+A categorized collection of reusable prompts for writing, business, coding,
+productivity, image generation, daily life, and learning.
 
 ## Writing
 
-41. Rewrite this text in a professional tone.
+### 1. Blog Post from Outline
 
-42. Write a blog post about this topic.
+Write a 1,200-word blog post about {{topic}} for {{audience}}.
 
-43. Generate an engaging introduction for this article.
+Structure:
+- Hook intro (2 sentences)
+- 5 subheadings with 2-3 paragraphs each
+- Conclusion with CTA
 
-44. Create a catchy headline for this blog post.
+Tone: conversational, authoritative. Use specific examples.
 
-45. Rewrite this paragraph to be clearer and more concise.
+### 2. Rewrite for Clarity
 
-46. Write a persuasive argument for this topic.
+Rewrite this text to be clearer and more concise.
 
-47. Turn these notes into a well‑structured article.
+Requirements:
+- Cut unnecessary words
+- Fix passive voice
+- Improve flow
+- Keep the same meaning and tone
 
-48. Write a creative story about this idea.
+Text:
+{{paste_text}}
 
-49. Improve the tone of this email.
+Return only the rewritten version.
 
-50. Generate a conclusion for this article.
+### 3. 5 Opening Hooks
 
-51. Rewrite this text in a professional tone.
+Write 5 opening hooks for a blog post about {{topic}}.
 
-52. Write a blog post about this topic.
+Requirements:
+1. Surprising statistic
+2. Contrarian statement
+3. Story or anecdote
+4. Direct question
+5. Bold claim
 
-53. Generate an engaging introduction for this article.
+Each hook should be 1-2 sentences.
 
-54. Create a catchy headline for this blog post.
+### 4. Content Repurposer
 
-55. Rewrite this paragraph to be clearer and more concise.
+Take this content and create:
+1. LinkedIn post (150 words)
+2. Twitter/X thread (5 tweets)
+3. Email newsletter intro (100 words)
+4. Instagram caption with 5 hashtags
 
-56. Write a persuasive argument for this topic.
+Content:
+{{paste_text}}
 
-57. Turn these notes into a well‑structured article.
+### 5. Executive Summary
 
-58. Write a creative story about this idea.
+Write an executive summary (250 words max) for this document:
 
-59. Improve the tone of this email.
+{{paste_text}}
 
-60. Generate a conclusion for this article.
+Structure:
+- Key finding (1 sentence)
+- Context (2-3 sentences)
+- 3-5 bullet insights
+- Recommended action
 
-## Productivity
+### 6. Headline A/B Tester
 
-61. Create a daily productivity routine.
+Generate 10 headline variations for:
+"{{headline}}"
 
-62. Generate a weekly planning template.
+Include:
+- 3 how-to options
+- 2 listicle options
+- 2 question-based options
+- 2 benefit-driven options
+- 1 contrarian option
 
-63. Suggest ways to improve focus while working.
+Each headline must stay under 65 characters.
 
-64. Create a task prioritization strategy.
+### 7. Product Description
 
-65. Suggest productivity tools for remote workers.
+Write a product description for {{product}}.
 
-66. Help me plan my week effectively.
+Specs: {{specs}}
+Target buyer: {{persona}}
+Price: {{price}}
 
-67. Create a time‑blocking schedule.
+Format:
+- One-line hook
+- 3 benefit bullets
+- Social proof placeholder
+- CTA
 
-68. Generate ideas to avoid procrastination.
+Keep it under 150 words.
 
-69. Create a 30‑day productivity challenge.
+### 8. Tone Converter
 
-70. Suggest habits to improve productivity.
+Rewrite this in a {{professional/casual/humorous/academic}} tone while
+keeping the same message.
 
-71. Create a daily productivity routine.
+Original:
+{{paste_text}}
 
-72. Generate a weekly planning template.
+### 9. Article Outline
 
-73. Suggest ways to improve focus while working.
+Create a detailed outline for a {{word_count}}-word article about
+{{topic}}.
 
-74. Create a task prioritization strategy.
+Include:
+- H1 with keyword "{{keyword}}"
+- 6-8 H2 sections
+- 2-3 bullets per section
+- Meta description (155 chars)
 
-75. Suggest productivity tools for remote workers.
+### 10. Story Framework
 
-76. Help me plan my week effectively.
+Write a 500-word short story.
 
-77. Create a time‑blocking schedule.
+Setting: {{setting}}
+Character: {{character}} with flaw {{flaw}}
+Conflict: {{conflict}}
+Resolution: {{bittersweet/triumphant/open}}
 
-78. Generate ideas to avoid procrastination.
+Use vivid sensory details. Show, do not tell.
 
-79. Create a 30‑day productivity challenge.
+### 11. Cold Email
 
-80. Suggest habits to improve productivity.
+Write a cold email to {{role}} at {{company_type}}.
 
-## Image Generation
+Goal: {{goal}}
+Product: {{description}}
+Pain: {{pain}}
 
-81. Create a cinematic cyberpunk city at night.
+Requirements:
+- Under 100 words
+- No "hope this finds you well"
+- Personalized opening
+- One CTA
+- P.S. with social proof
 
-82. Generate a futuristic robot concept art.
+### 12. Follow-Up Email
 
-83. Create a fantasy castle on a floating island.
+Write follow-up #{{number}} for a prospect who has not responded.
 
-84. Design a modern tech startup logo.
+Context: {{summary}}
+Days since last email: {{days}}
 
-85. Create a realistic portrait of an astronaut.
+Include:
+- New value (insight or case study)
+- Different angle
+- Question CTA
 
-86. Generate a magical glowing forest scene.
-
-87. Design a futuristic AI brain made of circuits.
-
-88. Create a cartoon developer working late at night.
-
-89. Generate a sci‑fi spaceship interior concept.
-
-90. Design a futuristic electric car.
-
-91. Create a cinematic cyberpunk city at night.
-
-92. Generate a futuristic robot concept art.
-
-93. Create a fantasy castle on a floating island.
-
-94. Design a modern tech startup logo.
-
-95. Create a realistic portrait of an astronaut.
-
-96. Generate a magical glowing forest scene.
-
-97. Design a futuristic AI brain made of circuits.
-
-98. Create a cartoon developer working late at night.
-
-99. Generate a sci‑fi spaceship interior concept.
-
-100. Design a futuristic electric car.
+Keep it under 75 words.
 
 ## Business
 
-101. Generate startup ideas in the AI industry.
+### 21. Google Ads Copy
 
-102. Create a business plan outline for this idea.
+Write Google Ads for {{product}}.
 
-103. Analyze this market opportunity.
+Deliver:
+- 5 headlines (max 30 chars)
+- 3 descriptions (max 90 chars)
 
-104. Write a pitch deck outline for investors.
+Keyword: {{keyword}}
+USP: {{usp}}
 
-105. Suggest growth strategies for a startup.
+Focus on benefits over features.
 
-106. Create a competitive analysis for this product.
+### 22. Landing Page Copy
 
-107. Generate marketing ideas for this business.
+Write landing page copy for {{product}} targeting {{audience}}.
 
-108. Write a professional email to a potential investor.
+Include:
+- Hero headline + subheadline
+- 3 benefit sections
+- Social proof
+- FAQ (4 items)
+- CTA
 
-109. Create a pricing strategy for this product.
+Tone: {{tone}}
 
-110. Analyze strengths and weaknesses of this business idea.
+### 23. 90-Day Marketing Plan
 
-111. Generate startup ideas in the AI industry.
+Create a 90-day marketing plan for {{business}} with {{budget}} per
+month.
 
-112. Create a business plan outline for this idea.
+Include:
+- 3 channels with rationale
+- Weekly content topics
+- 5 KPIs with targets
+- 2 quick wins for month 1
 
-113. Analyze this market opportunity.
+### 24. Value Proposition
 
-114. Write a pitch deck outline for investors.
+Create a value proposition using this format:
 
-115. Suggest growth strategies for a startup.
+For {{customer}} who {{need}}, our {{product}} is a {{category}} that
+{{benefit}}. Unlike {{competitor}}, we {{differentiator}}.
 
-116. Create a competitive analysis for this product.
+Then write 3 one-liners under 15 words.
 
-117. Generate marketing ideas for this business.
+### 25. Email Welcome Sequence
 
-118. Write a professional email to a potential investor.
+Write a 5-email welcome sequence for {{business}}.
 
-119. Create a pricing strategy for this product.
+Email timing:
+- Day 0: Welcome + quick win
+- Day 2: Story + proof
+- Day 4: Overcome objection
+- Day 7: Case study
+- Day 10: Offer
 
-120. Analyze strengths and weaknesses of this business idea.
+For each email include:
+- Subject line
+- ~150 word body
+- One CTA
+
+### 26. SWOT Analysis
+
+Perform a SWOT analysis for {{company}} in {{industry}}.
+
+Include:
+- 4-5 points per quadrant
+- Short explanation for each point
+
+End with: Top strategic priority: [one sentence].
+
+### 27. Meeting Summary
+
+Summarize these meeting notes:
+
+{{paste_notes}}
+
+Output:
+1. Key decisions
+2. Action items (who, what, when)
+3. Open questions
+4. Next meeting agenda
+
+Under 300 words.
+
+### 28. Competitive Analysis
+
+Compare {{product}} vs {{comp_1}}, {{comp_2}}, and {{comp_3}}.
+
+Evaluate:
+- Pricing
+- 5 key features
+- Target audience
+- Strengths
+- Weaknesses
+
+Return a comparison table plus a 100-word summary.
+
+## Developer
+
+### 31. Debug This Error
+
+Error in {{language}}:
+
+{{paste_error}}
+
+Code:
+{{paste_code}}
+
+Provide:
+1. Root cause
+2. Fixed code
+3. Explanation
+4. Prevention tips
+
+### 32. Code Review
+
+Review this code:
+
+{{paste_code}}
+
+Check for:
+- Logic errors
+- Edge cases
+- Performance
+- Security
+- Naming
+- Error handling
+
+For each issue include severity, line reference, and recommended fix.
+
+### 33. Refactor for Readability
+
+Refactor this code for readability:
+
+{{paste_code}}
+
+Requirements:
+- Preserve functionality
+- Use descriptive names
+- Extract repeated logic
+- Keep comments minimal and useful
+
+Return the refactored code plus a short explanation.
+
+### 34. Unit Tests
+
+Write unit tests using {{framework}} for:
+
+{{paste_code}}
+
+Cover:
+- Happy paths
+- Edge cases
+- Error cases
+
+Use descriptive test names.
+
+### 35. System Design Prompt
+
+Design a high-level architecture for {{system}}.
+
+Context:
+- Users: {{users}}
+- Traffic: {{traffic}}
+- Availability target: {{sla}}
+- Constraints: {{constraints}}
+
+Deliver:
+1. Core components
+2. Data flow
+3. Scaling strategy
+4. Security considerations
+5. Key tradeoffs
+
+## Productivity
+
+### 41. Decision Matrix
+
+Help decide between {{option_1}}, {{option_2}}, and {{option_3}}.
+
+Criteria with weights:
+{{criteria_with_weights}}
+
+Score each option from 1-10, calculate weighted totals, and recommend the
+best option.
+
+### 42. Weekly Planner
+
+Plan my week.
+
+Priorities: {{list_3}}
+Projects: {{list}}
+Available time: {{hours}}
+
+Rules:
+- Deep work in the morning
+- Group similar tasks
+- Add buffer time
+- Flag overflow work
+
+### 43. Meeting Agenda Builder
+
+Create a 30-minute meeting agenda for {{topic}}.
+
+Participants: {{participants}}
+Goal: {{goal}}
+Context: {{context}}
+
+Output:
+- Agenda sections with time boxes
+- Required pre-read
+- Decisions needed
+- Follow-up owner list
+
+## Image Generation
+
+### 51. Product Hero Image Prompt
+
+Create an image-generation prompt for a hero shot of {{product}}.
+
+Include:
+- Subject and composition
+- Lighting
+- Camera angle
+- Background details
+- Style references
+- Negative prompt
+
+Output one polished prompt and one shorter variation.
+
+### 52. Brand Illustration Prompt
+
+Create 3 image prompts for a brand illustration system.
+
+Brand: {{brand}}
+Audience: {{audience}}
+Style: {{style}}
+Palette: {{palette}}
+Mood: {{mood}}
+
+For each prompt include composition, rendering style, and negative prompt.
+
+### 53. Character Portrait Prompt
+
+Write a detailed portrait prompt for {{character}}.
+
+Include:
+- Age and appearance
+- Wardrobe
+- Expression
+- Setting
+- Lighting
+- Lens or framing
+- Art style
+
+Return one cinematic prompt and one minimalist prompt.
 
 ## Daily Life
 
-121. Create a healthy weekly meal plan.
+### 61. Weekly Meal Plan
 
-122. Suggest a beginner workout routine.
+Create a healthy 7-day meal plan.
 
-123. Plan a weekend trip itinerary.
+Constraints:
+- Budget: {{budget}}
+- Diet: {{diet}}
+- Cooking time: {{time_limit}}
+- Goal: {{goal}}
 
-124. Generate creative birthday wishes.
+Include breakfast, lunch, dinner, and one shopping list.
 
-125. Write a motivational quote for today.
+### 62. Weekend Trip Planner
 
-126. Suggest gift ideas for a friend.
+Plan a weekend trip to {{destination}}.
 
-127. Create a morning routine for productivity.
+Budget: {{budget}}
+Travel style: {{style}}
+Start point: {{start_location}}
+Interests: {{interests}}
 
-128. Give tips for improving focus.
+Return:
+- Day-by-day itinerary
+- Estimated costs
+- Packing list
+- 3 backup options for weather changes
 
-129. Create a daily schedule template.
+### 63. Daily Reset Routine
 
-130. Suggest ways to reduce stress.
+Build a daily reset routine for {{person_type}}.
 
-131. Create a healthy weekly meal plan.
+Problems to solve:
+{{problems}}
 
-132. Suggest a beginner workout routine.
+Include:
+- Morning reset
+- Midday reset
+- Evening shutdown
+- One simple habit tracker
 
-133. Plan a weekend trip itinerary.
+### 64. Stress Reduction Plan
 
-134. Generate creative birthday wishes.
+Create a realistic stress reduction plan.
 
-135. Write a motivational quote for today.
+Context:
+{{context}}
 
-136. Suggest gift ideas for a friend.
+Include:
+- Immediate actions for today
+- 3 daily habits
+- 2 weekly habits
+- When to ask for professional help
 
-137. Create a morning routine for productivity.
+## Learning
 
-138. Give tips for improving focus.
+### 71. Explain Like I'm 10
 
-139. Create a daily schedule template.
+Explain {{topic}} simply.
 
-140. Suggest ways to reduce stress.
+Structure:
+1. Simple explanation
+2. Everyday analogy
+3. Slightly more advanced explanation
+4. One thing to remember
+5. Expert version (3 sentences)
+
+### 72. Debate Both Sides
+
+Debate both sides of {{topic}}.
+
+PRO:
+- 3 arguments with evidence
+- Best counter to CON
+
+CON:
+- 3 arguments with evidence
+- Best counter to PRO
+
+End with a balanced conclusion.
+
+### 73. Book Summary
+
+Summarize:
+"{{book}}" by {{author}}
+
+Include:
+- Core thesis
+- 5-7 key ideas
+- 3 best quotes
+- Practical takeaways
+- Who should read it
+- Connection to {{related_topic}}
+
+### 74. Learning Roadmap
+
+Create a learning roadmap for {{topic}} over {{timeframe}}.
+
+Include:
+- Beginner, intermediate, and advanced milestones
+- Weekly practice plan
+- Suggested projects
+- Common mistakes to avoid
+- How to measure progress

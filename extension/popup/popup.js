@@ -1123,6 +1123,7 @@ function renderMarketplaceCards(target, prompts, options = {}) {
 
   prompts.forEach((prompt) => {
     const usage = prompt.usage || {};
+    const previewText = prompt.previewText || prompt.text || "";
     const card = document.createElement("article");
     card.className = "marketplace-card";
 
@@ -1144,7 +1145,7 @@ function renderMarketplaceCards(target, prompts, options = {}) {
           ${usageBadge}
         </div>
       </div>
-      <p class="marketplace-card__text">${escapeHtml(prompt.text)}</p>
+      <p class="marketplace-card__text">${escapeHtml(previewText)}</p>
       <div class="marketplace-card__footer">
         <button type="button" class="button marketplace-card__action" data-marketplace-action="copy" data-prompt-id="${escapeHtml(prompt.id)}">Copy</button>
         <button type="button" class="button marketplace-card__action" data-marketplace-action="insert" data-prompt-id="${escapeHtml(prompt.id)}">Insert</button>
@@ -1181,7 +1182,10 @@ function renderMarketplace() {
 
   marketplaceCountBadge.textContent = `${library.summary.promptCount} prompts`;
   marketplaceCountBadge.classList.remove("profile-badge--empty");
-  marketplaceTrendingMeta.textContent = `${library.summary.duplicatePromptCount} duplicates normalized`;
+  marketplaceTrendingMeta.textContent =
+    library.summary.duplicatePromptCount > 0
+      ? `${library.categories.length - 1} categories | ${library.summary.duplicatePromptCount} duplicates normalized`
+      : `${library.categories.length - 1} categories`;
   marketplaceResultsMeta.textContent = `${results.total} result${results.total === 1 ? "" : "s"}`;
 
   renderMarketplaceCategories(library, results.categoryKey);

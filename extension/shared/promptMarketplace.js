@@ -62,6 +62,7 @@
   function normalizePromptText(value) {
     return clean(value)
       .replace(/\s+/g, " ")
+      .replace(/[`*_>#-]+/g, " ")
       .replace(/[.?!]+$/g, "")
       .toLowerCase();
   }
@@ -74,14 +75,28 @@
     return `${normalized.slice(0, 69).trimEnd()}...`;
   }
 
-  function splitKeywords(promptText, categoryKey) {
-    const parts = `${categoryKey} ${promptText}`
+  function splitKeywords(title, promptText, categoryKey) {
+    const parts = `${categoryKey} ${title} ${promptText}`
       .toLowerCase()
-      .replace(/[^a-z0-9\s]+/g, " ")
+      .replace(/[^a-z0-9\s{}]+/g, " ")
       .split(/\s+/)
       .filter((token) => token.length >= 3);
 
     return Array.from(new Set(parts)).slice(0, 16);
+  }
+
+  function buildPreviewText(promptText) {
+    const preview = clean(promptText)
+      .split(/\r?\n/)
+      .map((line) => clean(line).replace(/^[-*]\s+/, ""))
+      .filter(Boolean)
+      .slice(0, 4)
+      .join(" ");
+
+    if (preview.length <= 220) {
+      return preview;
+    }
+    return `${preview.slice(0, 217).trimEnd()}...`;
   }
 
   function getPromptSourceMarkdown() {
@@ -118,37 +133,36 @@
     let currentCategoryKey = DEFAULT_CATEGORY;
     let currentCategoryLabel = getCategoryLabel(DEFAULT_CATEGORY);
     let rawPromptCount = 0;
+    let currentPrompt = null;
 
-    lines.forEach((line) => {
-      const categoryMatch = line.match(/^##\s+(.+)$/);
-      if (categoryMatch) {
-        currentCategoryKey = normalizeCategory(categoryMatch[1]);
-        currentCategoryLabel = getCategoryLabel(currentCategoryKey);
-        if (!categorySeen.has(currentCategoryKey)) {
-          categorySeen.add(currentCategoryKey);
-          categories.push({
-            key: currentCategoryKey,
-            label: currentCategoryLabel,
-            rawCount: 0,
-            promptCount: 0
-          });
-        }
+    function registerCategory(categoryKey, categoryLabel) {
+      if (!categorySeen.has(categoryKey)) {
+        categorySeen.add(categoryKey);
+        categories.push({
+          key: categoryKey,
+          label: categoryLabel,
+          rawCount: 0,
+          promptCount: 0
+        });
+      }
+    }
+
+    function finalizePrompt() {
+      if (!currentPrompt || currentCategoryKey === DEFAULT_CATEGORY) {
+        currentPrompt = null;
         return;
       }
 
-      const promptMatch = line.match(/^\s*(\d+)\.\s+(.+?)\s*$/);
-      if (!promptMatch || currentCategoryKey === DEFAULT_CATEGORY) {
-        return;
-      }
-
-      const rawNumber = Number(promptMatch[1]);
-      const promptText = clean(promptMatch[2]);
-      if (!promptText) {
+      const title = clean(currentPrompt.title);
+      const body = currentPrompt.lines.join("\n").trim();
+      const promptText = clean(body || title);
+      if (!title || !promptText) {
+        currentPrompt = null;
         return;
       }
 
       rawPromptCount += 1;
-      const dedupeKey = `${currentCategoryKey}::${normalizePromptText(promptText)}`;
+      const dedupeKey = `${currentCategoryKey}::${normalizePromptText(`${title} ${promptText}`)}`;
       const categoryEntry = categories.find((entry) => entry.key === currentCategoryKey);
       if (categoryEntry) {
         categoryEntry.rawCount += 1;
@@ -157,19 +171,23 @@
       if (dedupeMap.has(dedupeKey)) {
         const existing = dedupeMap.get(dedupeKey);
         existing.duplicateCount += 1;
-        existing.sourceNumbers.push(rawNumber);
+        if (Number.isFinite(currentPrompt.sourceNumber)) {
+          existing.sourceNumbers.push(currentPrompt.sourceNumber);
+        }
+        currentPrompt = null;
         return;
       }
 
       const prompt = {
-        id: `${currentCategoryKey}-${String(prompts.length + 1).padStart(3, "0")}-${slugify(promptText)}`,
-        title: buildTitle(promptText),
+        id: `${currentCategoryKey}-${String(prompts.length + 1).padStart(3, "0")}-${slugify(title)}`,
+        title,
         text: promptText,
+        previewText: buildPreviewText(promptText),
         categoryKey: currentCategoryKey,
         categoryLabel: currentCategoryLabel,
         duplicateCount: 1,
-        sourceNumbers: [rawNumber],
-        keywords: splitKeywords(promptText, currentCategoryKey)
+        sourceNumbers: Number.isFinite(currentPrompt.sourceNumber) ? [currentPrompt.sourceNumber] : [],
+        keywords: splitKeywords(title, promptText, currentCategoryKey)
       };
 
       prompts.push(prompt);
@@ -178,7 +196,60 @@
       if (categoryEntry) {
         categoryEntry.promptCount += 1;
       }
+
+      currentPrompt = null;
+    }
+
+    lines.forEach((line) => {
+      if (/^\s*-{3,}\s*$/.test(line)) {
+        return;
+      }
+
+      const categoryMatch = line.match(/^##\s+(.+?)\s*$/);
+      if (categoryMatch) {
+        finalizePrompt();
+        const nextCategoryKey = normalizeCategory(categoryMatch[1]);
+        if (nextCategoryKey === DEFAULT_CATEGORY) {
+          currentCategoryKey = DEFAULT_CATEGORY;
+          currentCategoryLabel = getCategoryLabel(DEFAULT_CATEGORY);
+          return;
+        }
+
+        currentCategoryKey = nextCategoryKey;
+        currentCategoryLabel = getCategoryLabel(currentCategoryKey);
+        registerCategory(currentCategoryKey, currentCategoryLabel);
+        return;
+      }
+
+      const promptHeadingMatch = line.match(/^###\s+(?:(\d+)\.\s+)?(.+?)\s*$/);
+      if (promptHeadingMatch && currentCategoryKey !== DEFAULT_CATEGORY) {
+        finalizePrompt();
+        currentPrompt = {
+          sourceNumber: promptHeadingMatch[1] ? Number(promptHeadingMatch[1]) : NaN,
+          title: clean(promptHeadingMatch[2]),
+          lines: []
+        };
+        return;
+      }
+
+      const legacyPromptMatch = !currentPrompt && line.match(/^\s*(\d+)\.\s+(.+?)\s*$/);
+      if (legacyPromptMatch && currentCategoryKey !== DEFAULT_CATEGORY) {
+        finalizePrompt();
+        currentPrompt = {
+          sourceNumber: Number(legacyPromptMatch[1]),
+          title: buildTitle(legacyPromptMatch[2]),
+          lines: [clean(legacyPromptMatch[2])]
+        };
+        finalizePrompt();
+        return;
+      }
+
+      if (currentPrompt) {
+        currentPrompt.lines.push(line);
+      }
     });
+
+    finalizePrompt();
 
     const sortedCategories = categories.sort((left, right) => {
       const leftIndex = CATEGORY_ORDER.indexOf(left.key);
