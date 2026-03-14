@@ -86,6 +86,9 @@
   const DEFAULT_TEMPLATE = "debugging";
   const REQUIRED_FIELDS = ["task", "context", "attempt"];
   const DEFAULT_STATUS_MESSAGE = "Tip: press Ctrl/Cmd + O while focused in the AI chat to open this builder.";
+  const INLINE_SUGGESTION_LIMIT = 5;
+  const INLINE_SUGGESTION_MINIMUM = 3;
+  const INLINE_SUGGESTION_DEBOUNCE_MS = 300;
 
   const TEMPLATES = {
     debugging: {
@@ -198,7 +201,18 @@
     selectedRoleKey: "software_engineer",
     profile: { ...DEFAULT_PROFILE },
     refs: null,
-    layoutTicking: false
+    layoutTicking: false,
+    inlineSuggestions: {
+      library: null,
+      storageState: null,
+      activeInput: null,
+      debounceId: 0,
+      items: [],
+      activeIndex: 0,
+      selectedPromptText: "",
+      open: false,
+      handlers: null
+    }
   };
 
   function storageGet(keys) {
@@ -213,12 +227,37 @@
     return (value || "").trim();
   }
 
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   function getRoleCoaching() {
     const roleCoaching = window.AIDevCoachRoleCoaching;
     if (!roleCoaching || typeof roleCoaching.getRoleProfile !== "function") {
       throw new Error("Role coaching module is unavailable.");
     }
     return roleCoaching;
+  }
+
+  function getPromptMarketplace() {
+    const marketplace = window.AIDevCoachPromptMarketplace;
+    if (!marketplace || typeof marketplace.getPromptLibrary !== "function") {
+      throw new Error("Prompt marketplace module is unavailable.");
+    }
+    return marketplace;
+  }
+
+  function getPromptSuggestionEngine() {
+    const engine = window.AIDevCoachPromptSuggestionEngine;
+    if (!engine || typeof engine.getInlinePromptSuggestions !== "function") {
+      throw new Error("Prompt suggestion engine is unavailable.");
+    }
+    return engine;
   }
 
   function normalizeLevel(value) {
@@ -594,6 +633,22 @@
     return false;
   }
 
+  function readPromptInputValue(input) {
+    if (!(input instanceof HTMLElement)) {
+      return "";
+    }
+
+    if (input.tagName === "TEXTAREA") {
+      return clean(input.value);
+    }
+
+    if (input.isContentEditable) {
+      return clean((input.innerText || input.textContent || "").replace(/\u00a0/g, " "));
+    }
+
+    return "";
+  }
+
   async function attemptSend(input) {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const sendButton = findSendButton(input);
@@ -944,6 +999,309 @@
     };
   }
 
+  function hideInlineSuggestions() {
+    if (!state.refs?.suggestionPanel || !state.refs?.suggestionList) {
+      return;
+    }
+
+    state.inlineSuggestions.open = false;
+    state.inlineSuggestions.items = [];
+    state.inlineSuggestions.activeIndex = 0;
+    state.refs.suggestionPanel.classList.add("ai-coach-builder__hidden");
+    state.refs.suggestionList.innerHTML = "";
+    if (state.refs.suggestionMeta) {
+      state.refs.suggestionMeta.textContent = "";
+    }
+  }
+
+  function positionInlineSuggestions() {
+    if (!state.refs?.suggestionPanel || !state.inlineSuggestions.open) {
+      return;
+    }
+
+    const input = state.inlineSuggestions.activeInput;
+    if (!(input instanceof HTMLElement) || !document.contains(input)) {
+      hideInlineSuggestions();
+      return;
+    }
+
+    const rect = input.getBoundingClientRect();
+    const maxWidth = Math.max(240, window.innerWidth - 16);
+    const width = Math.min(maxWidth, Math.max(280, Math.min(420, rect.width || 320)));
+    const panelHeight = state.refs.suggestionPanel.offsetHeight || 248;
+    let left = rect.left;
+    let top = rect.bottom + 8;
+
+    if (left + width > window.innerWidth - 8) {
+      left = window.innerWidth - width - 8;
+    }
+
+    if (top + panelHeight > window.innerHeight - 8 && rect.top > panelHeight + 8) {
+      top = rect.top - panelHeight - 8;
+    }
+
+    state.refs.suggestionPanel.style.width = `${width}px`;
+    state.refs.suggestionPanel.style.left = `${Math.max(8, left)}px`;
+    state.refs.suggestionPanel.style.top = `${Math.max(8, top)}px`;
+  }
+
+  function renderInlineSuggestions() {
+    if (!state.refs?.suggestionPanel || !state.refs?.suggestionList) {
+      return;
+    }
+
+    const { items, activeIndex } = state.inlineSuggestions;
+    if (!Array.isArray(items) || items.length === 0) {
+      hideInlineSuggestions();
+      return;
+    }
+
+    state.refs.suggestionList.innerHTML = "";
+    if (state.refs.suggestionMeta) {
+      state.refs.suggestionMeta.textContent = `${items.length} suggestion${items.length === 1 ? "" : "s"}`;
+    }
+
+    items.forEach((prompt, index) => {
+      const previewText = prompt.previewText || prompt.text || "";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `ai-coach-inline-suggestion${index === activeIndex ? " ai-coach-inline-suggestion--active" : ""}`;
+      button.dataset.promptId = prompt.id;
+      button.dataset.index = String(index);
+      button.dataset.aiCoachOwned = "true";
+      button.innerHTML = `
+        <div class="ai-coach-inline-suggestion__head">
+          <strong>${escapeHtml(prompt.title)}</strong>
+          <span class="ai-coach-inline-suggestion__badge">${escapeHtml(prompt.categoryLabel)}</span>
+        </div>
+        <p class="ai-coach-inline-suggestion__text">${escapeHtml(previewText)}</p>
+        ${
+          Array.isArray(prompt.reasons) && prompt.reasons.length > 0
+            ? `<div class="ai-coach-inline-suggestion__reasons">${prompt.reasons
+                .map((reason) => `<span>${escapeHtml(reason)}</span>`)
+                .join("")}</div>`
+            : ""
+        }
+      `;
+      state.refs.suggestionList.appendChild(button);
+    });
+
+    state.refs.suggestionPanel.classList.remove("ai-coach-builder__hidden");
+    state.inlineSuggestions.open = true;
+    positionInlineSuggestions();
+  }
+
+  async function loadInlineSuggestionResources(force = false) {
+    if (state.inlineSuggestions.library && state.inlineSuggestions.storageState && !force) {
+      return;
+    }
+
+    const marketplace = getPromptMarketplace();
+    state.inlineSuggestions.library = marketplace.getPromptLibrary();
+    state.inlineSuggestions.storageState = await marketplace.readState(chrome.storage.local);
+  }
+
+  async function recordInlineSuggestionUsage(prompt) {
+    if (!prompt?.id) {
+      return;
+    }
+
+    try {
+      state.inlineSuggestions.storageState = await getPromptMarketplace().recordPromptUsage(chrome.storage.local, {
+        promptId: prompt.id,
+        action: "insert",
+        source: "inline_suggestion",
+        platform: detectPlatform()?.name || ""
+      });
+    } catch (error) {
+      console.debug("AI Dev Coach inline suggestion usage tracking skipped", error);
+    }
+  }
+
+  async function applyInlineSuggestion(prompt, input) {
+    const targetInput =
+      input instanceof HTMLElement ? input : state.inlineSuggestions.activeInput;
+    if (!(targetInput instanceof HTMLElement) || !prompt) {
+      return false;
+    }
+
+    const inserted = setPromptInputValue(targetInput, prompt.text);
+    if (!inserted) {
+      return false;
+    }
+
+    state.inlineSuggestions.selectedPromptText = prompt.text;
+    hideInlineSuggestions();
+    await recordInlineSuggestionUsage(prompt);
+    return true;
+  }
+
+  async function refreshInlineSuggestions() {
+    if (state.panelOpen) {
+      hideInlineSuggestions();
+      return;
+    }
+
+    const input = state.inlineSuggestions.activeInput;
+    if (!(input instanceof HTMLElement) || !document.contains(input) || !isVisibleInput(input)) {
+      hideInlineSuggestions();
+      return;
+    }
+
+    const query = readPromptInputValue(input);
+    if (!query || query.length < 2) {
+      hideInlineSuggestions();
+      return;
+    }
+
+    if (state.inlineSuggestions.selectedPromptText && query === state.inlineSuggestions.selectedPromptText) {
+      hideInlineSuggestions();
+      return;
+    }
+
+    await loadInlineSuggestionResources();
+    const suggestions = getPromptSuggestionEngine().getInlinePromptSuggestions({
+      query,
+      roleKey: state.selectedRoleKey || resolveRoleKey(state.profile),
+      library: state.inlineSuggestions.library,
+      rawState: state.inlineSuggestions.storageState,
+      limit: INLINE_SUGGESTION_LIMIT,
+      minimum: INLINE_SUGGESTION_MINIMUM
+    });
+
+    if (!suggestions.length) {
+      hideInlineSuggestions();
+      return;
+    }
+
+    state.inlineSuggestions.items = suggestions;
+    state.inlineSuggestions.activeIndex = 0;
+    renderInlineSuggestions();
+  }
+
+  function scheduleInlineSuggestionUpdate(input) {
+    if (input instanceof HTMLElement) {
+      state.inlineSuggestions.activeInput = input;
+    }
+
+    const currentValue = readPromptInputValue(state.inlineSuggestions.activeInput);
+    if (state.inlineSuggestions.selectedPromptText && currentValue !== state.inlineSuggestions.selectedPromptText) {
+      state.inlineSuggestions.selectedPromptText = "";
+    }
+
+    window.clearTimeout(state.inlineSuggestions.debounceId);
+    state.inlineSuggestions.debounceId = window.setTimeout(() => {
+      refreshInlineSuggestions().catch((error) => {
+        console.debug("AI Dev Coach inline suggestion refresh skipped", error);
+      });
+    }, INLINE_SUGGESTION_DEBOUNCE_MS);
+  }
+
+  function setInlineSuggestionIndex(nextIndex) {
+    if (!state.inlineSuggestions.items.length) {
+      return;
+    }
+
+    const itemCount = state.inlineSuggestions.items.length;
+    state.inlineSuggestions.activeIndex = ((nextIndex % itemCount) + itemCount) % itemCount;
+    renderInlineSuggestions();
+  }
+
+  function handleInlineSuggestionKeydown(event) {
+    if (!state.inlineSuggestions.open || !state.inlineSuggestions.items.length) {
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setInlineSuggestionIndex(state.inlineSuggestions.activeIndex + 1);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setInlineSuggestionIndex(state.inlineSuggestions.activeIndex - 1);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      hideInlineSuggestions();
+      return;
+    }
+
+    if (event.key === "Enter") {
+      const selected = state.inlineSuggestions.items[state.inlineSuggestions.activeIndex];
+      if (!selected) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      applyInlineSuggestion(selected, state.inlineSuggestions.activeInput).catch((error) => {
+        console.debug("AI Dev Coach inline suggestion apply skipped", error);
+      });
+    }
+  }
+
+  function unbindInlineSuggestionInput() {
+    const input = state.inlineSuggestions.activeInput;
+    const handlers = state.inlineSuggestions.handlers;
+    if (!(input instanceof HTMLElement) || !handlers) {
+      return;
+    }
+
+    input.removeEventListener("input", handlers.input);
+    input.removeEventListener("keydown", handlers.keydown, true);
+    input.removeEventListener("blur", handlers.blur, true);
+    state.inlineSuggestions.handlers = null;
+  }
+
+  function bindInlineSuggestionInput(input) {
+    if (!(input instanceof HTMLElement)) {
+      unbindInlineSuggestionInput();
+      state.inlineSuggestions.activeInput = null;
+      hideInlineSuggestions();
+      return;
+    }
+
+    if (state.inlineSuggestions.activeInput === input && state.inlineSuggestions.handlers) {
+      return;
+    }
+
+    unbindInlineSuggestionInput();
+    state.inlineSuggestions.activeInput = input;
+
+    const handlers = {
+      input: () => scheduleInlineSuggestionUpdate(input),
+      keydown: (event) => handleInlineSuggestionKeydown(event),
+      blur: () => {
+        window.setTimeout(() => {
+          const focused = document.activeElement;
+          if (focused instanceof HTMLElement && isCoachOwnedElement(focused)) {
+            return;
+          }
+          hideInlineSuggestions();
+        }, 120);
+      }
+    };
+
+    input.addEventListener("input", handlers.input);
+    input.addEventListener("keydown", handlers.keydown, true);
+    input.addEventListener("blur", handlers.blur, true);
+    state.inlineSuggestions.handlers = handlers;
+    scheduleInlineSuggestionUpdate(input);
+  }
+
+  function syncInlineSuggestionInput(platform) {
+    const activeElement = document.activeElement;
+    const input =
+      resolvePromptInputFromElement(platform, activeElement) ||
+      findPromptInput(platform);
+
+    bindInlineSuggestionInput(input);
+  }
+
   function ensureUiAttached() {
     if (!state.refs || !document.body) {
       return false;
@@ -961,6 +1319,11 @@
       reattached = true;
     }
 
+    if (state.refs.suggestionPanel && !document.contains(state.refs.suggestionPanel)) {
+      document.body.appendChild(state.refs.suggestionPanel);
+      reattached = true;
+    }
+
     return reattached;
   }
 
@@ -972,9 +1335,11 @@
     ensureUiAttached();
 
     const platform = detectPlatform();
+    syncInlineSuggestionInput(platform);
     const input = findPromptInput(platform);
 
     if (!platform) {
+      hideInlineSuggestions();
       state.refs.launcher.classList.add("ai-coach-builder__hidden");
       return;
     }
@@ -1018,6 +1383,8 @@
       state.refs.panel.style.right = "auto";
       state.refs.panel.style.bottom = "auto";
     }
+
+    positionInlineSuggestions();
   }
 
   function scheduleLayoutUpdate() {
@@ -1044,9 +1411,13 @@
     state.refs.launcher.classList.toggle("ai-coach-builder-launcher--active", state.panelOpen);
 
     if (state.panelOpen) {
+      hideInlineSuggestions();
       setStatus("", true);
       state.refs.taskInput.focus();
+      return;
     }
+
+    scheduleInlineSuggestionUpdate(state.inlineSuggestions.activeInput);
   }
 
   function createUI() {
@@ -1128,12 +1499,28 @@
       </div>
     `;
 
+    const suggestionPanel = document.createElement("aside");
+    suggestionPanel.id = "ai-dev-coach-inline-suggestions";
+    suggestionPanel.className = "ai-coach-inline-suggestions ai-coach-builder__hidden";
+    suggestionPanel.dataset.aiCoachOwned = "true";
+    suggestionPanel.innerHTML = `
+      <div class="ai-coach-inline-suggestions__header">
+        <strong>Suggested Prompts</strong>
+        <span id="aiCoachSuggestionMeta" class="ai-coach-inline-suggestions__meta"></span>
+      </div>
+      <div id="aiCoachSuggestionList" class="ai-coach-inline-suggestions__list"></div>
+    `;
+
     document.body.appendChild(launcher);
     document.body.appendChild(panel);
+    document.body.appendChild(suggestionPanel);
 
     state.refs = {
       launcher,
       panel,
+      suggestionPanel,
+      suggestionList: suggestionPanel.querySelector("#aiCoachSuggestionList"),
+      suggestionMeta: suggestionPanel.querySelector("#aiCoachSuggestionMeta"),
       closeBtn: panel.querySelector(".ai-coach-builder__close"),
       templateSelect: panel.querySelector("#aiCoachTemplateSelect"),
       templateHint: panel.querySelector("#aiCoachTemplateHint"),
@@ -1193,6 +1580,26 @@
       });
     });
 
+    state.refs.suggestionList.addEventListener("mousedown", (event) => {
+      const target = event.target instanceof HTMLElement ? event.target.closest("[data-prompt-id][data-index]") : null;
+      if (target) {
+        event.preventDefault();
+      }
+    });
+
+    state.refs.suggestionList.addEventListener("click", (event) => {
+      const target = event.target instanceof HTMLElement ? event.target.closest("[data-prompt-id][data-index]") : null;
+      if (!target) {
+        return;
+      }
+
+      const index = Number(target.dataset.index);
+      const prompt = state.inlineSuggestions.items[index];
+      applyInlineSuggestion(prompt, state.inlineSuggestions.activeInput).catch((error) => {
+        console.debug("AI Dev Coach inline suggestion click skipped", error);
+      });
+    });
+
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && state.panelOpen) {
         togglePanel(false);
@@ -1213,7 +1620,56 @@
     window.addEventListener("resize", scheduleLayoutUpdate, { passive: true });
     window.addEventListener("scroll", scheduleLayoutUpdate, { passive: true, capture: true });
     document.addEventListener("focusin", scheduleLayoutUpdate, true);
+    document.addEventListener("pointerdown", (event) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const clickedCoachUi = target && isCoachOwnedElement(target);
+      const clickedActiveInput =
+        target &&
+        state.inlineSuggestions.activeInput instanceof HTMLElement &&
+        state.inlineSuggestions.activeInput.contains(target);
+
+      if (clickedCoachUi) {
+        return;
+      }
+
+      if (!clickedActiveInput) {
+        hideInlineSuggestions();
+      }
+
+      if (state.panelOpen) {
+        togglePanel(false);
+      }
+    });
     document.addEventListener("visibilitychange", scheduleLayoutUpdate, true);
+  }
+
+  function wireStorageChanges() {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName !== "local") {
+        return;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(changes, "promptMarketplace")) {
+        state.inlineSuggestions.storageState = changes.promptMarketplace.newValue || null;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(changes, "profile")) {
+        const migratedProfile = getRoleCoaching().migrateLegacyStudentProfile({
+          ...DEFAULT_PROFILE,
+          ...(changes.profile?.newValue || {})
+        });
+        state.profile = migratedProfile.profile;
+        state.selectedRoleKey = resolveRoleKey(state.profile);
+      }
+
+      if (changes.quickBuilderRoleKey?.newValue) {
+        state.selectedRoleKey = normalizeRoleKey(changes.quickBuilderRoleKey.newValue);
+      }
+
+      if (state.inlineSuggestions.activeInput) {
+        scheduleInlineSuggestionUpdate(state.inlineSuggestions.activeInput);
+      }
+    });
   }
 
   function isShortcutToggleEvent(event) {
@@ -1300,10 +1756,16 @@
     createUI();
     renderTemplateOptions();
     await loadProfileAndTemplate();
+    try {
+      await loadInlineSuggestionResources();
+    } catch (error) {
+      console.debug("AI Dev Coach inline suggestion preload skipped", error);
+    }
     applyTemplateUI(state.selectedTemplate);
     startObservers();
     wireShortcut();
     wireRuntimeMessages();
+    wireStorageChanges();
     scheduleLayoutUpdate();
   }
 
