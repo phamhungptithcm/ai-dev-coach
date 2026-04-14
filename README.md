@@ -33,7 +33,7 @@ AI Dev Coach is designed to protect the learning loop:
 - Sensitive data detection and local redaction for likely secrets before prompt submission
 - Warning overlays in top-right for shortcut prompts and risky copy-paste behavior
 - AI dependency tracking (`ai requests`, `manual attempts`, `large pastes`)
-- Prompt Marketplace actions that disable `Insert` and `Send` until the current workspace is actually ready
+- Focused Prompt Marketplace for developer and learning prompts, with `Insert` and `Send` disabled until the current workspace is actually ready
 - Settings page for strict mode and warning thresholds
 - First-run consent gate before any prompt or copied-content monitoring can be enabled
 - Enterprise policy support via `chrome.storage.managed`, including supported-host allowlists and admin-locked coaching settings
@@ -136,6 +136,7 @@ See [docs/07-project/branching-strategy.md](docs/07-project/branching-strategy.m
 
 ```text
 extension/
+vscode-extension/
 docs/
 .github/workflows/ci.yml
 .github/workflows/deploy-docs.yml

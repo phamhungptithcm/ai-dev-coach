@@ -41,6 +41,12 @@ It provides:
 The extension runs locally in your browser and does not send your prompts or code to external analytics services.
 ```
 
+Recommended positioning for listing copy:
+
+- primary user: junior and mid-level developers using ChatGPT, Claude, Gemini, Grok, or DeepSeek for engineering work
+- single promise: improve debugging, code-review, and reasoning habits without blocking AI
+- avoid broad wording about writing, business, or daily-life prompts
+
 ## 4. Required Graphic Assets
 
 Store icon:
@@ -51,6 +57,12 @@ Recommended promotional assets for better approval/conversion:
 - Large tile: `920 x 680`
 - Marquee promo tile: `1400 x 560`
 - Screenshots: at least `1280 x 800` (desktop capture preferred)
+
+Recommended screenshot story:
+
+1. weak prompt becomes a structured debugging prompt
+2. secret or risky paste behavior triggers a coaching warning
+3. workspace-ready insert/send flow works directly on an AI chat page
 
 ## 5. Privacy and Distribution Form Guidance
 

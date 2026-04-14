@@ -70,10 +70,19 @@ jobs:
       - name: Validate prompt suggestion engine smoke checks
         run: node scripts/test-prompt-suggestion-engine.mjs
 
+      - name: Validate VS Code companion runtime smoke checks
+        run: node scripts/test-vscode-coach-runtime.mjs
+
+      - name: Validate VS Code diagnostics runtime smoke checks
+        run: node scripts/test-vscode-diagnostics-runtime.mjs
+
+      - name: Validate VS Code diagnostics fixtures
+        run: node scripts/test-vscode-diagnostics-fixtures.mjs
+
       - name: Validate extension JavaScript syntax
         run: |
           set -euo pipefail
-          for f in $(find extension -type f -name '*.js' | sort); do
+          for f in $(find extension vscode-extension -type f -name '*.js' | sort); do
             node --check "$f"
           done
 

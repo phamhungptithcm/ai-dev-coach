@@ -26,30 +26,30 @@
   ]);
 
   const ROLE_CATEGORY_WEIGHTS = {
-    teacher: { learning: 18, writing: 12, productivity: 8 },
-    software_engineer: { developer: 20, learning: 9, productivity: 4 },
-    solution_architecture: { developer: 18, business: 10, productivity: 6 },
-    manager: { business: 18, productivity: 14, writing: 8 },
-    director: { business: 20, productivity: 12, writing: 10 },
-    doctor: { learning: 14, daily_life: 10, writing: 6 },
-    other: {}
+    teacher: { learning: 18 },
+    software_engineer: { developer: 20, learning: 9 },
+    solution_architecture: { developer: 20, learning: 8 },
+    manager: { developer: 16, learning: 6 },
+    director: { developer: 14, learning: 6 },
+    doctor: { learning: 12 },
+    other: { developer: 8, learning: 8 }
   };
 
   const ROLE_KEYWORD_WEIGHTS = {
-    teacher: [/teach/i, /lesson/i, /learn/i, /quiz/i, /flashcard/i],
+    teacher: [/teach/i, /learn/i, /quiz/i, /practice/i],
     software_engineer: [/debug/i, /review/i, /stack/i, /sql/i, /test/i, /api/i, /architect/i],
-    solution_architecture: [/architecture/i, /scalable/i, /system/i, /integration/i, /strategy/i],
-    manager: [/plan/i, /email/i, /analysis/i, /pitch/i, /strategy/i, /market/i],
-    director: [/pitch/i, /strategy/i, /pricing/i, /investor/i, /analysis/i],
-    doctor: [/explain/i, /plan/i, /routine/i, /stress/i, /focus/i],
-    other: []
+    solution_architecture: [/architecture/i, /scalable/i, /system/i, /integration/i, /trade/i, /reliability/i],
+    manager: [/delivery/i, /timeline/i, /dependency/i, /risk/i, /incident/i, /roadmap/i],
+    director: [/strategy/i, /roadmap/i, /dependency/i, /portfolio/i],
+    doctor: [/explain/i, /learn/i, /practice/i],
+    other: [/system/i, /workflow/i, /process/i]
   };
 
   const INTENT_RULES = [
     {
       id: "summarize",
       patterns: [/\bsummar(y|ize|ise)\b/i, /\bkey points?\b/i, /\binsights?\b/i, /\bbullet points?\b/i],
-      categories: { learning: 18, writing: 10, business: 8 },
+      categories: { learning: 18, developer: 4 },
       keywords: [/summar/i, /key learning/i, /conclusion/i]
     },
     {
@@ -61,38 +61,26 @@
     {
       id: "review",
       patterns: [/\breview\b/i, /\bfeedback\b/i, /\bimprove\b/i, /\brefactor\b/i],
-      categories: { developer: 16, writing: 10 },
-      keywords: [/review/i, /rewrite/i, /refactor/i, /improve/i]
+      categories: { developer: 18, learning: 4 },
+      keywords: [/review/i, /refactor/i, /improve/i, /tests?/i]
     },
     {
-      id: "write",
-      patterns: [/\bwrite\b/i, /\brewrite\b/i, /\bemail\b/i, /\barticle\b/i, /\bblog\b/i],
-      categories: { writing: 20, business: 8 },
-      keywords: [/write/i, /rewrite/i, /email/i, /article/i, /headline/i]
+      id: "design",
+      patterns: [/\bdesign\b/i, /\barchitecture\b/i, /\bscal(e|ing)\b/i, /\btrade-?off\b/i, /\brollout\b/i],
+      categories: { developer: 18, learning: 4 },
+      keywords: [/architecture/i, /system/i, /scal/i, /trade/i, /rollout/i]
     },
     {
       id: "plan",
-      patterns: [/\bplan\b/i, /\bschedule\b/i, /\broadmap\b/i, /\broutine\b/i, /\bpriorit/i],
-      categories: { productivity: 18, business: 8, learning: 6 },
-      keywords: [/plan/i, /schedule/i, /routine/i, /roadmap/i]
+      patterns: [/\bplan\b/i, /\broadmap\b/i, /\bpriorit/i, /\bchecklist\b/i, /\bnext steps?\b/i],
+      categories: { developer: 10, learning: 8 },
+      keywords: [/plan/i, /roadmap/i, /checklist/i, /next step/i]
     },
     {
       id: "learn",
       patterns: [/\blearn\b/i, /\bteach\b/i, /\bexplain\b/i, /\bpractice\b/i, /\bquiz\b/i],
       categories: { learning: 20, developer: 6 },
       keywords: [/explain/i, /teach/i, /quiz/i, /practice/i, /flashcard/i]
-    },
-    {
-      id: "business",
-      patterns: [/\bstartup\b/i, /\bbusiness\b/i, /\bmarket\b/i, /\bpitch\b/i, /\bpricing\b/i],
-      categories: { business: 20, writing: 6, productivity: 4 },
-      keywords: [/startup/i, /business/i, /pitch/i, /pricing/i, /market/i]
-    },
-    {
-      id: "image",
-      patterns: [/\bimage\b/i, /\bdesign\b/i, /\blogo\b/i, /\bconcept art\b/i, /\bportrait\b/i],
-      categories: { image_generation: 22 },
-      keywords: [/design/i, /logo/i, /portrait/i, /concept/i, /cinematic/i]
     }
   ];
 
@@ -118,6 +106,9 @@
 
   function normalizeRoleKey(value) {
     const roleCoaching = globalThis.AIDevCoachRoleCoaching;
+    if (roleCoaching && typeof roleCoaching.normalizeVisibleRoleKey === "function") {
+      return roleCoaching.normalizeVisibleRoleKey(value);
+    }
     if (roleCoaching && typeof roleCoaching.normalizeRoleKey === "function") {
       return roleCoaching.normalizeRoleKey(value);
     }

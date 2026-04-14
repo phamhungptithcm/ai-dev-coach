@@ -43,14 +43,14 @@ Expected outcome:
 Goal: show progress over time and open the path into IDE workflows.
 
 - `#16 Skill Trend Graph` — 5 points — 2 to 3 days
-- `#18 VS Code Extension Scaffold` — 8 points — 4 to 5 days
+- `#18 VS Code Companion Scaffold + Inline Diagnostics` — 8 points — 4 to 5 days
 - `#19 Debugging-First IDE Templates` — 5 points — 2 to 3 days
 
 Total: 18 points
 
 Expected outcome:
 - users can see trend lines for prompt quality and warning frequency
-- VS Code companion exists with shared prompt-analysis foundations
+- VS Code companion exists with shared prompt-analysis foundations, inline diagnostics, and quick fixes
 - debugging templates accelerate real developer workflows
 
 ## Sprint 4: Review Workflow and Policy Foundation

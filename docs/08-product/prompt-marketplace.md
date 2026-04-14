@@ -1,6 +1,6 @@
 # Prompt Marketplace
 
-Prompt Marketplace gives users a fast way to browse curated prompts without leaving the extension.
+Prompt Marketplace gives developers a fast way to browse curated prompts without leaving the extension.
 
 ## Source of truth
 
@@ -28,11 +28,8 @@ compact previews for readability.
 
 - Developer
 - Learning
-- Writing
-- Productivity
-- Image Generation
-- Business
-- Daily Life
+
+The source markdown is intentionally limited to the developer-focused subset.
 
 ## Marketplace data model
 

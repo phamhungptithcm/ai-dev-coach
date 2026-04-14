@@ -1329,8 +1329,8 @@ function renderMarketplace() {
   marketplaceCountBadge.classList.remove("profile-badge--empty");
   marketplaceTrendingMeta.textContent =
     library.summary.duplicatePromptCount > 0
-      ? `${library.categories.length - 1} categories | ${library.summary.duplicatePromptCount} duplicates normalized`
-      : `${library.categories.length - 1} categories`;
+      ? `${library.categories.length - 1} focus categories | ${library.summary.duplicatePromptCount} duplicates normalized`
+      : `${library.categories.length - 1} focus categories`;
   marketplaceResultsMeta.textContent = `${results.total} result${results.total === 1 ? "" : "s"}`;
 
   renderMarketplaceCategories(library, results.categoryKey);

@@ -22,13 +22,10 @@ Optional fields:
 
 Role modes available in Prompt Builder:
 
-- Teacher
 - Software Engineer
-- Solution Architecture
-- Manager
-- Director
-- Doctor
-- Other
+- Solution Architect
+- Engineering Manager
+- Other Tech Role
 
 Level modes:
 
@@ -49,12 +46,10 @@ Current role-aware behavior includes:
 
 Examples:
 
-- Teacher: learner level, objective, misconception, assessment
 - Software Engineer: failing command, file path, exact error, expected vs actual
-- Solution Architecture: scale assumptions, NFRs, tradeoffs, rollout risk
-- Manager: business impact, timeline, capacity, blockers, decision needed
-- Director: KPI targets, dependencies, budget or portfolio constraints
-- Doctor: symptoms timeline, history, red flags, tests already available, education-only guardrails
+- Solution Architect: scale assumptions, NFRs, tradeoffs, rollout risk
+- Engineering Manager: business impact, timeline, capacity, blockers, decision needed
+- Other Tech Role: system context, constraints, available evidence, expected outcome
 
 ## Prompt Scoring Algorithm
 
@@ -155,7 +150,7 @@ Grade mapping:
 - Press `Ctrl/Cmd + O` while focused in the chat composer to open the Prompt Builder instantly (browser-dependent).
 - Use command shortcut `Ctrl/Cmd + Shift + O` for consistent opening across browsers.
 - Clicking the button opens a compact form with the same template + required fields as popup builder.
-- Role selector in the in-page builder adjusts guidance and prompt framing per job role.
+- Role selector in the in-page builder adjusts guidance and prompt framing for developer workflows.
 - `Build + Insert` writes the generated prompt into the chat input.
 - `Build + Send` writes the prompt and triggers send automatically.
 - generated prompts now use cleaner document-style sections (`PROFILE`, `TASK`, `CONTEXT`, `WHAT I TRIED`, `CONSTRAINTS`, `ACCEPTANCE CRITERIA`, `HOW TO RESPOND`) for easier reading and copy/paste

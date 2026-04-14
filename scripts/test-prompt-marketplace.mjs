@@ -14,14 +14,23 @@ const __dirname = path.dirname(__filename);
 const promptsPath = path.resolve(__dirname, '../docs/prompts.md');
 const markdown = fs.readFileSync(promptsPath, 'utf8');
 
-const library = marketplace.parsePromptLibraryMarkdown(markdown);
-assert.ok(library.summary.rawPromptCount >= library.summary.promptCount, 'raw prompt count should be >= unique prompt count');
-assert.ok(library.summary.promptCount > 0, 'prompt marketplace should parse at least one prompt');
-assert.equal(library.categories[0].key, 'all', 'library should expose an all category');
-assert.ok(library.categories.some((category) => category.key === 'developer'), 'developer category should exist');
-assert.ok(library.categories.some((category) => category.key === 'business'), 'business category should exist');
-assert.ok(library.summary.promptCount >= 25, 'rich prompt library should expose a meaningful prompt set');
-assert.equal(library.summary.duplicatePromptCount, 0, 'refactored source should not require duplicate normalization');
+const parsedLibrary = marketplace.parsePromptLibraryMarkdown(markdown);
+assert.ok(parsedLibrary.summary.rawPromptCount >= parsedLibrary.summary.promptCount, 'raw prompt count should be >= unique prompt count');
+assert.ok(parsedLibrary.summary.promptCount > 0, 'prompt marketplace should parse at least one prompt');
+assert.equal(parsedLibrary.categories[0].key, 'all', 'parsed library should expose an all category');
+assert.ok(parsedLibrary.categories.some((category) => category.key === 'developer'), 'developer category should exist in source');
+assert.ok(parsedLibrary.categories.some((category) => category.key === 'learning'), 'learning category should exist in source');
+assert.ok(!parsedLibrary.categories.some((category) => category.key === 'business'), 'source markdown should no longer include business prompts');
+assert.equal(parsedLibrary.summary.duplicatePromptCount, 0, 'refactored source should not require duplicate normalization');
+
+const library = marketplace.getPromptLibrary(markdown);
+assert.equal(library.categories[0].key, 'all', 'focused library should expose an all category');
+assert.ok(library.categories.some((category) => category.key === 'developer'), 'focused library should keep developer prompts');
+assert.ok(library.categories.some((category) => category.key === 'learning'), 'focused library should keep learning prompts');
+assert.ok(!library.categories.some((category) => category.key === 'business'), 'focused library should hide non-developer business prompts');
+assert.ok(!library.categories.some((category) => category.key === 'writing'), 'focused library should hide general writing prompts');
+assert.ok(library.summary.promptCount >= 9, 'focused prompt library should keep the developer-facing prompt set');
+assert.equal(library.summary.hiddenPromptCount, 0, 'focused library should not report hidden prompts after trimming source markdown');
 assert.ok(
   library.prompts.some((prompt) => prompt.title === 'Debug This Error' && /Root cause/i.test(prompt.text)),
   'developer prompts should preserve structured multi-line bodies'
@@ -39,13 +48,13 @@ assert.ok(developerSearch.total > 0, 'developer search should return results');
 assert.equal(developerSearch.results[0].categoryKey, 'developer');
 assert.equal(developerSearch.results[0].title, 'Debug This Error');
 
-const writingSearch = marketplace.filterPrompts(library, {
-  query: 'passive voice concise flow',
-  categoryKey: 'writing'
+const learningSearch = marketplace.filterPrompts(library, {
+  query: 'step by step exercise explain concept',
+  categoryKey: 'learning'
 });
 assert.ok(
-  writingSearch.results.some((prompt) => prompt.title === 'Rewrite for Clarity'),
-  'writing search should match richer rewriting prompts'
+  learningSearch.results.some((prompt) => /Explain Like I'm 10|Learning Roadmap/i.test(prompt.title)),
+  'learning search should return focused learning prompts'
 );
 
 function createMockStorage(initialValue) {

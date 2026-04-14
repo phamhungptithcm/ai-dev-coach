@@ -10,13 +10,10 @@ Users can store:
 
 Job role options:
 
-- Teacher
 - Software Engineer
-- Solution Architecture
-- Manager
-- Director
-- Doctor
-- Other
+- Solution Architect
+- Engineering Manager
+- Other Tech Role
 
 This profile personalizes coaching tips.
 
@@ -51,7 +48,7 @@ Role-specific builder behavior:
 
 - role and level change the recommended template
 - role-aware examples are shown in the popup and in-page quick builder
-- role guardrails stay visible for sensitive modes such as `Doctor`
+- popup and quick builder both stay aligned to the same developer-only role set
 
 ## 2.1 Prompt Marketplace
 
@@ -75,15 +72,12 @@ Marketplace data flow:
 - local usage counts drive trending prompts
 - inline suggestion ranking reuses local prompt usage, role weighting, and query intent matching
 
-Prompt categories:
+Prompt categories surfaced in the extension:
 
 - Developer
 - Learning
-- Writing
-- Productivity
-- Image Generation
-- Business
-- Daily Life
+
+The source markdown is now intentionally limited to developer and learning prompts so the extension stays focused.
 
 ## 3. Prompt Quality Analyzer
 

@@ -1,0 +1,92 @@
+{
+  "name": "ai-dev-coach-vscode",
+  "displayName": "AI Dev Coach",
+  "description": "Prompt coaching for debugging, code review, and technical learning inside VS Code.",
+  "version": "0.0.1",
+  "publisher": "phamhungptithcm",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "prompt",
+    "debugging",
+    "code-review",
+    "developer-tools",
+    "learning"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown",
+    "onLanguage:plaintext",
+    "onCommand:aiDevCoach.analyzeSelection",
+    "onCommand:aiDevCoach.insertPromptSkeleton"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aiDevCoach.analyzeSelection",
+        "title": "AI Dev Coach: Analyze Selected Prompt"
+      },
+      {
+        "command": "aiDevCoach.insertPromptSkeleton",
+        "title": "AI Dev Coach: Insert Prompt Skeleton"
+      }
+    ],
+    "configuration": {
+      "title": "AI Dev Coach",
+      "properties": {
+        "aiDevCoach.defaultRole": {
+          "type": "string",
+          "default": "software_engineer",
+          "enum": [
+            "software_engineer",
+            "solution_architecture",
+            "manager",
+            "other"
+          ],
+          "description": "Default technical role used by the VS Code companion."
+        },
+        "aiDevCoach.defaultLevel": {
+          "type": "string",
+          "default": "Junior",
+          "enum": [
+            "Student",
+            "Junior",
+            "Middle",
+            "Senior"
+          ],
+          "description": "Default level used when analyzing a selected prompt."
+        },
+        "aiDevCoach.defaultTemplate": {
+          "type": "string",
+          "default": "debugging",
+          "enum": [
+            "debugging",
+            "code_review",
+            "system_design",
+            "refactoring",
+            "performance_optimization",
+            "learning"
+          ],
+          "description": "Default prompt template for commands that do not ask for a template."
+        },
+        "aiDevCoach.enableDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable low-noise inline diagnostics and quick fixes for prompt-like markdown or plaintext documents."
+        },
+        "aiDevCoach.maxPromptLength": {
+          "type": "number",
+          "default": 6000,
+          "minimum": 200,
+          "description": "Maximum document length that AI Dev Coach will inspect for inline diagnostics."
+        }
+      }
+    }
+  }
+}

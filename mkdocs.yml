@@ -47,9 +47,10 @@ nav:
       - Vision: 00-overview/vision.md
   - Extensions:
       - Chrome Extension: 01-extensions/chrome-extension.md
-      - VS Code Extension (Planned): 01-extensions/vscode-extension.md
+      - VS Code Extension: 01-extensions/vscode-extension.md
       - IntelliJ Plugin (Planned): 01-extensions/intellij-plugin.md
   - Product:
+      - Positioning: 08-product/positioning.md
       - Feature Specification: 08-product/feature-spec.md
       - Learning Analytics: 08-product/learning-analytics.md
       - Prompt Marketplace: 08-product/prompt-marketplace.md
@@ -66,6 +67,8 @@ nav:
       - Chrome Web Store: 03-deployment/chrome-store.md
   - Operations:
       - Monitoring: 05-operations/monitoring.md
+      - Chrome Manual QA: 05-operations/manual-qa.md
+      - VS Code Manual QA: 05-operations/vscode-manual-qa.md
   - Project:
       - Branching Strategy: 07-project/branching-strategy.md
       - Roadmap: 07-project/roadmap.md

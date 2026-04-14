@@ -175,111 +175,119 @@
       </div>
     </section>
 
-    <section class="card">
-      <div class="profile-card__head">
-        <h2>Prompt Marketplace</h2>
-        <span id="marketplaceCountBadge" class="profile-badge profile-badge--empty">Loading...</span>
+    <details class="card card--collapsible">
+      <summary class="card-summary">
+        <span>Prompt Marketplace</span>
+        <span class="card-summary__meta">Optional starter prompts</span>
+      </summary>
+      <div class="card-collapsible__content">
+        <div class="profile-card__head">
+          <span class="card-summary__content-title">Focused Library</span>
+          <span id="marketplaceCountBadge" class="profile-badge profile-badge--empty">Loading...</span>
+        </div>
+        <p class="muted">Browse curated developer and learning prompts, then copy, insert, or send them on supported AI chat pages.</p>
+
+        <label for="marketplaceSearchInput">Search Prompts</label>
+        <input id="marketplaceSearchInput" type="search" placeholder="Search debugging, code review, system design, learning..." />
+
+        <div class="marketplace-shell">
+          <aside class="marketplace-sidebar" aria-label="Prompt categories">
+            <span class="marketplace-sidebar__title">Categories</span>
+            <div id="marketplaceCategoryList" class="marketplace-category-list"></div>
+          </aside>
+
+          <div class="marketplace-main">
+            <section class="marketplace-panel" aria-label="Trending prompts">
+              <div class="marketplace-panel__head">
+                <span>Trending</span>
+                <span id="marketplaceTrendingMeta" class="trend-delta">Local</span>
+              </div>
+              <div id="marketplaceTrendingList" class="marketplace-trending-list"></div>
+            </section>
+
+            <section class="marketplace-panel" aria-label="Prompt results">
+              <div class="marketplace-panel__head">
+                <span>Prompt Library</span>
+                <span id="marketplaceResultsMeta" class="trend-delta">0 results</span>
+              </div>
+              <div id="marketplacePromptList" class="marketplace-prompt-list"></div>
+            </section>
+          </div>
+        </div>
+
+        <p id="marketplaceStatus" class="status"></p>
       </div>
-      <p class="muted">Browse curated engineering prompts from the local library, then copy, insert, or send them on supported AI chat pages.</p>
+    </details>
 
-      <label for="marketplaceSearchInput">Search Prompts</label>
-      <input id="marketplaceSearchInput" type="search" placeholder="Search debugging, code review, system design, learning..." />
+    <details class="card card--collapsible">
+      <summary class="card-summary">
+        <span>Learning Analytics</span>
+        <span class="card-summary__meta">Local-only insights</span>
+      </summary>
+      <div class="card-collapsible__content">
+        <p class="muted">Prompt text is not stored. This view tracks prompt metadata only.</p>
+        <div class="analytics-grid">
+          <article class="analytics-pill">
+            <span class="analytics-pill__label">Tracked prompts</span>
+            <strong id="analyticsPromptCount">0</strong>
+          </article>
+          <article class="analytics-pill">
+            <span class="analytics-pill__label">Average score</span>
+            <strong id="analyticsAverageScore">--</strong>
+          </article>
+          <article class="analytics-pill">
+            <span class="analytics-pill__label">Average length</span>
+            <strong id="analyticsAverageLength">--</strong>
+          </article>
+        </div>
+        <p id="analyticsSummary" class="stats"></p>
+        <p id="analyticsMeta" class="muted"></p>
 
-      <div class="marketplace-shell">
-        <aside class="marketplace-sidebar" aria-label="Prompt categories">
-          <span class="marketplace-sidebar__title">Categories</span>
-          <div id="marketplaceCategoryList" class="marketplace-category-list"></div>
-        </aside>
+        <section class="score-card" aria-label="Daily session summary">
+          <div class="score-card__header">
+            <span>Today's Session</span>
+            <strong id="sessionSummaryScore">--/100</strong>
+            <span id="sessionSummaryDay" class="grade grade--na">Today</span>
+          </div>
+          <p id="sessionSummaryHeadline" class="muted"></p>
+          <p id="sessionSummaryStats" class="stats"></p>
+          <ul id="sessionCategoryList" class="score-list"></ul>
+          <ul id="sessionSuggestionList" class="score-list score-list--tips"></ul>
+        </section>
 
-        <div class="marketplace-main">
-          <section class="marketplace-panel" aria-label="Trending prompts">
-            <div class="marketplace-panel__head">
-              <span>Trending</span>
-              <span id="marketplaceTrendingMeta" class="trend-delta">Local</span>
+        <section class="score-card" aria-label="Trend dashboard">
+          <div class="score-card__header">
+            <span>Trend Dashboard</span>
+            <strong id="trendWindowLabel">7 days</strong>
+            <span id="trendActiveDays" class="grade grade--na">0 active</span>
+          </div>
+          <div class="trend-panel">
+            <div class="trend-panel__head">
+              <span>Quality over time</span>
+              <span id="qualityTrendDelta" class="trend-delta">--</span>
             </div>
-            <div id="marketplaceTrendingList" class="marketplace-trending-list"></div>
-          </section>
-
-          <section class="marketplace-panel" aria-label="Prompt results">
-            <div class="marketplace-panel__head">
-              <span>Prompt Library</span>
-              <span id="marketplaceResultsMeta" class="trend-delta">0 results</span>
+            <svg id="qualityTrendChart" class="trend-chart" viewBox="0 0 220 84" role="img" aria-label="Prompt quality trend"></svg>
+            <p id="qualityTrendSummary" class="muted"></p>
+          </div>
+          <div class="trend-panel">
+            <div class="trend-panel__head">
+              <span>Warning frequency</span>
+              <span id="warningTrendDelta" class="trend-delta">--</span>
             </div>
-            <div id="marketplacePromptList" class="marketplace-prompt-list"></div>
-          </section>
-        </div>
-      </div>
-
-      <p id="marketplaceStatus" class="status"></p>
-    </section>
-
-    <section class="card">
-      <div class="profile-card__head">
-        <h2>Learning Analytics</h2>
-        <span class="profile-badge">Local only</span>
-      </div>
-      <p class="muted">Prompt text is not stored. This view tracks prompt metadata only.</p>
-      <div class="analytics-grid">
-        <article class="analytics-pill">
-          <span class="analytics-pill__label">Tracked prompts</span>
-          <strong id="analyticsPromptCount">0</strong>
-        </article>
-        <article class="analytics-pill">
-          <span class="analytics-pill__label">Average score</span>
-          <strong id="analyticsAverageScore">--</strong>
-        </article>
-        <article class="analytics-pill">
-          <span class="analytics-pill__label">Average length</span>
-          <strong id="analyticsAverageLength">--</strong>
-        </article>
-      </div>
-      <p id="analyticsSummary" class="stats"></p>
-      <p id="analyticsMeta" class="muted"></p>
-
-      <section class="score-card" aria-label="Daily session summary">
-        <div class="score-card__header">
-          <span>Today's Session</span>
-          <strong id="sessionSummaryScore">--/100</strong>
-          <span id="sessionSummaryDay" class="grade grade--na">Today</span>
-        </div>
-        <p id="sessionSummaryHeadline" class="muted"></p>
-        <p id="sessionSummaryStats" class="stats"></p>
-        <ul id="sessionCategoryList" class="score-list"></ul>
-        <ul id="sessionSuggestionList" class="score-list score-list--tips"></ul>
-      </section>
-
-      <section class="score-card" aria-label="Trend dashboard">
-        <div class="score-card__header">
-          <span>Trend Dashboard</span>
-          <strong id="trendWindowLabel">7 days</strong>
-          <span id="trendActiveDays" class="grade grade--na">0 active</span>
-        </div>
-        <div class="trend-panel">
-          <div class="trend-panel__head">
-            <span>Quality over time</span>
-            <span id="qualityTrendDelta" class="trend-delta">--</span>
+            <svg id="warningTrendChart" class="trend-chart" viewBox="0 0 220 84" role="img" aria-label="Warning frequency trend"></svg>
+            <p id="warningTrendSummary" class="muted"></p>
           </div>
-          <svg id="qualityTrendChart" class="trend-chart" viewBox="0 0 220 84" role="img" aria-label="Prompt quality trend"></svg>
-          <p id="qualityTrendSummary" class="muted"></p>
-        </div>
-        <div class="trend-panel">
-          <div class="trend-panel__head">
-            <span>Warning frequency</span>
-            <span id="warningTrendDelta" class="trend-delta">--</span>
+          <div class="trend-panel">
+            <div class="trend-panel__head">
+              <span>Prompt types</span>
+              <span id="trendTopCategory" class="trend-delta">--</span>
+            </div>
+            <div id="categoryTrendBars" class="category-bars"></div>
+            <p id="trendRulesSummary" class="muted"></p>
           </div>
-          <svg id="warningTrendChart" class="trend-chart" viewBox="0 0 220 84" role="img" aria-label="Warning frequency trend"></svg>
-          <p id="warningTrendSummary" class="muted"></p>
-        </div>
-        <div class="trend-panel">
-          <div class="trend-panel__head">
-            <span>Prompt types</span>
-            <span id="trendTopCategory" class="trend-delta">--</span>
-          </div>
-          <div id="categoryTrendBars" class="category-bars"></div>
-          <p id="trendRulesSummary" class="muted"></p>
-        </div>
-      </section>
-    </section>
+        </section>
+      </div>
+    </details>
   </main>
 
   <script src="../shared/managedConfig.js"></script>

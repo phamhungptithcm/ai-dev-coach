@@ -3,6 +3,8 @@
   const SCHEMA_VERSION = 1;
   const DEFAULT_CATEGORY = "all";
   const DEFAULT_TREND_LIMIT = 6;
+  const FOCUSED_CATEGORY_ORDER = ["developer", "learning"];
+  const FOCUSED_CATEGORY_SET = new Set(FOCUSED_CATEGORY_ORDER);
   const CATEGORY_ORDER = [
     "developer",
     "learning",
@@ -57,6 +59,10 @@
 
   function getCategoryLabel(categoryKey) {
     return CATEGORY_LABELS[normalizeCategory(categoryKey)] || CATEGORY_LABELS[DEFAULT_CATEGORY];
+  }
+
+  function isVisibleCategory(categoryKey) {
+    return FOCUSED_CATEGORY_SET.has(normalizeCategory(categoryKey));
   }
 
   function normalizePromptText(value) {
@@ -285,13 +291,62 @@
     };
   }
 
+  function buildFocusedLibrary(libraryInput) {
+    const sourceLibrary =
+      libraryInput && Array.isArray(libraryInput.prompts) ? libraryInput : buildLibrary(getPromptSourceMarkdown());
+    const visiblePrompts = sourceLibrary.prompts.filter((prompt) => isVisibleCategory(prompt.categoryKey));
+    const categoryCounts = {};
+    visiblePrompts.forEach((prompt) => {
+      categoryCounts[prompt.categoryKey] = (categoryCounts[prompt.categoryKey] || 0) + 1;
+    });
+
+    const visibleCategories = sourceLibrary.categories
+      .filter((category) => isVisibleCategory(category.key))
+      .sort((left, right) => {
+        const leftIndex = FOCUSED_CATEGORY_ORDER.indexOf(left.key);
+        const rightIndex = FOCUSED_CATEGORY_ORDER.indexOf(right.key);
+        return (leftIndex === -1 ? 99 : leftIndex) - (rightIndex === -1 ? 99 : rightIndex);
+      })
+      .map((category) => ({
+        ...category,
+        promptCount: categoryCounts[category.key] || 0
+      }));
+
+    const rawPromptCount = visibleCategories.reduce(
+      (total, category) => total + (Number.isFinite(category.rawCount) ? category.rawCount : 0),
+      0
+    );
+
+    return {
+      ...sourceLibrary,
+      prompts: visiblePrompts,
+      categories: [
+        {
+          key: DEFAULT_CATEGORY,
+          label: CATEGORY_LABELS[DEFAULT_CATEGORY],
+          rawCount: rawPromptCount,
+          promptCount: visiblePrompts.length
+        },
+        ...visibleCategories
+      ],
+      summary: {
+        rawPromptCount,
+        promptCount: visiblePrompts.length,
+        duplicatePromptCount: Math.max(0, rawPromptCount - visiblePrompts.length),
+        categoryCounts,
+        hiddenPromptCount: Math.max(0, sourceLibrary.prompts.length - visiblePrompts.length)
+      },
+      sourceSummary: sourceLibrary.summary
+    };
+  }
+
   function getPromptLibrary(markdown) {
     const resolvedMarkdown = typeof markdown === "string" ? markdown : getPromptSourceMarkdown();
     const cacheKey = `${resolvedMarkdown.length}:${resolvedMarkdown.slice(0, 64)}`;
     if (libraryCache && libraryCacheKey === cacheKey) {
       return libraryCache;
     }
-    libraryCache = buildLibrary(resolvedMarkdown);
+    libraryCache = buildFocusedLibrary(buildLibrary(resolvedMarkdown));
     libraryCacheKey = cacheKey;
     return libraryCache;
   }
@@ -320,7 +375,12 @@
     const resolvedLibrary = library && Array.isArray(library.prompts) ? library : getPromptLibrary();
     const query = clean(options.query).toLowerCase();
     const queryTokens = query.split(/\s+/).filter(Boolean);
-    const categoryKey = normalizeCategory(options.categoryKey || DEFAULT_CATEGORY);
+    const requestedCategoryKey = normalizeCategory(options.categoryKey || DEFAULT_CATEGORY);
+    const categoryKey =
+      requestedCategoryKey !== DEFAULT_CATEGORY &&
+      !resolvedLibrary.categories.some((category) => category.key === requestedCategoryKey)
+        ? DEFAULT_CATEGORY
+        : requestedCategoryKey;
 
     const matches = resolvedLibrary.prompts
       .filter((prompt) => categoryKey === DEFAULT_CATEGORY || prompt.categoryKey === categoryKey)
@@ -539,10 +599,13 @@
     STORAGE_KEY,
     SCHEMA_VERSION,
     DEFAULT_CATEGORY,
+    FOCUSED_CATEGORY_ORDER,
     CATEGORY_ORDER,
     CATEGORY_LABELS,
     getCategoryLabel,
+    isVisibleCategory,
     parsePromptLibraryMarkdown,
+    buildFocusedLibrary,
     getPromptLibrary,
     filterPrompts,
     createEmptyState,

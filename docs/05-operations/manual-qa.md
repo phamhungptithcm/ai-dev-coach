@@ -2,6 +2,8 @@
 
 Use this checklist after loading the unpacked extension in Chrome.
 
+For editor-specific checks, use [VS Code Companion Manual QA](vscode-manual-qa.md).
+
 ## First-Run Consent
 
 1. Open the popup before enabling any monitoring.

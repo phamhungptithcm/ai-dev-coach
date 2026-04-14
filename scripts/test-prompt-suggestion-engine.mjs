@@ -16,8 +16,8 @@ const markdown = fs.readFileSync(path.resolve(__dirname, "../docs/prompts.md"), 
 const library = marketplace.getPromptLibrary(markdown);
 
 const summarizeSuggestions = suggestionEngine.getInlinePromptSuggestions({
-  query: "summarize this document",
-  roleKey: "teacher",
+  query: "explain async await step by step",
+  roleKey: "software_engineer",
   library,
   rawState: null,
   limit: 5,
@@ -27,8 +27,8 @@ const summarizeSuggestions = suggestionEngine.getInlinePromptSuggestions({
 assert.ok(summarizeSuggestions.length >= 3, "should provide at least three inline suggestions");
 assert.match(
   summarizeSuggestions[0].title,
-  /Executive Summary|Book Summary/i,
-  "summarize query should surface a structured summarization prompt first"
+  /Explain Like I'm 10|Learning Roadmap|Book Summary/i,
+  "learning query should surface a developer-friendly learning prompt first"
 );
 
 const debugSuggestions = suggestionEngine.getInlinePromptSuggestions({
@@ -51,10 +51,10 @@ assert.match(
   "debug query should surface the direct debugging prompt"
 );
 
-const rewritePrompt = library.prompts.find((prompt) => prompt.title === "Rewrite for Clarity");
-const welcomeSequencePrompt = library.prompts.find((prompt) => prompt.title === "Email Welcome Sequence");
-assert.ok(rewritePrompt, "rewrite prompt should exist in the library");
-assert.ok(welcomeSequencePrompt, "welcome sequence prompt should exist in the library");
+const codeReviewPrompt = library.prompts.find((prompt) => prompt.title === "Code Review");
+const systemDesignPrompt = library.prompts.find((prompt) => prompt.title === "System Design Prompt");
+assert.ok(codeReviewPrompt, "code review prompt should exist in the focused library");
+assert.ok(systemDesignPrompt, "system design prompt should exist in the focused library");
 
 let storageState = marketplace.createEmptyState();
 storageState = await marketplace.recordPromptUsage(
@@ -68,8 +68,8 @@ storageState = await marketplace.recordPromptUsage(
     }
   },
   {
-    promptId: rewritePrompt.id,
-    categoryKey: rewritePrompt.categoryKey,
+    promptId: codeReviewPrompt.id,
+    categoryKey: codeReviewPrompt.categoryKey,
     action: "insert",
     source: "inline_suggestion"
   }
@@ -85,15 +85,15 @@ storageState = await marketplace.recordPromptUsage(
     }
   },
   {
-    promptId: welcomeSequencePrompt.id,
-    categoryKey: welcomeSequencePrompt.categoryKey,
+    promptId: systemDesignPrompt.id,
+    categoryKey: systemDesignPrompt.categoryKey,
     action: "send",
     source: "inline_suggestion"
   }
 );
 
 const emailSuggestions = suggestionEngine.getInlinePromptSuggestions({
-  query: "welcome email sequence",
+  query: "system design rollout risk",
   roleKey: "manager",
   library,
   rawState: storageState,
@@ -103,13 +103,13 @@ const emailSuggestions = suggestionEngine.getInlinePromptSuggestions({
 
 assert.match(
   emailSuggestions[0].title,
-  /Email Welcome Sequence/i,
-  "manager email query should surface a structured email workflow prompt"
+  /System Design Prompt/i,
+  "manager system-design query should surface a technical rollout prompt"
 );
 assert.ok(
   emailSuggestions.some(
     (entry) =>
-      entry.id === welcomeSequencePrompt.id &&
+      entry.id === systemDesignPrompt.id &&
       Array.isArray(entry.reasons) &&
       entry.reasons.includes("Popular locally")
   ),

@@ -1,7 +1,11 @@
 # Changelog
 
+Historical release notes below keep version history but use the current developer-focused product language.
+
 ## Unreleased
 
+- narrowed product positioning, prompt-library docs, and marketplace copy to the developer-only coaching scope
+- added inline prompt diagnostics and quick-fix code actions to the VS Code companion scaffold
 - refactored `docs/prompts.md` into a richer prompt library with structured multi-line templates and reusable placeholders
 - updated prompt parsing, previews, and marketplace rendering so longer prompts stay readable in popup cards and inline suggestions
 - added inline prompt suggestions inside supported AI chat inputs, using local prompt-library matching, role-aware ranking, and popularity boosts
@@ -13,7 +17,7 @@
 - redesigned live coaching bubble into a smaller stats-first layout with readable prompt preview and coaching signals
 - polished in-page Quick Prompt Builder with grouped sections, better helper copy, and clearer action feedback
 - added a shared role-coaching module so popup builder, quick builder, live monitoring, and analytics can use the same role-aware hints and warnings
-- added role-specific coaching examples and warnings for Teacher, Software Engineer, Solution Architecture, Manager, Director, Doctor, and Other profiles
+- added role-specific coaching examples and warnings for software engineers, solution architects, engineering managers, and other tech workflows
 - added software-engineering specialization guidance for frontend, backend, DevOps, and fullstack wording
 - improved generated prompt formatting with cleaner section breaks for easier reading and copy/paste
 - added a lightweight local trend dashboard with quality-over-time, warning-frequency, and prompt-category views
@@ -49,7 +53,7 @@
 
 ## v1.2.15
 
-- expanded role-aware Prompt Builder coverage with new roles: Manager and Director
+- expanded role-aware Prompt Builder coverage with stronger engineering leadership guidance
 - changed profile skill field to level dropdown (`Student`, `Junior`, `Middle`, `Senior`)
 - moved `Student` from role mode into level mode for clearer profile semantics
 - added role-to-template recommendation logic in popup and in-page Prompt Builder
@@ -59,7 +63,7 @@
 
 ## v1.2.14
 
-- added role-aware Prompt Builder options by job (Student, Teacher, Software Engineer, Solution Architecture, Doctor, Other)
+- added role-aware Prompt Builder options by job across core technical coaching flows
 - added role selector and role-specific prompt guidance in popup and in-page builder
 - changed in-page Prompt Builder shortcut from `F1` to `Ctrl + O` when composer is focused
 - made `AI Dev Coach Live` bubble always visible on supported AI pages

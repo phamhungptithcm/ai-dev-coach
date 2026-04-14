@@ -13,7 +13,7 @@ The Chrome extension is the current production implementation of AI Dev Coach.
 - copy/paste behavior warnings
 - dependency tracking (AI requests vs manual attempts)
 - prompt builder with 6 templates
-- role-aware prompting modes (Teacher, Software Engineer, Solution Architecture, Manager, Director, Doctor, Other)
+- role-aware prompting modes (Software Engineer, Solution Architect, Engineering Manager, Other Tech Role)
 - level-aware coaching modes (`Student`, `Junior`, `Middle`, `Senior`)
 - bilingual prompt analysis hints (English + Vietnamese)
 
