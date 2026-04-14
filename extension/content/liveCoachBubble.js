@@ -6,8 +6,8 @@
 
   const DEFAULT_SETTINGS = {
     enableCoach: true,
-    promptListenerEnabled: true,
-    behaviorMonitorEnabled: true
+    promptListenerEnabled: false,
+    behaviorMonitorEnabled: false
   };
 
   const DEFAULT_STATS = {
@@ -56,6 +56,14 @@
 
   function storageSet(payload) {
     return new Promise((resolve) => chrome.storage.local.set(payload, resolve));
+  }
+
+  function mergeSettings(rawSettings, rawEffectiveSettings) {
+    return {
+      ...DEFAULT_SETTINGS,
+      ...(rawSettings || {}),
+      ...(rawEffectiveSettings || {})
+    };
   }
 
   function clamp(value, min, max) {
@@ -448,8 +456,14 @@
   }
 
   async function hydrateFromStorage() {
-    const data = await storageGet(["settings", "stats", "lastRuntimePromptEvaluation", BUBBLE_POSITION_KEY]);
-    state.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
+    const data = await storageGet([
+      "settings",
+      "effectiveSettings",
+      "stats",
+      "lastRuntimePromptEvaluation",
+      BUBBLE_POSITION_KEY
+    ]);
+    state.settings = mergeSettings(data.settings, data.effectiveSettings);
     state.stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
     state.runtime = mergeRuntime(data.lastRuntimePromptEvaluation);
     state.bubblePosition = normalizeBubblePosition(data[BUBBLE_POSITION_KEY]);
@@ -471,8 +485,11 @@
         return;
       }
 
-      if (changes.settings) {
-        state.settings = { ...DEFAULT_SETTINGS, ...(changes.settings.newValue || {}) };
+      if (changes.settings || changes.effectiveSettings) {
+        state.settings = mergeSettings(
+          changes.settings ? changes.settings.newValue : state.settings,
+          changes.effectiveSettings ? changes.effectiveSettings.newValue : state.settings
+        );
       }
       if (changes.stats) {
         state.stats = { ...DEFAULT_STATS, ...(changes.stats.newValue || {}) };

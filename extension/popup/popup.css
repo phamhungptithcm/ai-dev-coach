@@ -117,6 +117,26 @@ body {
   opacity: 0.9;
 }
 
+.consent-card {
+  border-color: rgba(222, 193, 141, 0.55);
+  background: linear-gradient(180deg, rgba(255, 251, 242, 0.96), rgba(247, 252, 255, 0.92));
+}
+
+.consent-card::after {
+  background: linear-gradient(90deg, #f6d39a, var(--primary));
+}
+
+.notice-banner {
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(186, 216, 238, 0.82);
+  background: rgba(237, 248, 255, 0.84);
+  color: #31556d;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .profile-card__head {
   display: flex;
   align-items: center;
@@ -226,6 +246,13 @@ textarea {
   transform: translateY(0);
 }
 
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+  transform: none;
+  box-shadow: none;
+}
+
 .button--small {
   width: auto;
   padding: 5px 10px;
@@ -276,6 +303,14 @@ textarea {
   transform: translateY(-1px);
 }
 
+.monitor-toggle--disabled,
+.monitor-toggle--disabled:hover {
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
+  border-color: rgba(186, 216, 238, 0.72);
+}
+
 .monitor-toggle__meta {
   display: grid;
   gap: 1px;
@@ -307,6 +342,10 @@ textarea {
   opacity: 0;
   margin: 0;
   cursor: pointer;
+}
+
+.monitor-switch input:disabled {
+  cursor: not-allowed;
 }
 
 .monitor-switch__track {

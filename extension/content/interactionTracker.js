@@ -3,12 +3,12 @@
 
   const DEFAULT_SETTINGS = {
     enableCoach: true,
-    promptListenerEnabled: true,
-    behaviorMonitorEnabled: true,
-    readPromptContentEnabled: true,
-    readCopiedContentEnabled: true,
-    readBeforeCopyEnabled: true,
-    showOutputCountdown: true,
+    promptListenerEnabled: false,
+    behaviorMonitorEnabled: false,
+    readPromptContentEnabled: false,
+    readCopiedContentEnabled: false,
+    readBeforeCopyEnabled: false,
+    showOutputCountdown: false,
     pasteThreshold: 320,
     longCopyThreshold: 360,
     minReadBeforeCopySeconds: 20,
@@ -57,13 +57,17 @@
     return new Promise((resolve) => chrome.storage.local.set(payload, resolve));
   }
 
-  function mergeSettings(rawSettings) {
-    return { ...DEFAULT_SETTINGS, ...(rawSettings || {}) };
+  function mergeSettings(rawSettings, rawEffectiveSettings) {
+    return {
+      ...DEFAULT_SETTINGS,
+      ...(rawSettings || {}),
+      ...(rawEffectiveSettings || {})
+    };
   }
 
   async function refreshSettingsCache() {
-    const data = await storageGet(["settings"]);
-    currentSettings = mergeSettings(data.settings);
+    const data = await storageGet(["settings", "effectiveSettings"]);
+    currentSettings = mergeSettings(data.settings, data.effectiveSettings);
   }
 
   function normalizeText(text) {
@@ -125,7 +129,10 @@
     }
 
     const inputType = (target.getAttribute("type") || "text").toLowerCase();
-    const allowedTypes = new Set(["text", "search", "email", "url", "tel", "number", "password"]);
+    if (inputType === "password") {
+      return false;
+    }
+    const allowedTypes = new Set(["text", "search", "email", "url", "tel", "number"]);
 
     return (
       allowedTypes.has(inputType) &&
@@ -163,12 +170,7 @@
       return false;
     }
 
-    if (ASSISTANT_SELECTORS.some((selector) => !!target.closest(selector))) {
-      return true;
-    }
-
-    // Conservative fallback on AI chat pages: long non-editable selection is likely model output.
-    return true;
+    return ASSISTANT_SELECTORS.some((selector) => !!target.closest(selector));
   }
 
   function hasLargeCopiedAiOutput(text) {
@@ -548,10 +550,13 @@
 
   function wireSettingsUpdates() {
     chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName !== "local" || !changes.settings) {
+      if (areaName !== "local" || (!changes.settings && !changes.effectiveSettings)) {
         return;
       }
-      currentSettings = mergeSettings(changes.settings.newValue);
+
+      refreshSettingsCache().catch((error) => {
+        console.debug("AI Dev Coach interaction settings refresh skipped", error);
+      });
     });
   }
 

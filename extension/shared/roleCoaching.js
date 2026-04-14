@@ -8,6 +8,12 @@
     "doctor",
     "other"
   ];
+  const VISIBLE_ROLE_ORDER = [
+    "software_engineer",
+    "solution_architecture",
+    "manager",
+    "other"
+  ];
 
   const LEVEL_OPTIONS = ["Student", "Junior", "Middle", "Senior"];
 
@@ -108,7 +114,7 @@
         "For engineering prompts, keep using Task, Context, What You Tried, and a clear verification target."
     },
     solution_architecture: {
-      label: "Solution Architecture",
+      label: "Solution Architect",
       builderHint: "Focus on constraints, tradeoffs, scalability, and risk.",
       contextHint: "NFRs, integration points, compliance, cost and latency constraints",
       attemptHint: "Architecture option explored and tradeoff concerns",
@@ -126,7 +132,7 @@
         "For architecture prompts, ask AI to compare options, failure modes, and rollout phases before implementation details."
     },
     manager: {
-      label: "Manager",
+      label: "Engineering Manager",
       builderHint: "Focus on delivery risk, prioritization, and team execution clarity.",
       contextHint: "Business impact, timeline, team capacity, and blockers",
       attemptHint: "What has been tried, what is blocked, and decision options",
@@ -181,22 +187,22 @@
         "For doctor prompts, ask AI to support reasoning, differential comparison, and trainee education rather than final decisions."
     },
     other: {
-      label: "Other",
+      label: "Other Tech Role",
       builderHint: "Define your domain context clearly and ask for reasoning-first guidance.",
       contextHint: "Domain constraints, available evidence, expected outcome",
       attemptHint: "What you already tried and where you are blocked",
       roleSignals: [/constraint/i, /evidence/i, /outcome/i, /risk/i],
       focusAreas: ["domain context", "available evidence", "constraints", "expected outcome"],
       examplePrompts: [
-        "Explain the best way to structure this request so AI can reason from my available evidence instead of guessing.",
-        "Review these constraints and suggest the clearest decision framework for my domain-specific problem."
+        "Explain the best way to structure this technical request so AI can reason from my available evidence instead of guessing.",
+        "Review these rollout constraints and suggest the clearest decision framework for this platform problem."
       ],
       roleSuggestion:
-        "Other mode: include your domain context, available evidence, constraints, and the exact outcome you want.",
+        "Other tech role mode: include your technical context, available evidence, constraints, and the exact outcome you want.",
       shortcutWarning:
-        "Domain mode: ask AI to reason from your evidence and constraints before asking for a final output.",
+        "Other tech role mode: ask AI to reason from your evidence and constraints before asking for a final output.",
       habitTip:
-        "For non-engineering prompts, define the domain, evidence, and success criteria before asking AI for help."
+        "For technical prompts outside the core roles, define the system context, evidence, and success criteria before asking AI for help."
     }
   };
 
@@ -227,6 +233,11 @@
 
   function normalizeRoleKey(value) {
     return clean(value).toLowerCase().replace(/\s+/g, "_");
+  }
+
+  function normalizeVisibleRoleKey(value) {
+    const normalized = normalizeRoleKey(value);
+    return VISIBLE_ROLE_ORDER.includes(normalized) ? normalized : "other";
   }
 
   function normalizeLevel(value) {
@@ -276,10 +287,41 @@
       profile: {
         ...rawProfile,
         roleKey: "other",
-        role: "Other",
+        role: "Other Tech Role",
         skill: normalizeLevel(rawProfile.skill) || "Student"
       },
       migrated: true
+    };
+  }
+
+  function shouldHideLegacyRoleLabel(value) {
+    const roleText = clean(value).toLowerCase();
+    if (!roleText) {
+      return false;
+    }
+
+    return (
+      /^(other|other tech role)$/.test(roleText) ||
+      /teacher|giang vien|giao vien/.test(roleText) ||
+      /director|giam doc/.test(roleText) ||
+      /doctor|bac si|physician|medical/.test(roleText)
+    );
+  }
+
+  function coerceToVisibleRoleProfile(rawProfile = {}) {
+    const normalizedProfile = migrateLegacyStudentProfile(rawProfile).profile;
+    const visibleRoleKey = normalizeVisibleRoleKey(resolveRoleKey(normalizedProfile));
+    const base = JOB_ROLE_OPTIONS[visibleRoleKey] || JOB_ROLE_OPTIONS.other;
+    const customRole =
+      visibleRoleKey === "other" && !shouldHideLegacyRoleLabel(normalizedProfile.role)
+        ? clean(normalizedProfile.role)
+        : "";
+
+    return {
+      ...normalizedProfile,
+      roleKey: visibleRoleKey,
+      role: visibleRoleKey === "other" ? customRole || base.label : base.label,
+      skill: normalizeLevel(normalizedProfile.skill)
     };
   }
 
@@ -544,7 +586,10 @@
     }
 
     if (roleProfile.key === "other" && !/constraint|evidence|outcome|risk/i.test(contextText)) {
-      uniquePush(suggestions, "Domain mode: give AI the relevant evidence, constraints, and the exact outcome you want it to reason toward.");
+      uniquePush(
+        suggestions,
+        "Other tech role mode: give AI the relevant evidence, constraints, and the exact outcome you want it to reason toward."
+      );
     }
 
     if (snapshot.level === "Student") {
@@ -571,14 +616,17 @@
 
   const api = {
     JOB_ROLE_ORDER,
+    VISIBLE_ROLE_ORDER,
     JOB_ROLE_OPTIONS,
     ROLE_TEMPLATE_RECOMMENDATIONS,
     LEVEL_OPTIONS,
     normalizeLevel,
     isStudentLevel,
     normalizeRoleKey,
+    normalizeVisibleRoleKey,
     hasLegacyStudentRole,
     migrateLegacyStudentProfile,
+    coerceToVisibleRoleProfile,
     resolveRoleKey,
     getRoleProfile,
     buildRoleHeaderLines,

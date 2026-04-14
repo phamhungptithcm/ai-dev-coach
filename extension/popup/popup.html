@@ -10,13 +10,30 @@
   <main class="popup">
     <header class="popup__header">
       <h1>AI Dev Coach</h1>
-      <p>Build better AI habits: think first, ask better, ship safer.</p>
+      <p>Build better AI habits for engineering work: think first, ask better, ship safer.</p>
       <p id="profileBadge" class="profile-badge profile-badge--empty">Profile: Not set</p>
     </header>
+
+    <section id="monitoringConsentCard" class="card consent-card hidden">
+      <h2>Monitoring Consent</h2>
+      <p class="muted">Monitoring stays off until you explicitly opt in. Prompt analysis and copy-risk coaching only run on supported AI chat pages after consent.</p>
+      <div class="button-row">
+        <button id="acceptMonitoringConsentBtn" class="button button--primary" type="button">Allow Monitoring Controls</button>
+        <button id="openConsentOptionsBtn" class="button" type="button">Open Settings</button>
+      </div>
+      <p id="monitoringConsentStatus" class="status"></p>
+    </section>
+
+    <section class="card">
+      <h2>Workspace Status</h2>
+      <p id="workspaceStatusSummary" class="muted">Checking the current tab…</p>
+      <p id="workspaceStatusDetail" class="notice-banner hidden"></p>
+    </section>
 
     <section class="card">
       <h2>Live Monitoring</h2>
       <p class="muted card-hint">Turn on real-time coaching while you work in AI chat.</p>
+      <p id="monitoringPolicyNotice" class="notice-banner hidden"></p>
       <div class="monitor-grid">
         <label class="monitor-toggle">
           <span class="monitor-toggle__meta">
@@ -53,15 +70,12 @@
       <div id="profileForm">
         <label for="roleSelect">Job / Role</label>
         <select id="roleSelect">
-          <option value="teacher">Teacher</option>
           <option value="software_engineer" selected>Software Engineer</option>
-          <option value="solution_architecture">Solution Architecture</option>
-          <option value="manager">Manager</option>
-          <option value="director">Director</option>
-          <option value="doctor">Doctor</option>
-          <option value="other">Other</option>
+          <option value="solution_architecture">Solution Architect</option>
+          <option value="manager">Engineering Manager</option>
+          <option value="other">Other Tech Role</option>
         </select>
-        <input id="customRoleInput" class="hidden" type="text" placeholder="Enter your custom role" />
+        <input id="customRoleInput" class="hidden" type="text" placeholder="Enter your technical role" />
 
         <label for="skillInput">Level</label>
         <select id="skillInput">
@@ -166,10 +180,10 @@
         <h2>Prompt Marketplace</h2>
         <span id="marketplaceCountBadge" class="profile-badge profile-badge--empty">Loading...</span>
       </div>
-      <p class="muted">Browse curated prompts from the local markdown library, then copy, insert, or send them on supported AI chat pages.</p>
+      <p class="muted">Browse curated engineering prompts from the local library, then copy, insert, or send them on supported AI chat pages.</p>
 
       <label for="marketplaceSearchInput">Search Prompts</label>
-      <input id="marketplaceSearchInput" type="search" placeholder="Search debugging, writing, learning, business..." />
+      <input id="marketplaceSearchInput" type="search" placeholder="Search debugging, code review, system design, learning..." />
 
       <div class="marketplace-shell">
         <aside class="marketplace-sidebar" aria-label="Prompt categories">
@@ -268,6 +282,8 @@
     </section>
   </main>
 
+  <script src="../shared/managedConfig.js"></script>
+  <script src="../shared/workspaceReadiness.js"></script>
   <script src="../shared/roleCoaching.js"></script>
   <script src="../shared/promptQualityEngine.js"></script>
   <script src="../shared/learningAnalytics.js"></script>

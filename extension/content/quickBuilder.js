@@ -1,69 +1,11 @@
 (() => {
+  if (globalThis.AIDevCoachQuickBuilderLoaded) {
+    return;
+  }
+  globalThis.AIDevCoachQuickBuilderLoaded = true;
+
   const PANEL_ID = "ai-dev-coach-builder-panel";
   const BUTTON_ID = "ai-dev-coach-builder-launcher";
-  const COACH_OWNED_SELECTOR = '[data-ai-coach-owned="true"]';
-  const PLATFORM_INPUT_SELECTORS = [
-    "#prompt-textarea",
-    "[data-testid='prompt-textarea']",
-    "[data-testid*='prompt-textarea']",
-    "[data-testid*='composer'] textarea",
-    "[data-testid*='composer'] [contenteditable='true']",
-    "[role='textbox'][contenteditable='true']",
-    "div.ProseMirror[contenteditable='true']",
-    "textarea",
-    '[contenteditable="true"]',
-    '[contenteditable="plaintext-only"]',
-    '[contenteditable=""]',
-    '[contenteditable]:not([contenteditable="false"])'
-  ];
-
-  const PLATFORM_CONFIG = [
-    {
-      name: "ChatGPT",
-      matches: [/chatgpt\.com/i, /chat\.openai\.com/i],
-      inputSelectors: PLATFORM_INPUT_SELECTORS
-    },
-    {
-      name: "Claude",
-      matches: [/claude\.ai/i],
-      inputSelectors: PLATFORM_INPUT_SELECTORS
-    },
-    {
-      name: "Gemini",
-      matches: [/gemini\.google\.com/i],
-      inputSelectors: PLATFORM_INPUT_SELECTORS
-    },
-    {
-      name: "Grok",
-      matches: [/grok\.com/i],
-      inputSelectors: PLATFORM_INPUT_SELECTORS
-    },
-    {
-      name: "DeepSeek",
-      matches: [/chat\.deepseek\.com/i, /deepseek\.com/i],
-      inputSelectors: PLATFORM_INPUT_SELECTORS
-    }
-  ];
-
-  const SEND_BUTTON_HINTS = [
-    /\bsend\b/i,
-    /\bsubmit\b/i,
-    /\bask\b/i,
-    /send message/i,
-    /submit prompt/i,
-    /arrow up/i
-  ];
-
-  const NON_SEND_BUTTON_HINTS = [
-    /\bstop\b/i,
-    /\bregenerate\b/i,
-    /\bretry\b/i,
-    /\bnew chat\b/i,
-    /\battach\b/i,
-    /\bupload\b/i,
-    /\bcopy\b/i,
-    /\bshare\b/i
-  ];
 
   const DEFAULT_PROFILE = {
     role: "",
@@ -71,17 +13,6 @@
     skill: "",
     habitGoals: ""
   };
-
-  const CONTEXT_EXCLUSION_HINTS = [
-    /\bsearch\b/i,
-    /\bfilter\b/i,
-    /\bfind\b/i,
-    /\bhistory\b/i,
-    /\brename\b/i,
-    /\btitle\b/i,
-    /\bsetting(s)?\b/i,
-    /\bmemory\b/i
-  ];
 
   const DEFAULT_TEMPLATE = "debugging";
   const REQUIRED_FIELDS = ["task", "context", "attempt"];
@@ -236,6 +167,14 @@
       .replace(/'/g, "&#39;");
   }
 
+  function getPlatformAdapter() {
+    const adapter = window.AIDevCoachPlatformAdapter;
+    if (!adapter || typeof adapter.detectPlatform !== "function") {
+      throw new Error("Platform adapter is unavailable.");
+    }
+    return adapter;
+  }
+
   function getRoleCoaching() {
     const roleCoaching = window.AIDevCoachRoleCoaching;
     if (!roleCoaching || typeof roleCoaching.getRoleProfile !== "function") {
@@ -289,6 +228,12 @@
     return getRoleCoaching().normalizeRoleKey(value);
   }
 
+  function normalizeVisibleRoleKey(value) {
+    return getRoleCoaching().normalizeVisibleRoleKey
+      ? getRoleCoaching().normalizeVisibleRoleKey(value)
+      : normalizeRoleKey(value) || "other";
+  }
+
   function resolveRoleKey(rawProfile = {}) {
     return getRoleCoaching().resolveRoleKey(rawProfile);
   }
@@ -297,370 +242,93 @@
     return getRoleCoaching().getRoleProfile(rawProfile);
   }
 
+  function coerceToVisibleRoleProfile(rawProfile = {}) {
+    return getRoleCoaching().coerceToVisibleRoleProfile
+      ? getRoleCoaching().coerceToVisibleRoleProfile(rawProfile)
+      : rawProfile;
+  }
+
   function buildRoleHeaderLines(roleProfile) {
     return getRoleCoaching().buildRoleHeaderLines(roleProfile);
   }
 
   function isCoachOwnedElement(element) {
-    if (!(element instanceof Element)) {
-      return false;
-    }
-
-    return !!element.closest(COACH_OWNED_SELECTOR);
+    return getPlatformAdapter().isCoachOwnedElement(element);
   }
 
   function detectPlatform() {
-    const href = window.location.href;
-    return PLATFORM_CONFIG.find((platform) =>
-      platform.matches.some((matcher) => matcher.test(href))
-    );
+    return getPlatformAdapter().detectPlatform();
   }
 
   function isVisibleInput(element) {
-    if (!(element instanceof HTMLElement)) {
-      return false;
-    }
-
-    if (isCoachOwnedElement(element)) {
-      return false;
-    }
-
-    const style = window.getComputedStyle(element);
-    if (style.display === "none" || style.visibility === "hidden") {
-      return false;
-    }
-
-    if (element.hasAttribute("disabled") || element.getAttribute("aria-hidden") === "true") {
-      return false;
-    }
-
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
-  }
-
-  function contextHintText(element) {
-    if (!(element instanceof HTMLElement)) {
-      return "";
-    }
-
-    return [
-      element.id,
-      element.getAttribute("name"),
-      element.getAttribute("data-testid"),
-      element.getAttribute("aria-label"),
-      element.getAttribute("placeholder"),
-      element.className
-    ]
-      .filter(Boolean)
-      .join(" ");
-  }
-
-  function isExcludedContextInput(element) {
-    if (!(element instanceof HTMLElement)) {
-      return true;
-    }
-
-    const context = contextHintText(element);
-    return CONTEXT_EXCLUSION_HINTS.some((pattern) => pattern.test(context));
-  }
-
-  function findComposerScope(element) {
-    if (!(element instanceof HTMLElement)) {
-      return null;
-    }
-
-    return element.closest(
-      "form,[data-testid*='composer'],[data-testid*='prompt'],[class*='composer'],[class*='prompt'],[class*='chat-input']"
-    );
-  }
-
-  function hasNearbySendButton(element) {
-    const scope = findComposerScope(element);
-    if (!(scope instanceof Element)) {
-      return false;
-    }
-
-    const candidates = Array.from(
-      scope.querySelectorAll("button,[role='button'],input[type='submit'],input[type='button']")
-    ).slice(0, 80);
-    return candidates.some((candidate) => candidate instanceof HTMLElement && isLikelySendButton(candidate));
-  }
-
-  function scorePromptInputCandidate(element) {
-    if (!(element instanceof HTMLElement) || !isVisibleInput(element) || isExcludedContextInput(element)) {
-      return Number.NEGATIVE_INFINITY;
-    }
-
-    const context = contextHintText(element);
-    const rect = element.getBoundingClientRect();
-    let score = 0;
-
-    if (/#prompt-textarea|prompt-textarea|composer|chat-input/i.test(context)) {
-      score += 80;
-    }
-    if (findComposerScope(element)) {
-      score += 36;
-    }
-    if (hasNearbySendButton(element)) {
-      score += 30;
-    }
-    if (rect.bottom >= window.innerHeight * 0.45) {
-      score += 16;
-    }
-    if (rect.width >= 200) {
-      score += 10;
-    }
-
-    return score;
-  }
-
-  function pickBestPromptInput(candidates) {
-    if (!Array.isArray(candidates) || candidates.length === 0) {
-      return null;
-    }
-
-    let best = null;
-    let bestScore = Number.NEGATIVE_INFINITY;
-
-    candidates.forEach((candidate) => {
-      const score = scorePromptInputCandidate(candidate);
-      if (score > bestScore) {
-        best = candidate;
-        bestScore = score;
-      }
-    });
-
-    return bestScore === Number.NEGATIVE_INFINITY ? null : best;
+    return getPlatformAdapter().isVisiblePromptInput(element);
   }
 
   function findPromptInput(platform) {
-    if (!platform) {
-      return null;
-    }
-
-    const activeElement = document.activeElement;
-    if (
-      activeElement instanceof HTMLElement &&
-      !isCoachOwnedElement(activeElement) &&
-      platform.inputSelectors.some((selector) => activeElement.matches(selector)) &&
-      isVisibleInput(activeElement)
-    ) {
-      const activeScore = scorePromptInputCandidate(activeElement);
-      if (activeScore !== Number.NEGATIVE_INFINITY) {
-        return activeElement;
-      }
-    }
-
-    const matches = [];
-    const seen = new Set();
-
-    for (const selector of platform.inputSelectors) {
-      const candidates = Array.from(document.querySelectorAll(selector));
-      candidates.forEach((candidate) => {
-        if (!(candidate instanceof HTMLElement) || seen.has(candidate) || !isVisibleInput(candidate)) {
-          return;
-        }
-        seen.add(candidate);
-        matches.push(candidate);
-      });
-    }
-
-    const best = pickBestPromptInput(matches);
-    if (best) {
-      return best;
-    }
-
-    for (const candidate of matches) {
-      if (!isExcludedContextInput(candidate)) {
-        return candidate;
-      }
-    }
-
-    return null;
+    return getPlatformAdapter().resolveActivePromptInput(platform);
   }
 
   function resolvePromptInputFromElement(platform, element) {
-    if (!platform || !(element instanceof Element)) {
-      return null;
-    }
-
-    if (isCoachOwnedElement(element)) {
-      return null;
-    }
-
-    for (const selector of platform.inputSelectors) {
-      const candidate = element.closest(selector);
-      if (candidate instanceof HTMLElement && isVisibleInput(candidate) && !isCoachOwnedElement(candidate)) {
-        return candidate;
-      }
-    }
-
-    const scoped = findComposerScope(element instanceof HTMLElement ? element : null);
-    if (scoped instanceof Element) {
-      const candidates = [];
-      for (const selector of platform.inputSelectors) {
-        scoped.querySelectorAll(selector).forEach((node) => {
-          if (node instanceof HTMLElement && isVisibleInput(node) && !isCoachOwnedElement(node)) {
-            candidates.push(node);
-          }
-        });
-      }
-      return pickBestPromptInput(candidates);
-    }
-
-    return null;
-  }
-
-  function isLikelySendButton(element) {
-    if (!(element instanceof HTMLElement)) {
-      return false;
-    }
-
-    if (element.matches("button[type='submit'],input[type='submit']")) {
-      return true;
-    }
-
-    const attributes = [
-      element.getAttribute("aria-label"),
-      element.getAttribute("title"),
-      element.getAttribute("data-testid"),
-      element.getAttribute("name"),
-      element.id,
-      element.textContent
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    if (!attributes) {
-      return false;
-    }
-
-    if (NON_SEND_BUTTON_HINTS.some((pattern) => pattern.test(attributes))) {
-      return false;
-    }
-
-    return SEND_BUTTON_HINTS.some((pattern) => pattern.test(attributes));
+    return getPlatformAdapter().resolvePromptInputFromElement(platform, element);
   }
 
   function findSendButton(input) {
-    if (!(input instanceof HTMLElement)) {
-      return null;
-    }
-
-    const containers = [
-      input.closest("form"),
-      input.closest("[data-testid*='composer']"),
-      input.closest("[class*='composer']"),
-      input.closest("[class*='prompt']"),
-      document
-    ].filter(Boolean);
-
-    for (const container of containers) {
-      const candidates = Array.from(
-        container.querySelectorAll("button,[role='button'],input[type='submit'],input[type='button']")
-      ).slice(0, 120);
-
-      const button = candidates.find((candidate) => {
-        if (!(candidate instanceof HTMLElement)) {
-          return false;
-        }
-
-        if (isCoachOwnedElement(candidate)) {
-          return false;
-        }
-
-        if (!isVisibleInput(candidate)) {
-          return false;
-        }
-
-        if (
-          candidate.hasAttribute("disabled") ||
-          candidate.getAttribute("aria-disabled") === "true"
-        ) {
-          return false;
-        }
-
-        return isLikelySendButton(candidate);
-      });
-
-      if (button) {
-        return button;
-      }
-    }
-
-    return null;
+    return getPlatformAdapter().findSendButton(input);
   }
 
   function setPromptInputValue(input, text) {
-    if (!(input instanceof HTMLElement)) {
+    return getPlatformAdapter().writePromptInputValue(input, text);
+  }
+
+  function readPromptInputValue(input) {
+    return getPlatformAdapter().readPromptInputValue(input);
+  }
+
+  function promptWasConsumed(input, expectedPrompt) {
+    const normalizedExpected = clean(expectedPrompt);
+    if (!normalizedExpected) {
       return false;
     }
 
-    const value = text || "";
-
-    if (input.tagName === "TEXTAREA") {
-      input.focus();
-      const prototype = window.HTMLTextAreaElement?.prototype;
-      const descriptor = prototype ? Object.getOwnPropertyDescriptor(prototype, "value") : null;
-      if (descriptor && typeof descriptor.set === "function") {
-        descriptor.set.call(input, value);
-      } else {
-        input.value = value;
-      }
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
+    const currentValue = clean(readPromptInputValue(input));
+    if (!currentValue) {
       return true;
     }
 
-    if (input.isContentEditable) {
-      input.focus();
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(input);
-      range.deleteContents();
-      const textNode = document.createTextNode(value);
-      range.insertNode(textNode);
-      range.setStartAfter(textNode);
-      range.collapse(true);
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(range);
+    if (currentValue === normalizedExpected) {
+      return false;
+    }
+
+    return currentValue.length <= Math.max(12, Math.floor(normalizedExpected.length * 0.2));
+  }
+
+  async function confirmPromptSend(input, expectedPrompt, attempts = 6, delayMs = 150) {
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+      if (promptWasConsumed(input, expectedPrompt)) {
+        return true;
       }
-      input.dispatchEvent(new InputEvent("input", { bubbles: true, data: value, inputType: "insertText" }));
-      return true;
     }
 
     return false;
   }
 
-  function readPromptInputValue(input) {
-    if (!(input instanceof HTMLElement)) {
-      return "";
-    }
+  async function attemptSend(input, expectedPrompt = "") {
+    const promptBeforeSend = clean(expectedPrompt || readPromptInputValue(input));
 
-    if (input.tagName === "TEXTAREA") {
-      return clean(input.value);
-    }
-
-    if (input.isContentEditable) {
-      return clean((input.innerText || input.textContent || "").replace(/\u00a0/g, " "));
-    }
-
-    return "";
-  }
-
-  async function attemptSend(input) {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const sendButton = findSendButton(input);
       if (sendButton) {
         sendButton.click();
-        return true;
+        if (await confirmPromptSend(input, promptBeforeSend)) {
+          return true;
+        }
       }
 
       await new Promise((resolve) => window.setTimeout(resolve, 120));
     }
 
-    if (!(input instanceof HTMLElement)) {
+    if (!(input instanceof HTMLElement) || !promptBeforeSend) {
       return false;
     }
 
@@ -676,7 +344,7 @@
     input.dispatchEvent(new KeyboardEvent("keydown", keyInit));
     input.dispatchEvent(new KeyboardEvent("keyup", keyInit));
     input.dispatchEvent(new KeyboardEvent("keypress", keyInit));
-    return true;
+    return confirmPromptSend(input, promptBeforeSend, 4, 150);
   }
 
   function emitQuickBuilderSendEvent(prompt) {
@@ -864,19 +532,19 @@
       ...DEFAULT_PROFILE,
       ...(data.profile || {})
     });
-    state.profile = migratedProfile.profile;
-    if (migratedProfile.migrated) {
+    state.profile = coerceToVisibleRoleProfile(migratedProfile.profile);
+    if (
+      migratedProfile.migrated ||
+      JSON.stringify(state.profile) !== JSON.stringify(data.profile || {})
+    ) {
       storageSet({ profile: state.profile }).catch(() => {
         console.warn("AI Dev Coach quick builder legacy profile migration skipped");
       });
     }
     const profileHasExplicitRole = !!(clean(state.profile.role) || clean(state.profile.roleKey));
-    const roleOptions = getRoleCoaching().JOB_ROLE_OPTIONS;
     state.selectedRoleKey = profileHasExplicitRole
-      ? resolveRoleKey(state.profile)
-      : roleOptions[data.quickBuilderRoleKey]
-        ? data.quickBuilderRoleKey
-        : resolveRoleKey(state.profile);
+      ? normalizeVisibleRoleKey(resolveRoleKey(state.profile))
+      : normalizeVisibleRoleKey(data.quickBuilderRoleKey || resolveRoleKey(state.profile));
     const recommendedTemplate = getRecommendedTemplateForProfile(state.profile, state.selectedRoleKey);
     state.selectedTemplate = TEMPLATES[data.selectedTemplate]
       ? data.selectedTemplate
@@ -930,7 +598,7 @@
     }
 
     if (sendAfterBuild) {
-      const sent = await attemptSend(promptInput);
+      const sent = await attemptSend(promptInput, prompt);
       if (sent) {
         emitQuickBuilderSendEvent(prompt);
       }
@@ -973,7 +641,7 @@
     }
 
     if (mode === "send") {
-      const sent = await attemptSend(promptInput);
+      const sent = await attemptSend(promptInput, normalizedPrompt);
       if (sent) {
         emitQuickBuilderSendEvent(normalizedPrompt);
       }
@@ -1436,14 +1104,14 @@
       <header class="ai-coach-builder__header">
         <div>
           <h3>Quick Prompt Builder</h3>
-          <p class="ai-coach-builder__subhead">Build a clean prompt, place it in the active AI chat, and send it when you are ready.</p>
+          <p class="ai-coach-builder__subhead">Build a clean engineering prompt, place it in the active AI chat, and send it when you are ready.</p>
         </div>
         <button type="button" class="ai-coach-builder__close" aria-label="Close">×</button>
       </header>
       <section class="ai-coach-builder__section">
         <div class="ai-coach-builder__section-head">
           <span class="ai-coach-builder__section-kicker">Setup</span>
-          <p class="ai-coach-builder__hint">Choose a template and role that match the conversation you want to have.</p>
+          <p class="ai-coach-builder__hint">Choose a template and technical role that match the engineering problem you want to solve.</p>
         </div>
         <label class="ai-coach-builder__label" for="aiCoachTemplateSelect">Template</label>
         <select id="aiCoachTemplateSelect" class="ai-coach-builder__input"></select>
@@ -1451,13 +1119,10 @@
 
         <label class="ai-coach-builder__label" for="aiCoachRoleSelect">Role</label>
         <select id="aiCoachRoleSelect" class="ai-coach-builder__input">
-          <option value="teacher">Teacher</option>
           <option value="software_engineer" selected>Software Engineer</option>
-          <option value="solution_architecture">Solution Architecture</option>
-          <option value="manager">Manager</option>
-          <option value="director">Director</option>
-          <option value="doctor">Doctor</option>
-          <option value="other">Other</option>
+          <option value="solution_architecture">Solution Architect</option>
+          <option value="manager">Engineering Manager</option>
+          <option value="other">Other Tech Role</option>
         </select>
         <p id="aiCoachRoleHint" class="ai-coach-builder__hint"></p>
         <p id="aiCoachRoleCoachHint" class="ai-coach-builder__hint"></p>
@@ -1552,7 +1217,7 @@
     });
 
     state.refs.roleSelect.addEventListener("change", async () => {
-      state.selectedRoleKey = state.refs.roleSelect.value;
+      state.selectedRoleKey = normalizeVisibleRoleKey(state.refs.roleSelect.value);
       const recommendedTemplate = getRecommendedTemplateForProfile(state.profile, state.selectedRoleKey);
       state.selectedTemplate = TEMPLATES[recommendedTemplate] ? recommendedTemplate : DEFAULT_TEMPLATE;
       renderTemplateOptions();
@@ -1658,12 +1323,12 @@
           ...DEFAULT_PROFILE,
           ...(changes.profile?.newValue || {})
         });
-        state.profile = migratedProfile.profile;
-        state.selectedRoleKey = resolveRoleKey(state.profile);
+        state.profile = coerceToVisibleRoleProfile(migratedProfile.profile);
+        state.selectedRoleKey = normalizeVisibleRoleKey(resolveRoleKey(state.profile));
       }
 
       if (changes.quickBuilderRoleKey?.newValue) {
-        state.selectedRoleKey = normalizeRoleKey(changes.quickBuilderRoleKey.newValue);
+        state.selectedRoleKey = normalizeVisibleRoleKey(changes.quickBuilderRoleKey.newValue);
       }
 
       if (state.inlineSuggestions.activeInput) {
@@ -1771,5 +1436,6 @@
 
   init().catch((error) => {
     console.error("AI Dev Coach quick builder init error", error);
+    globalThis.AIDevCoachQuickBuilderLoaded = false;
   });
 })();

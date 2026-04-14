@@ -1,57 +1,14 @@
 (() => {
-  const COACH_OWNED_SELECTOR = '[data-ai-coach-owned="true"]';
   const PROMPT_ANALYZED_EVENT = "ai-dev-coach:prompt-analyzed";
-  const PLATFORM_INPUT_SELECTORS = [
-    "#prompt-textarea",
-    "[data-testid='prompt-textarea']",
-    "[data-testid*='prompt-textarea']",
-    "[data-testid*='composer'] textarea",
-    "[data-testid*='composer'] [contenteditable='true']",
-    "[role='textbox'][contenteditable='true']",
-    "div.ProseMirror[contenteditable='true']",
-    "textarea",
-    '[contenteditable="true"]',
-    '[contenteditable="plaintext-only"]',
-    '[contenteditable=""]',
-    '[contenteditable]:not([contenteditable="false"])'
-  ];
-
-  const PLATFORM_CONFIG = [
-    {
-      name: "ChatGPT",
-      matches: [/chatgpt\.com/i, /chat\.openai\.com/i],
-      inputSelectors: PLATFORM_INPUT_SELECTORS
-    },
-    {
-      name: "Claude",
-      matches: [/claude\.ai/i],
-      inputSelectors: PLATFORM_INPUT_SELECTORS
-    },
-    {
-      name: "Gemini",
-      matches: [/gemini\.google\.com/i],
-      inputSelectors: PLATFORM_INPUT_SELECTORS
-    },
-    {
-      name: "Grok",
-      matches: [/grok\.com/i],
-      inputSelectors: PLATFORM_INPUT_SELECTORS
-    },
-    {
-      name: "DeepSeek",
-      matches: [/chat\.deepseek\.com/i, /deepseek\.com/i],
-      inputSelectors: PLATFORM_INPUT_SELECTORS
-    }
-  ];
 
   const DEFAULT_SETTINGS = {
     enableCoach: true,
-    promptListenerEnabled: true,
-    behaviorMonitorEnabled: true,
-    readPromptContentEnabled: true,
-    readCopiedContentEnabled: true,
-    readBeforeCopyEnabled: true,
-    showOutputCountdown: true,
+    promptListenerEnabled: false,
+    behaviorMonitorEnabled: false,
+    readPromptContentEnabled: false,
+    readCopiedContentEnabled: false,
+    readBeforeCopyEnabled: false,
+    showOutputCountdown: false,
     strictMode: true,
     dependencyWarningThreshold: 70,
     pasteThreshold: 320,
@@ -248,37 +205,8 @@
     /em\s*[đd][aã]\s*th[ửu]\s*:/i
   ];
 
-  const SEND_BUTTON_HINTS = [
-    /\bsend\b/i,
-    /\bsubmit\b/i,
-    /\bask\b/i,
-    /send message/i,
-    /submit prompt/i,
-    /arrow up/i
-  ];
-
-  const NON_SEND_BUTTON_HINTS = [
-    /\bstop\b/i,
-    /\bregenerate\b/i,
-    /\bretry\b/i,
-    /\bnew chat\b/i,
-    /\battach\b/i,
-    /\bupload\b/i,
-    /\bcopy\b/i,
-    /\bshare\b/i
-  ];
   const DRAFT_PROMPT_TTL_MS = 15000;
   const LIVE_SCORE_DEBOUNCE_MS = 500;
-  const CONTEXT_EXCLUSION_HINTS = [
-    /\bsearch\b/i,
-    /\bfilter\b/i,
-    /\bfind\b/i,
-    /\bhistory\b/i,
-    /\brename\b/i,
-    /\btitle\b/i,
-    /\bsetting(s)?\b/i,
-    /\bmemory\b/i
-  ];
 
   const attachedInputs = new WeakSet();
   const attachedForms = new WeakSet();
@@ -363,6 +291,17 @@
     return null;
   }
 
+  function getPlatformAdapter() {
+    if (
+      window.AIDevCoachPlatformAdapter &&
+      typeof window.AIDevCoachPlatformAdapter.detectPlatform === "function"
+    ) {
+      return window.AIDevCoachPlatformAdapter;
+    }
+
+    return null;
+  }
+
   function rememberDraftPrompt(prompt) {
     const normalized = clean(prompt);
     if (!normalized) {
@@ -389,12 +328,16 @@
     return clean(prompt).replace(/\s+/g, " ").slice(0, 220);
   }
 
-  function mergeSettings(rawSettings) {
-    return { ...DEFAULT_SETTINGS, ...(rawSettings || {}) };
+  function mergeSettings(rawSettings, rawEffectiveSettings) {
+    return {
+      ...DEFAULT_SETTINGS,
+      ...(rawSettings || {}),
+      ...(rawEffectiveSettings || {})
+    };
   }
 
-  function syncCachedSettings(nextSettings) {
-    cachedSettings = mergeSettings(nextSettings);
+  function syncCachedSettings(nextSettings, nextEffectiveSettings) {
+    cachedSettings = mergeSettings(nextSettings, nextEffectiveSettings);
   }
 
   function syncCachedProfile(nextProfile) {
@@ -402,18 +345,18 @@
   }
 
   async function getCurrentSettings() {
-    const data = await storageGet(["settings"]);
-    const settings = mergeSettings(data.settings);
-    syncCachedSettings(settings);
+    const data = await storageGet(["settings", "effectiveSettings"]);
+    const settings = mergeSettings(data.settings, data.effectiveSettings);
+    syncCachedSettings(data.settings, data.effectiveSettings);
     return settings;
   }
 
   async function getState() {
-    const data = await storageGet(["settings", "profile", "stats"]);
-    syncCachedSettings(data.settings);
+    const data = await storageGet(["settings", "effectiveSettings", "profile", "stats"]);
+    syncCachedSettings(data.settings, data.effectiveSettings);
     syncCachedProfile(data.profile);
     return {
-      settings: mergeSettings(data.settings),
+      settings: mergeSettings(data.settings, data.effectiveSettings),
       profile: { ...DEFAULT_PROFILE, ...(data.profile || {}) },
       stats: { ...DEFAULT_STATS, ...(data.stats || {}) }
     };
@@ -431,315 +374,77 @@
   }
 
   function writePrompt(input, text) {
-    if (!(input instanceof HTMLElement)) {
+    const adapter = getPlatformAdapter();
+    if (!adapter || typeof adapter.writePromptInputValue !== "function") {
       return false;
     }
 
-    const value = text || "";
-
-    if (input.tagName === "TEXTAREA") {
-      input.focus();
-      const prototype = window.HTMLTextAreaElement?.prototype;
-      const descriptor = prototype ? Object.getOwnPropertyDescriptor(prototype, "value") : null;
-      if (descriptor && typeof descriptor.set === "function") {
-        descriptor.set.call(input, value);
-      } else {
-        input.value = value;
-      }
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      return true;
-    }
-
-    if (input.isContentEditable) {
-      input.focus();
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(input);
-      range.deleteContents();
-      const textNode = document.createTextNode(value);
-      range.insertNode(textNode);
-      range.setStartAfter(textNode);
-      range.collapse(true);
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
-      input.dispatchEvent(
-        new InputEvent("input", { bubbles: true, data: value, inputType: "insertText" })
-      );
-      return true;
-    }
-
-    return false;
+    return adapter.writePromptInputValue(input, text);
   }
 
   function detectPlatform() {
-    const locationValue = window.location.href;
-    return PLATFORM_CONFIG.find((platform) =>
-      platform.matches.some((matcher) => matcher.test(locationValue))
-    );
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.detectPlatform() : null;
   }
 
   function isCoachOwnedElement(element) {
-    if (!(element instanceof Element)) {
-      return false;
-    }
-    return !!element.closest(COACH_OWNED_SELECTOR);
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.isCoachOwnedElement(element) : false;
   }
 
   function isVisibleInput(element) {
-    if (!(element instanceof HTMLElement)) {
-      return false;
-    }
-
-    if (isCoachOwnedElement(element)) {
-      return false;
-    }
-
-    const style = window.getComputedStyle(element);
-    if (style.display === "none" || style.visibility === "hidden") {
-      return false;
-    }
-
-    if (element.hasAttribute("disabled") || element.getAttribute("aria-hidden") === "true") {
-      return false;
-    }
-
-    if (element.tagName === "TEXTAREA" && element.readOnly) {
-      return false;
-    }
-
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.isVisiblePromptInput(element) : false;
   }
 
   function contextHintText(element) {
-    if (!(element instanceof HTMLElement)) {
-      return "";
-    }
-
-    return [
-      element.id,
-      element.getAttribute("name"),
-      element.getAttribute("data-testid"),
-      element.getAttribute("aria-label"),
-      element.getAttribute("placeholder"),
-      element.className
-    ]
-      .filter(Boolean)
-      .join(" ");
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.contextHintText(element) : "";
   }
 
   function isExcludedContextInput(element) {
-    if (!(element instanceof HTMLElement)) {
-      return true;
-    }
-    const context = contextHintText(element);
-    return CONTEXT_EXCLUSION_HINTS.some((pattern) => pattern.test(context));
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.isExcludedContextInput(element) : true;
   }
 
   function findComposerScope(element) {
-    if (!(element instanceof HTMLElement)) {
-      return null;
-    }
-
-    return element.closest(
-      "form,[data-testid*='composer'],[data-testid*='prompt'],[class*='composer'],[class*='prompt'],[class*='chat-input']"
-    );
-  }
-
-  function hasNearbySendButton(element) {
-    const scope = findComposerScope(element);
-    if (!(scope instanceof Element)) {
-      return false;
-    }
-
-    const candidates = Array.from(
-      scope.querySelectorAll("button,[role='button'],input[type='submit'],input[type='button']")
-    ).slice(0, 80);
-    return candidates.some((candidate) => candidate instanceof HTMLElement && isLikelySendButton(candidate));
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.findComposerScope(element) : null;
   }
 
   function scorePromptInputCandidate(element) {
-    if (!(element instanceof HTMLElement) || !isVisibleInput(element) || isExcludedContextInput(element)) {
-      return Number.NEGATIVE_INFINITY;
-    }
-
-    const context = contextHintText(element);
-    const rect = element.getBoundingClientRect();
-    let score = 0;
-
-    if (/#prompt-textarea|prompt-textarea|composer|chat-input/i.test(context)) {
-      score += 80;
-    }
-    if (findComposerScope(element)) {
-      score += 36;
-    }
-    if (hasNearbySendButton(element)) {
-      score += 30;
-    }
-    if (rect.bottom >= window.innerHeight * 0.45) {
-      score += 16;
-    }
-    if (rect.width >= 200) {
-      score += 10;
-    }
-
-    return score;
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.scorePromptInputCandidate(element) : Number.NEGATIVE_INFINITY;
   }
 
   function pickBestPromptInput(candidates) {
-    if (!Array.isArray(candidates) || candidates.length === 0) {
-      return null;
-    }
-
-    let best = null;
-    let bestScore = Number.NEGATIVE_INFINITY;
-
-    candidates.forEach((candidate) => {
-      const score = scorePromptInputCandidate(candidate);
-      if (score > bestScore) {
-        best = candidate;
-        bestScore = score;
-      }
-    });
-
-    return bestScore === Number.NEGATIVE_INFINITY ? null : best;
-  }
-
-  function isPlatformInput(platform, element) {
-    return platform.inputSelectors.some((selector) => element.matches(selector));
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.pickBestPromptInput(candidates) : null;
   }
 
   function findPromptInputs(platform) {
-    const matches = [];
-    const seen = new Set();
-
-    const activeElement = document.activeElement;
-    if (
-      activeElement instanceof HTMLElement &&
-      isPlatformInput(platform, activeElement) &&
-      isVisibleInput(activeElement)
-    ) {
-      const activeScore = scorePromptInputCandidate(activeElement);
-      if (activeScore !== Number.NEGATIVE_INFINITY) {
-        matches.push(activeElement);
-        seen.add(activeElement);
-      }
-    }
-
-    for (const selector of platform.inputSelectors) {
-      const candidates = Array.from(document.querySelectorAll(selector));
-      for (const candidate of candidates) {
-        if (!(candidate instanceof HTMLElement)) {
-          continue;
-        }
-        if (seen.has(candidate) || !isVisibleInput(candidate)) {
-          continue;
-        }
-        if (scorePromptInputCandidate(candidate) === Number.NEGATIVE_INFINITY) {
-          continue;
-        }
-
-        matches.push(candidate);
-        seen.add(candidate);
-
-        if (matches.length >= 8) {
-          return matches;
-        }
-      }
-    }
-
-    return matches;
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.collectPromptInputs(platform) : [];
   }
 
   function findVisibleInputInScope(scope, platform) {
-    if (!(scope instanceof Element)) {
-      return null;
-    }
-
-    const candidates = [];
-    for (const selector of platform.inputSelectors) {
-      scope.querySelectorAll(selector).forEach((node) => {
-        if (node instanceof HTMLElement && isVisibleInput(node)) {
-          candidates.push(node);
-        }
-      });
-    }
-
-    return pickBestPromptInput(candidates);
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.findVisibleInputInScope(scope, platform) : null;
   }
 
   function resolvePromptInputFromEventTarget(target, platform) {
-    if (!(target instanceof Element)) {
-      return null;
-    }
-
-    if (isCoachOwnedElement(target)) {
-      return null;
-    }
-
-    for (const selector of platform.inputSelectors) {
-      const candidate = target.closest(selector);
-      if (candidate instanceof HTMLElement && isVisibleInput(candidate)) {
-        return candidate;
-      }
-    }
-
-    const scope = target.closest(
-      "form,[data-testid*='composer'],[data-testid*='prompt'],[class*='composer'],[class*='prompt'],[class*='chat-input']"
-    );
-    const scoped = findVisibleInputInScope(scope, platform);
-    if (scoped) {
-      return scoped;
-    }
-
-    return null;
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.resolvePromptInputFromElement(platform, target) : null;
   }
 
   function resolveActivePromptInput(platform) {
-    const activeElement = document.activeElement;
-    if (
-      activeElement instanceof HTMLElement &&
-      isPlatformInput(platform, activeElement) &&
-      isVisibleInput(activeElement)
-    ) {
-      const activeScore = scorePromptInputCandidate(activeElement);
-      if (activeScore !== Number.NEGATIVE_INFINITY) {
-        return activeElement;
-      }
-    }
-
-    const inputs = findPromptInputs(platform);
-    return pickBestPromptInput(inputs);
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.resolveActivePromptInput(platform) : null;
   }
 
   function readPrompt(input) {
-    if (!input) {
-      return "";
-    }
-
-    if (input.tagName === "TEXTAREA") {
-      return (input.value || "").replace(/[\u200B-\u200D\uFEFF]/g, "");
-    }
-
-    const placeholder = clean(
-      input.getAttribute("aria-placeholder") ||
-        input.getAttribute("data-placeholder") ||
-        input.getAttribute("placeholder")
-    ).toLowerCase();
-    const text = clean((input.innerText || input.textContent || "").replace(/[\u200B-\u200D\uFEFF]/g, ""));
-
-    if (!text) {
-      return "";
-    }
-
-    if (placeholder && text.toLowerCase() === placeholder) {
-      return "";
-    }
-
-    return text;
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.readPromptInputValue(input) : "";
   }
 
   function summarizeSecretFindings(findings) {
@@ -1248,72 +953,20 @@
   }
 
   function isLikelySendButton(element) {
-    if (!(element instanceof HTMLElement)) {
-      return false;
-    }
-
-    if (element.matches("button[type='submit'],input[type='submit']")) {
-      return true;
-    }
-
-    const attributes = [
-      element.getAttribute("aria-label"),
-      element.getAttribute("title"),
-      element.getAttribute("data-testid"),
-      element.getAttribute("name"),
-      element.id,
-      element.textContent
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    if (!attributes) {
-      return false;
-    }
-
-    if (NON_SEND_BUTTON_HINTS.some((pattern) => pattern.test(attributes))) {
-      return false;
-    }
-
-    return SEND_BUTTON_HINTS.some((pattern) => pattern.test(attributes));
+    const adapter = getPlatformAdapter();
+    return adapter ? adapter.isLikelySendButton(element) : false;
   }
 
   function resolvePromptInputFromTrigger(trigger, platform) {
-    if (!(trigger instanceof HTMLElement)) {
+    const adapter = getPlatformAdapter();
+    if (!adapter) {
       return null;
     }
 
-    if (isCoachOwnedElement(trigger)) {
-      return null;
-    }
-
-    const form = trigger.closest("form");
-    if (form) {
-      const formInput = findVisibleInputInScope(form, platform);
-      if (formInput) {
-        return formInput;
-      }
-    }
-
-    const composer = trigger.closest("[data-testid*='composer'],[class*='composer'],[class*='prompt']");
-    if (composer) {
-      const composerInput = findVisibleInputInScope(composer, platform);
-      if (composerInput) {
-        return composerInput;
-      }
-    }
-
-    const activeElement = document.activeElement;
-    if (
-      activeElement instanceof HTMLElement &&
-      isPlatformInput(platform, activeElement) &&
-      isVisibleInput(activeElement)
-    ) {
-      return activeElement;
-    }
-
-    const inputs = findPromptInputs(platform);
-    return pickBestPromptInput(inputs);
+    return (
+      adapter.resolvePromptInputFromElement(platform, trigger) ||
+      adapter.resolveActivePromptInput(platform)
+    );
   }
 
   function buildPromptSignature(prompt) {
@@ -1777,11 +1430,14 @@
   });
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== "local" || !changes.settings) {
+    if (areaName !== "local" || (!changes.settings && !changes.effectiveSettings)) {
       return;
     }
 
-    syncCachedSettings(changes.settings.newValue);
+    syncCachedSettings(
+      changes.settings ? changes.settings.newValue : cachedSettings,
+      changes.effectiveSettings ? changes.effectiveSettings.newValue : cachedSettings
+    );
   });
 
   document.addEventListener(

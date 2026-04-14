@@ -1,6 +1,6 @@
 # AI Dev Coach
 
-AI Dev Coach is a Chrome extension that helps new developers use AI tools without building bad habits.
+AI Dev Coach is a Chrome extension that helps developers use AI tools without building bad habits.
 
 It does not block AI. It coaches behavior in real time.
 
@@ -17,13 +17,14 @@ AI Dev Coach is designed to protect the learning loop:
 
 ## What You Get (Current MVP)
 
-- Profile onboarding in popup (`job`, `skill`, `habit goal`)
+- Profile onboarding in popup (`role`, `level`, `habit goal`)
 - Prompt Builder with required fields (`task`, `context`, `what you tried`)
 - In-page Quick Prompt Builder button beside AI chat composer (`Build + Insert`, `Build + Send`)
 - Keyboard shortcut `Ctrl/Cmd + O` while focused in AI chat composer (browser-dependent)
 - Background shortcut command `Ctrl/Cmd + Shift + O` to open Prompt Builder reliably
-- Role-aware Prompt Builder modes: Teacher, Software Engineer, Solution Architecture, Manager, Director, Doctor, Other
+- Developer-focused role modes: Software Engineer, Solution Architect, Engineering Manager, Other Tech Role
 - Profile level dropdown: Student, Junior, Middle, Senior
+- Popup workspace readiness card that explains when `Insert` and `Send` are available
 - In-page Live Coach bubble with realtime prompt score and habit snapshot
 - 6 prompt templates: debugging, code review, system design, refactoring, performance optimization, learning
 - Prompt quality engine v2 with shared scoring across popup and live monitor (`clarity`, `context`, `specificity`, `risk guardrails`)
@@ -32,7 +33,10 @@ AI Dev Coach is designed to protect the learning loop:
 - Sensitive data detection and local redaction for likely secrets before prompt submission
 - Warning overlays in top-right for shortcut prompts and risky copy-paste behavior
 - AI dependency tracking (`ai requests`, `manual attempts`, `large pastes`)
+- Prompt Marketplace actions that disable `Insert` and `Send` until the current workspace is actually ready
 - Settings page for strict mode and warning thresholds
+- First-run consent gate before any prompt or copied-content monitoring can be enabled
+- Enterprise policy support via `chrome.storage.managed`, including supported-host allowlists and admin-locked coaching settings
 
 ## Supported Platforms
 
@@ -56,6 +60,8 @@ AI Dev Coach is designed to protect the learning loop:
 
 ```bash
 node scripts/validate-extension.mjs
+node scripts/test-managed-config.mjs
+node scripts/test-platform-adapter.mjs
 node scripts/test-prompt-quality-engine.mjs
 node scripts/test-prompt-linter.mjs
 find extension -type f -name '*.js' -print0 | xargs -0 -n1 node --check

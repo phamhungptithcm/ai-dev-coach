@@ -1,0 +1,66 @@
+{
+  "type": "object",
+  "properties": {
+    "AllowedHosts": {
+      "type": "array",
+      "description": "Restrict AI Dev Coach to specific supported hosts such as chatgpt.com, claude.ai, gemini.google.com, grok.com, or chat.deepseek.com.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "LockMonitoringControls": {
+      "type": "boolean",
+      "description": "Prevent users from changing coaching and monitoring settings locally."
+    },
+    "EnableCoach": {
+      "type": "boolean"
+    },
+    "PromptListenerEnabled": {
+      "type": "boolean"
+    },
+    "BehaviorMonitorEnabled": {
+      "type": "boolean"
+    },
+    "ReadPromptContentEnabled": {
+      "type": "boolean"
+    },
+    "ReadCopiedContentEnabled": {
+      "type": "boolean"
+    },
+    "ReadBeforeCopyEnabled": {
+      "type": "boolean"
+    },
+    "ShowOutputCountdown": {
+      "type": "boolean"
+    },
+    "StrictMode": {
+      "type": "boolean"
+    },
+    "DependencyWarningThreshold": {
+      "type": "integer",
+      "minimum": 40,
+      "maximum": 95
+    },
+    "PasteThreshold": {
+      "type": "integer",
+      "minimum": 120,
+      "maximum": 2000
+    },
+    "LongCopyThreshold": {
+      "type": "integer",
+      "minimum": 180,
+      "maximum": 4000
+    },
+    "MinReadBeforeCopySeconds": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 180
+    },
+    "OverlayDurationMs": {
+      "type": "integer",
+      "minimum": 9000,
+      "maximum": 20000
+    }
+  },
+  "additionalProperties": false
+}

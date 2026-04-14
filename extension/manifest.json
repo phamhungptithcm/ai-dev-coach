@@ -12,8 +12,12 @@
     "128": "assets/icon-128.png"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "scripting"
   ],
+  "storage": {
+    "managed_schema": "managed-storage-schema.json"
+  },
   "host_permissions": [
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
@@ -41,36 +45,5 @@
       "description": "Open AI Dev Coach Prompt Builder"
     }
   },
-  "options_page": "options/options.html",
-  "content_scripts": [
-    {
-      "matches": [
-        "https://chat.openai.com/*",
-        "https://chatgpt.com/*",
-        "https://claude.ai/*",
-        "https://gemini.google.com/*",
-        "https://grok.com/*",
-        "https://chat.deepseek.com/*"
-      ],
-      "js": [
-        "content/aiOverlay.js",
-        "content/liveCoachBubble.js",
-        "shared/roleCoaching.js",
-        "shared/promptQualityEngine.js",
-        "shared/learningAnalytics.js",
-        "shared/promptLibrarySource.js",
-        "shared/promptMarketplace.js",
-        "shared/promptSuggestionEngine.js",
-        "content/quickBuilder.js",
-        "content/secretDetection.js",
-        "shared/promptLinter.js",
-        "content/monitor.js",
-        "content/interactionTracker.js"
-      ],
-      "css": [
-        "styles/overlay.css"
-      ],
-      "run_at": "document_idle"
-    }
-  ]
+  "options_page": "options/options.html"
 }

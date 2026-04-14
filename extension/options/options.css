@@ -87,6 +87,10 @@ header p {
   background: linear-gradient(90deg, var(--secondary), var(--primary));
 }
 
+.hidden {
+  display: none;
+}
+
 h2 {
   margin: 0;
   font-size: 18px;
@@ -142,6 +146,10 @@ input:disabled {
   width: 16px;
   height: 16px;
   accent-color: #68abd7;
+}
+
+.checkbox input:disabled {
+  cursor: not-allowed;
 }
 
 .button-row {

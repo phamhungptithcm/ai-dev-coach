@@ -250,8 +250,8 @@ const DEFAULT_PROFILE = {
 };
 
 const DEFAULT_SETTINGS = {
-  promptListenerEnabled: true,
-  behaviorMonitorEnabled: true
+  promptListenerEnabled: false,
+  behaviorMonitorEnabled: false
 };
 
 const DEFAULT_STATS = {
@@ -290,6 +290,11 @@ const rawPromptDetails = document.getElementById("rawPromptDetails");
 const profileStatus = document.getElementById("profileStatus");
 const promptStatus = document.getElementById("promptStatus");
 const monitorStatus = document.getElementById("monitorStatus");
+const monitoringConsentCard = document.getElementById("monitoringConsentCard");
+const monitoringConsentStatus = document.getElementById("monitoringConsentStatus");
+const monitoringPolicyNotice = document.getElementById("monitoringPolicyNotice");
+const workspaceStatusSummary = document.getElementById("workspaceStatusSummary");
+const workspaceStatusDetail = document.getElementById("workspaceStatusDetail");
 const habitStats = document.getElementById("habitStats");
 const profileBadge = document.getElementById("profileBadge");
 const profileForm = document.getElementById("profileForm");
@@ -297,6 +302,8 @@ const profileSummary = document.getElementById("profileSummary");
 const editProfileBtn = document.getElementById("editProfileBtn");
 const promptListenerToggle = document.getElementById("promptListenerToggle");
 const behaviorMonitorToggle = document.getElementById("behaviorMonitorToggle");
+const acceptMonitoringConsentBtn = document.getElementById("acceptMonitoringConsentBtn");
+const openConsentOptionsBtn = document.getElementById("openConsentOptionsBtn");
 const promptScoreValue = document.getElementById("promptScoreValue");
 const promptScoreGrade = document.getElementById("promptGrade");
 const promptScoreSummary = document.getElementById("promptScoreSummary");
@@ -339,7 +346,8 @@ const marketplaceViewState = {
   query: "",
   categoryKey: "all",
   library: null,
-  storageState: null
+  storageState: null,
+  activeWorkspace: null
 };
 
 function storageGet(keys) {
@@ -506,6 +514,22 @@ function updateGeneratedPromptOutput(prompt) {
   generatedPromptPreview.innerHTML = buildPromptPreviewMarkup(rawPrompt);
 }
 
+function getManagedConfig() {
+  const config = window.AIDevCoachManagedConfig;
+  if (!config || typeof config.normalizeMonitoringConsent !== "function") {
+    throw new Error("Managed config module is unavailable.");
+  }
+  return config;
+}
+
+function getWorkspaceReadiness() {
+  const readiness = window.AIDevCoachWorkspaceReadiness;
+  if (!readiness || typeof readiness.describeWorkspaceState !== "function") {
+    throw new Error("Workspace readiness module is unavailable.");
+  }
+  return readiness;
+}
+
 function getPromptQualityEngine() {
   const engine = window.AIDevCoachPromptQualityEngine;
   if (!engine || typeof engine.calculatePromptScore !== "function") {
@@ -566,12 +590,24 @@ function normalizeRoleKey(value) {
   return getRoleCoaching().normalizeRoleKey(value);
 }
 
+function normalizeVisibleRoleKey(value) {
+  return getRoleCoaching().normalizeVisibleRoleKey
+    ? getRoleCoaching().normalizeVisibleRoleKey(value)
+    : normalizeRoleKey(value) || "other";
+}
+
 function resolveRoleKey(rawProfile = {}) {
   return getRoleCoaching().resolveRoleKey(rawProfile);
 }
 
 function getRoleProfile(rawProfile = {}) {
   return getRoleCoaching().getRoleProfile(rawProfile);
+}
+
+function coerceToVisibleRoleProfile(rawProfile = {}) {
+  return getRoleCoaching().coerceToVisibleRoleProfile
+    ? getRoleCoaching().coerceToVisibleRoleProfile(rawProfile)
+    : rawProfile;
 }
 
 function setCustomRoleVisibility(roleKey) {
@@ -649,7 +685,8 @@ function readProfileForm() {
   const roleOptions = getRoleCoaching().JOB_ROLE_OPTIONS;
   const selectedRoleProfile = roleOptions[selectedRoleKey] || roleOptions.software_engineer;
   const customRole = clean(customRoleInput.value);
-  const resolvedRoleLabel = selectedRoleKey === "other" ? customRole || "Other" : selectedRoleProfile.label;
+  const resolvedRoleLabel =
+    selectedRoleKey === "other" ? customRole || "Other Tech Role" : selectedRoleProfile.label;
 
   return {
     roleKey: selectedRoleKey,
@@ -681,13 +718,16 @@ function validatePromptFields(fields) {
 }
 
 function fillProfile(profile) {
-  const roleKey = resolveRoleKey(profile);
+  const visibleProfile = coerceToVisibleRoleProfile(profile);
+  const roleKey = normalizeVisibleRoleKey(visibleProfile.roleKey || resolveRoleKey(visibleProfile));
   roleSelect.value = roleKey;
   setCustomRoleVisibility(roleKey);
   customRoleInput.value =
-    roleKey === "other" && clean(profile.role).toLowerCase() !== "other" ? clean(profile.role) : "";
-  skillInput.value = normalizeLevel(profile.skill);
-  habitInput.value = profile.habitGoals || "";
+    roleKey === "other" && !/^(other|other tech role)$/i.test(clean(visibleProfile.role))
+      ? clean(visibleProfile.role)
+      : "";
+  skillInput.value = normalizeLevel(visibleProfile.skill);
+  habitInput.value = visibleProfile.habitGoals || "";
 }
 
 function getRecommendedTemplateForProfile(profile) {
@@ -767,6 +807,107 @@ function renderProfileView(profile, forceEditMode = false) {
 function fillMonitoring(settings) {
   promptListenerToggle.checked = !!settings.promptListenerEnabled;
   behaviorMonitorToggle.checked = !!settings.behaviorMonitorEnabled;
+}
+
+function normalizeEnterpriseState(rawState) {
+  const state = rawState && typeof rawState === "object" ? rawState : {};
+  return {
+    consentAccepted: state.consentAccepted === true,
+    consentRequired: state.consentRequired !== false,
+    lockMonitoringControls: state.lockMonitoringControls === true,
+    allowedHosts: Array.isArray(state.allowedHosts) ? state.allowedHosts : [],
+    allowedHostLabels: Array.isArray(state.allowedHostLabels) ? state.allowedHostLabels : [],
+    managedKeys: Array.isArray(state.managedKeys) ? state.managedKeys : [],
+    managedSettingLabels: Array.isArray(state.managedSettingLabels) ? state.managedSettingLabels : [],
+    hasManagedPolicy: state.hasManagedPolicy === true
+  };
+}
+
+function setMonitoringToggleDisabled(toggle, disabled) {
+  toggle.disabled = disabled;
+  const wrapper = toggle.closest(".monitor-toggle");
+  if (wrapper) {
+    wrapper.classList.toggle("monitor-toggle--disabled", disabled);
+  }
+}
+
+function renderMonitoringState(settings, enterpriseState, monitoringConsent) {
+  const managedState = normalizeEnterpriseState(enterpriseState);
+  const consent = getManagedConfig().normalizeMonitoringConsent(monitoringConsent);
+  const consentAccepted = consent.accepted;
+  const managedKeys = new Set(managedState.managedKeys);
+  const monitoringLocked = managedState.lockMonitoringControls;
+
+  fillMonitoring(settings);
+
+  monitoringConsentCard.classList.toggle("hidden", consentAccepted);
+  if (!consentAccepted) {
+    setStatus(
+      monitoringConsentStatus,
+      "Monitoring is disabled until you accept consent in this device profile.",
+      false
+    );
+  } else {
+    setStatus(monitoringConsentStatus, "", true);
+  }
+
+  setMonitoringToggleDisabled(
+    promptListenerToggle,
+    !consentAccepted || monitoringLocked || managedKeys.has("promptListenerEnabled")
+  );
+  setMonitoringToggleDisabled(
+    behaviorMonitorToggle,
+    !consentAccepted || monitoringLocked || managedKeys.has("behaviorMonitorEnabled")
+  );
+
+  const notices = [];
+  if (managedState.allowedHostLabels.length > 0) {
+    notices.push(`Allowed hosts: ${managedState.allowedHostLabels.join(", ")}.`);
+  }
+  if (managedState.lockMonitoringControls) {
+    notices.push("Enterprise policy locks monitoring controls.");
+  } else if (managedState.managedSettingLabels.length > 0) {
+    notices.push(`Admin-managed settings: ${managedState.managedSettingLabels.join(", ")}.`);
+  }
+
+  monitoringPolicyNotice.textContent = notices.join(" ");
+  monitoringPolicyNotice.classList.toggle("hidden", notices.length === 0);
+}
+
+async function getActiveWorkspaceState(enterpriseState) {
+  let activeTab = null;
+  try {
+    [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  } catch (error) {
+    return {
+      readyForInjection: false,
+      summary: "Unable to inspect the current tab.",
+      detail: "Open a supported AI chat tab and reopen the popup if Insert or Send actions stay unavailable."
+    };
+  }
+
+  if (!activeTab || !activeTab.url) {
+    return getWorkspaceReadiness().describeWorkspaceState({
+      url: "",
+      enterpriseState,
+      supportedHosts: getManagedConfig().SUPPORTED_HOSTS,
+      isUrlAllowed: getManagedConfig().isUrlAllowed
+    });
+  }
+
+  return getWorkspaceReadiness().describeWorkspaceState({
+    url: activeTab.url,
+    enterpriseState,
+    supportedHosts: getManagedConfig().SUPPORTED_HOSTS,
+    isUrlAllowed: getManagedConfig().isUrlAllowed
+  });
+}
+
+function renderWorkspaceState(workspace) {
+  marketplaceViewState.activeWorkspace = workspace;
+  workspaceStatusSummary.textContent = workspace?.summary || "Workspace state unavailable.";
+  workspaceStatusDetail.textContent = workspace?.detail || "";
+  workspaceStatusDetail.classList.toggle("hidden", !workspace?.detail);
 }
 
 function renderStats(stats) {
@@ -1122,6 +1263,10 @@ function renderMarketplaceCards(target, prompts, options = {}) {
   }
 
   prompts.forEach((prompt) => {
+    const canInjectIntoWorkspace = marketplaceViewState.activeWorkspace?.readyForInjection === true;
+    const injectDisabledReason = canInjectIntoWorkspace
+      ? ""
+      : "Open a supported AI chat tab first to use Insert or Send.";
     const usage = prompt.usage || {};
     const previewText = prompt.previewText || prompt.text || "";
     const card = document.createElement("article");
@@ -1148,8 +1293,8 @@ function renderMarketplaceCards(target, prompts, options = {}) {
       <p class="marketplace-card__text">${escapeHtml(previewText)}</p>
       <div class="marketplace-card__footer">
         <button type="button" class="button marketplace-card__action" data-marketplace-action="copy" data-prompt-id="${escapeHtml(prompt.id)}">Copy</button>
-        <button type="button" class="button marketplace-card__action" data-marketplace-action="insert" data-prompt-id="${escapeHtml(prompt.id)}">Insert</button>
-        <button type="button" class="button button--primary marketplace-card__action" data-marketplace-action="send" data-prompt-id="${escapeHtml(prompt.id)}">Send</button>
+        <button type="button" class="button marketplace-card__action" data-marketplace-action="insert" data-prompt-id="${escapeHtml(prompt.id)}" ${canInjectIntoWorkspace ? "" : "disabled"} title="${escapeHtml(injectDisabledReason)}">Insert</button>
+        <button type="button" class="button button--primary marketplace-card__action" data-marketplace-action="send" data-prompt-id="${escapeHtml(prompt.id)}" ${canInjectIntoWorkspace ? "" : "disabled"} title="${escapeHtml(injectDisabledReason)}">Send</button>
       </div>
     `;
 
@@ -1238,6 +1383,19 @@ async function handleMarketplaceAction(promptId, action) {
   const prompt = findMarketplacePrompt(promptId);
   if (!prompt) {
     setStatus(marketplaceStatus, "Prompt could not be found in the local library.", false);
+    return;
+  }
+
+  if (
+    action !== "copy" &&
+    marketplaceViewState.activeWorkspace?.readyForInjection !== true
+  ) {
+    setStatus(
+      marketplaceStatus,
+      marketplaceViewState.activeWorkspace?.detail ||
+        "Open a supported AI chat tab first to use Insert or Send.",
+      false
+    );
     return;
   }
 
@@ -1492,9 +1650,33 @@ async function saveProfile() {
   setStatus(profileStatus, "", true);
 }
 
+async function acceptMonitoringConsent() {
+  const consent = getManagedConfig().normalizeMonitoringConsent({
+    version: getManagedConfig().CONSENT_VERSION,
+    accepted: true,
+    updatedAt: Date.now()
+  });
+
+  await storageSet({ monitoringConsent: consent });
+  setStatus(monitoringConsentStatus, "Monitoring controls unlocked for this browser profile.", true);
+}
+
 async function saveMonitoring() {
-  const data = await storageGet(["settings"]);
+  const data = await storageGet(["settings", "enterpriseState", "monitoringConsent"]);
   const monitoring = readMonitoringForm();
+  const enterpriseState = normalizeEnterpriseState(data.enterpriseState);
+  const monitoringConsent = getManagedConfig().normalizeMonitoringConsent(data.monitoringConsent);
+
+  if (!monitoringConsent.accepted) {
+    setStatus(monitorStatus, "Accept monitoring consent before enabling live monitoring.", false);
+    return;
+  }
+
+  if (enterpriseState.lockMonitoringControls) {
+    setStatus(monitorStatus, "Monitoring controls are locked by enterprise policy.", false);
+    return;
+  }
+
   const hasMonitoringEnabled = monitoring.promptListenerEnabled || monitoring.behaviorMonitorEnabled;
   const previousSettings = data.settings || {};
   const previousEnableCoach =
@@ -1507,6 +1689,13 @@ async function saveMonitoring() {
     ...monitoring,
     enableCoach: hasMonitoringEnabled ? true : previousEnableCoach
   };
+
+  enterpriseState.managedKeys.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(previousSettings, key)) {
+      nextSettings[key] = previousSettings[key];
+    }
+  });
+
   await storageSet({ settings: nextSettings });
   setStatus(monitorStatus, "Monitoring settings saved.", true);
 }
@@ -1617,6 +1806,9 @@ function resetScoreCard() {
 async function loadState() {
   const data = await storageGet([
     "settings",
+    "effectiveSettings",
+    "enterpriseState",
+    "monitoringConsent",
     "profile",
     "stats",
     "learningAnalytics",
@@ -1626,21 +1818,33 @@ async function loadState() {
     "lastPromptLintReport"
   ]);
 
-  const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
-  const { profile, migrated } = migrateLegacyStudentProfile({
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    ...(data.settings || {}),
+    ...(data.effectiveSettings || {})
+  };
+  const enterpriseState = normalizeEnterpriseState(data.enterpriseState);
+  const monitoringConsent = getManagedConfig().normalizeMonitoringConsent(data.monitoringConsent);
+  const workspace = await getActiveWorkspaceState(enterpriseState);
+  const migratedProfile = migrateLegacyStudentProfile({
     ...DEFAULT_PROFILE,
     ...(data.profile || {})
   });
+  const profile = coerceToVisibleRoleProfile(migratedProfile.profile);
   const stats = { ...DEFAULT_STATS, ...(data.stats || {}) };
   const selectedTemplate = TEMPLATES[data.selectedTemplate]
     ? data.selectedTemplate
     : getRecommendedTemplateForProfile(profile);
 
-  if (migrated) {
+  if (
+    migratedProfile.migrated ||
+    JSON.stringify(profile) !== JSON.stringify(data.profile || {})
+  ) {
     await storageSet({ profile });
   }
 
-  fillMonitoring(settings);
+  renderMonitoringState(settings, enterpriseState, monitoringConsent);
+  renderWorkspaceState(workspace);
   fillProfile(profile);
   renderProfileView(profile, false);
   renderTemplates(selectedTemplate);
@@ -1664,12 +1868,38 @@ async function loadState() {
 }
 
 function wireEvents() {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (
+      areaName !== "local" ||
+      (!changes.settings &&
+        !changes.effectiveSettings &&
+        !changes.enterpriseState &&
+        !changes.monitoringConsent)
+    ) {
+      return;
+    }
+
+    loadState().catch(() => {
+      setStatus(promptStatus, "Unable to refresh popup state.", false);
+    });
+  });
+
   [promptListenerToggle, behaviorMonitorToggle].forEach((toggle) => {
     toggle.addEventListener("change", () => {
       saveMonitoring().catch(() => {
         setStatus(monitorStatus, "Unable to save monitoring settings.", false);
       });
     });
+  });
+
+  acceptMonitoringConsentBtn.addEventListener("click", () => {
+    acceptMonitoringConsent()
+      .then(() => loadState())
+      .catch(() => setStatus(monitoringConsentStatus, "Unable to store monitoring consent.", false));
+  });
+
+  openConsentOptionsBtn.addEventListener("click", () => {
+    chrome.runtime.openOptionsPage();
   });
 
   document.getElementById("saveProfileBtn").addEventListener("click", () => {

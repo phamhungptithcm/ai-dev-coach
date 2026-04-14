@@ -13,6 +13,21 @@
       <p>Configure how strict the coach should be and how warnings are triggered.</p>
     </header>
 
+    <section id="monitoringConsentCard" class="card hidden">
+      <h2>Monitoring Consent</h2>
+      <p class="hint">Monitoring remains off until you explicitly opt in. This keeps prompt and copy inspection disabled by default.</p>
+      <div class="button-row">
+        <button id="acceptMonitoringConsentBtn" class="button button--primary" type="button">Allow Monitoring Controls</button>
+      </div>
+      <p id="monitoringConsentStatus" class="status"></p>
+    </section>
+
+    <section id="enterprisePolicyCard" class="card hidden">
+      <h2>Enterprise Controls</h2>
+      <p id="enterprisePolicySummary" class="hint"></p>
+      <p id="enterprisePolicyDetails" class="hint"></p>
+    </section>
+
     <section class="card">
       <h2>Coaching Controls</h2>
       <p class="hint">Choose exactly what the extension monitors and coaches in AI chat windows.</p>
@@ -87,6 +102,7 @@
     </section>
   </main>
 
+  <script src="../shared/managedConfig.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

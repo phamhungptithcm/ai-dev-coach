@@ -122,7 +122,12 @@ function validateIcons(manifest) {
 
 function validateContentScripts(manifest) {
   if (!Array.isArray(manifest.content_scripts) || manifest.content_scripts.length === 0) {
-    fail("manifest.content_scripts must contain at least one entry");
+    if (Array.isArray(manifest.permissions) && manifest.permissions.includes("scripting")) {
+      warn("No static content_scripts found. Assuming dynamic scripting registration via background worker.");
+      return;
+    }
+
+    fail("manifest must provide content_scripts or the 'scripting' permission for dynamic injection");
     return;
   }
 
@@ -147,6 +152,18 @@ function validateContentScripts(manifest) {
       });
     }
   });
+}
+
+function validateManagedStorage(manifest) {
+  if (!manifest.storage || typeof manifest.storage !== "object") {
+    return;
+  }
+
+  if (!manifest.storage.managed_schema) {
+    return;
+  }
+
+  assertFileExists(manifest.storage.managed_schema, "storage.managed_schema");
 }
 
 function walkFiles(directory, collector) {
@@ -182,9 +199,10 @@ function run() {
 
   const manifest = readManifest();
   if (manifest) {
-    validateManifestCore(manifest);
-    validateIcons(manifest);
-    validateContentScripts(manifest);
+validateManifestCore(manifest);
+validateIcons(manifest);
+validateContentScripts(manifest);
+validateManagedStorage(manifest);
   }
 
   if (fs.existsSync(extensionDir) && fs.statSync(extensionDir).isDirectory()) {

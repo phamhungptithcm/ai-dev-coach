@@ -52,6 +52,15 @@ jobs:
       - name: Validate role coaching smoke checks
         run: node scripts/test-role-coaching.mjs
 
+      - name: Validate managed config smoke checks
+        run: node scripts/test-managed-config.mjs
+
+      - name: Validate platform adapter smoke checks
+        run: node scripts/test-platform-adapter.mjs
+
+      - name: Validate workspace readiness smoke checks
+        run: node scripts/test-workspace-readiness.mjs
+
       - name: Validate learning analytics smoke checks
         run: node scripts/test-learning-analytics.mjs
 
