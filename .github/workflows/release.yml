@@ -139,15 +139,27 @@ jobs:
           set -euo pipefail
           echo "status=publishing" >> "$GITHUB_OUTPUT"
 
-          TOKEN_RESPONSE=$(curl --fail-with-body -sS https://oauth2.googleapis.com/token \
+          token_raw=$(curl --silent --show-error --write-out '\nHTTP_STATUS:%{http_code}\n' \
+            https://oauth2.googleapis.com/token \
             -d "client_id=${CWS_CLIENT_ID}" \
             -d "client_secret=${CWS_CLIENT_SECRET}" \
             -d "refresh_token=${CWS_REFRESH_TOKEN}" \
             -d "grant_type=refresh_token")
 
+          token_status=$(printf '%s\n' "${token_raw}" | sed -n 's/^HTTP_STATUS://p' | tail -n1)
+          TOKEN_RESPONSE=$(printf '%s\n' "${token_raw}" | sed '$d')
+
+          if [ "${token_status}" -ge 400 ]; then
+            token_error=$(printf '%s' "${TOKEN_RESPONSE}" | python3 -c 'import json,sys; body=json.load(sys.stdin); error=body.get("error","unknown_error"); description=body.get("error_description",""); print(f"{error}: {description}" if description else error)' 2>/dev/null || printf 'OAuth token request failed with a non-JSON response.')
+            echo "::error::Chrome Web Store OAuth token request failed (${token_status}): ${token_error}"
+            echo "status=failed_auth" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
           ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("access_token",""))')
           if [ -z "$ACCESS_TOKEN" ]; then
             echo "::error::Failed to get access token from OAuth response"
+            echo "status=failed_auth" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
