@@ -41,7 +41,7 @@ function readManifest() {
 function assertFileExists(relativePath, label) {
   if (!relativePath || typeof relativePath !== "string") {
     fail(`${label} is not configured`);
-    return;
+    return null;
   }
 
   const normalized = relativePath.replace(/\\/g, "/");
@@ -50,11 +50,23 @@ function assertFileExists(relativePath, label) {
 
   if (relativeFromExtension.startsWith("..") || path.isAbsolute(relativeFromExtension)) {
     fail(`${label} points outside extension directory: ${relativePath}`);
-    return;
+    return null;
   }
 
   if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
     fail(`${label} file not found: ${relativePath}`);
+    return null;
+  }
+
+  return absolutePath;
+}
+
+function readJsonFile(filePath, label) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (error) {
+    fail(`Invalid ${label}: ${error.message}`);
+    return null;
   }
 }
 
@@ -163,7 +175,84 @@ function validateManagedStorage(manifest) {
     return;
   }
 
-  assertFileExists(manifest.storage.managed_schema, "storage.managed_schema");
+  const schemaPath = assertFileExists(manifest.storage.managed_schema, "storage.managed_schema");
+  if (!schemaPath) {
+    return;
+  }
+
+  const schema = readJsonFile(schemaPath, "storage.managed_schema");
+  if (!schema) {
+    return;
+  }
+
+  validateManagedStorageSchemaNode(schema, "storage.managed_schema", true);
+}
+
+function validateManagedStorageSchemaNode(schemaNode, label, isRoot = false) {
+  if (!schemaNode || typeof schemaNode !== "object" || Array.isArray(schemaNode)) {
+    fail(`${label} must be a schema object`);
+    return;
+  }
+
+  const hasRef = Object.prototype.hasOwnProperty.call(schemaNode, "$ref");
+  const hasType = Object.prototype.hasOwnProperty.call(schemaNode, "type");
+
+  if (hasRef && typeof schemaNode.$ref !== "string") {
+    fail(`${label}.$ref must be a string`);
+  }
+
+  if (hasRef && hasType) {
+    fail(`${label} must use either $ref or type, not both`);
+  } else if (!hasRef && !hasType) {
+    fail(`${label} must provide either $ref or exactly one type`);
+  } else if (hasType && typeof schemaNode.type !== "string") {
+    fail(`${label}.type must be a single string`);
+  }
+
+  if (isRoot) {
+    if (schemaNode.type !== "object") {
+      fail("storage.managed_schema top-level type must be object");
+    }
+
+    if (Object.prototype.hasOwnProperty.call(schemaNode, "additionalProperties")) {
+      fail("storage.managed_schema top-level object cannot include additionalProperties");
+    }
+  } else if (Object.prototype.hasOwnProperty.call(schemaNode, "additionalProperties")) {
+    const additionalProperties = schemaNode.additionalProperties;
+    if (
+      !additionalProperties ||
+      typeof additionalProperties !== "object" ||
+      Array.isArray(additionalProperties)
+    ) {
+      fail(`${label}.additionalProperties must be a schema object`);
+    } else {
+      validateManagedStorageSchemaNode(
+        additionalProperties,
+        `${label}.additionalProperties`
+      );
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(schemaNode, "properties")) {
+    if (
+      !schemaNode.properties ||
+      typeof schemaNode.properties !== "object" ||
+      Array.isArray(schemaNode.properties)
+    ) {
+      fail(`${label}.properties must be an object`);
+    } else {
+      Object.entries(schemaNode.properties).forEach(([propertyName, propertySchema]) => {
+        validateManagedStorageSchemaNode(
+          propertySchema,
+          `${label}.properties.${propertyName}`
+        );
+      });
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(schemaNode, "items")) {
+    validateManagedStorageSchemaNode(schemaNode.items, `${label}.items`);
+  }
 }
 
 function walkFiles(directory, collector) {

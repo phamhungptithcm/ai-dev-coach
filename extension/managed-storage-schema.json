@@ -61,6 +61,5 @@
       "minimum": 9000,
       "maximum": 20000
     }
-  },
-  "additionalProperties": false
+  }
 }
