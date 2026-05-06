@@ -1749,7 +1749,7 @@ async function generatePrompt() {
     fields,
     templateKey,
     profile: {
-      roleKey: resolvedRoleKey(profile),
+      roleKey: resolveRoleKey(profile),
       role: profile.role || "",
       skill: profile.skill || ""
     }

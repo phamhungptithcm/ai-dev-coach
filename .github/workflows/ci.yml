@@ -38,6 +38,9 @@ jobs:
       - name: Validate extension package structure
         run: node scripts/validate-extension.mjs
 
+      - name: Validate background dynamic script registration
+        run: node scripts/test-background-dynamic-scripts.mjs
+
       - name: Validate prompt library sync
         run: |
           node scripts/sync-prompt-library.mjs
@@ -48,6 +51,9 @@ jobs:
 
       - name: Validate prompt linter smoke checks
         run: node scripts/test-prompt-linter.mjs
+
+      - name: Validate popup prompt builder smoke checks
+        run: node scripts/test-popup-prompt-builder.mjs
 
       - name: Validate role coaching smoke checks
         run: node scripts/test-role-coaching.mjs

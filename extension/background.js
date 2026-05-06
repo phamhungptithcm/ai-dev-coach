@@ -189,10 +189,11 @@ function buildDynamicContentScripts(settings, enterpriseState) {
     return scripts;
   }
 
-  const promptToolsEnabled = !!settings.promptListenerEnabled;
+  const promptToolsEnabled = settings.enableCoach !== false;
+  const promptMonitorEnabled = !!settings.promptListenerEnabled;
   const behaviorMonitorEnabled = !!settings.behaviorMonitorEnabled;
   const styleEnabled =
-    promptToolsEnabled || (!!settings.enableCoach && behaviorMonitorEnabled);
+    promptToolsEnabled || promptMonitorEnabled || (!!settings.enableCoach && behaviorMonitorEnabled);
 
   if (styleEnabled) {
     scripts.push({
@@ -212,6 +213,9 @@ function buildDynamicContentScripts(settings, enterpriseState) {
       runAt: "document_idle",
       persistAcrossSessions: true
     });
+  }
+
+  if (promptMonitorEnabled) {
     scripts.push({
       id: DYNAMIC_SCRIPT_IDS.promptMonitor,
       matches,
@@ -240,7 +244,7 @@ function buildDynamicContentScripts(settings, enterpriseState) {
     });
   }
 
-  if (!!settings.enableCoach && (promptToolsEnabled || behaviorMonitorEnabled)) {
+  if (!!settings.enableCoach && (promptMonitorEnabled || behaviorMonitorEnabled)) {
     scripts.push({
       id: DYNAMIC_SCRIPT_IDS.liveBubble,
       matches,
