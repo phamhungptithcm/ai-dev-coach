@@ -528,3 +528,5 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     console.error("AI Dev Coach enterprise sync error", error);
   });
 });
+
+initializeExtension("service worker activation");
